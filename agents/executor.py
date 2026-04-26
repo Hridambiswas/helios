@@ -21,7 +21,7 @@ logger = logging.getLogger("helios.agents.executor")
 _ALLOWED_IMPORTS: frozenset[str] = frozenset({
     "math", "statistics", "random", "re", "string", "datetime", "json",
     "collections", "itertools", "functools", "operator", "typing",
-    "numpy", "pandas", "scipy",
+    "numpy", "pandas", "scipy", "io", "textwrap", "hashlib",
 })
 
 _FORBIDDEN_BUILTINS: frozenset[str] = frozenset({
