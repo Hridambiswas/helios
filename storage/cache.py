@@ -78,6 +78,22 @@ async def incr(namespace: str, key: str, ttl: int = TTL_MEDIUM) -> int:
     return count
 
 
+async def get_many(namespace: str, keys: list[str]) -> dict[str, Any]:
+    """Batch GET — returns {key: value} for all keys that hit."""
+    client = _client()
+    full_keys = [_key(namespace, k) for k in keys]
+    try:
+        values = await client.mget(full_keys)
+    except Exception as exc:
+        logger.warning("Cache mget failed: %s", exc)
+        return {}
+    return {
+        k: json.loads(v)
+        for k, v in zip(keys, values)
+        if v is not None
+    }
+
+
 async def ping() -> bool:
     try:
         return await _client().ping()
