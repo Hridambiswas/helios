@@ -75,6 +75,13 @@ def delete(doc_id: str) -> None:
 
 # ── Query ops ─────────────────────────────────────────────────────────────────
 
+def query_by_text(text: str, top_k: int | None = None, where: dict | None = None) -> list[dict]:
+    """Convenience wrapper: embed text with CLIP then query ChromaDB."""
+    from retrieval.clip_encoder import encode_text
+    embedding = encode_text(text)[0]
+    return query(embedding, top_k=top_k, where=where)
+
+
 def query(
     embedding: list[float],
     top_k: int | None = None,
