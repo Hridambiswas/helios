@@ -139,6 +139,12 @@ class ExecutorAgent(BaseAgent):
         self.logger.info("Executing code (timeout=%ds):\n%s", cfg.executor_timeout_seconds, code[:200])
         stdout, stderr, exc = _run_with_timeout(code, cfg.executor_timeout_seconds)
 
+        # Truncate output to prevent oversized state payloads
+        if len(stdout) > 8000:
+            stdout = stdout[:8000] + "\n[output truncated]"
+        if len(stderr) > 2000:
+            stderr = stderr[:2000] + "\n[stderr truncated]"
+
         result = {
             "stdout": stdout,
             "stderr": stderr,
