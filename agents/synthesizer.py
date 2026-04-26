@@ -97,4 +97,16 @@ Now produce the final answer:"""
         self.logger.info(
             "Synthesized answer: %d chars, cited_docs=%s", len(answer), cited_ids
         )
+
+        # Append citation list at end of answer for traceability
+        if cited_ids and docs:
+            doc_map = {d["id"]: d for d in docs}
+            citation_block = "\n\n---\n**Sources:**"
+            for cid in cited_ids:
+                if cid in doc_map:
+                    meta = doc_map[cid].get("metadata", {})
+                    fname = meta.get("filename", cid)
+                    citation_block += f"\n- [{cid}] {fname}"
+            answer += citation_block
+
         return {**state, "answer": answer, "cited_doc_ids": cited_ids}
