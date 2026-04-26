@@ -53,6 +53,7 @@ class QueryRecord(Base):
     latency_ms: Mapped[float | None] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
     user: Mapped["User"] = relationship(back_populates="queries")
 
