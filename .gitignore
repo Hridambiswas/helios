@@ -63,5 +63,6 @@ k8s/secrets/
 uploads/
 media/
 
-# Eval output
-eval/reports/
+# Eval output (keep directory, ignore generated reports)
+eval/reports/*.json
+eval/reports/*.csv
