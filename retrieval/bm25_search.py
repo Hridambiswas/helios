@@ -46,11 +46,19 @@ class BM25Index:
         metadatas: list[dict] | None = None,
     ) -> None:
         with self._lock:
-            self._docs.extend(texts)
-            self._ids.extend(ids)
-            self._metas.extend(metadatas or [{} for _ in ids])
+            # Deduplicate: skip IDs already in the index
+            existing = set(self._ids)
+            new_ids, new_texts, new_metas = [], [], []
+            for i, doc_id in enumerate(ids):
+                if doc_id not in existing:
+                    new_ids.append(doc_id)
+                    new_texts.append(texts[i])
+                    new_metas.append((metadatas or [{}] * len(ids))[i])
+            self._docs.extend(new_texts)
+            self._ids.extend(new_ids)
+            self._metas.extend(new_metas)
             self._bm25 = BM25Okapi([_tokenize(d) for d in self._docs])
-        logger.info("BM25 index rebuilt: %d documents", len(self._docs))
+        logger.info("BM25 index rebuilt: %d documents (%d new)", len(self._docs), len(new_ids))
 
     def search(self, query: str, top_k: int = 10) -> list[dict[str, Any]]:
         """
