@@ -82,7 +82,11 @@ def route_after_retriever(state: HeliosState) -> str:
 
 
 def route_after_critic(state: HeliosState) -> str:
-    """Pass if critic approved; fail-fast if not (no retry loop)."""
+    """
+    Route after critic evaluation.
+    Currently always ends — retry loops would require LangGraph persistence.
+    Critic pass/fail is recorded in state for callers to inspect.
+    """
     return END
 
 
