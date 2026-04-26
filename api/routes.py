@@ -86,7 +86,9 @@ async def query(body: QueryRequest, current_user: CurrentUser):
 
     async with get_session() as session:
         result = await session.execute(select(QueryRecord).where(QueryRecord.id == query_id))
-        rec = result.scalar_one()
+        rec = result.scalar_one_or_none()
+        if rec is None:
+            raise HTTPException(500, detail="Query record lost — storage error")
         rec.answer = state.get("answer")
         rec.plan = state.get("plan")
         rec.retrieved_docs = [
