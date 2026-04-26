@@ -12,7 +12,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 
 from config import cfg
-from api.auth import get_user_by_id
+from api.auth import get_current_user_from_token_str
 from graph.pipeline import run_pipeline
 from observability.metrics import active_websocket_gauge
 
@@ -34,17 +34,10 @@ async def _authenticate_ws(websocket: WebSocket) -> str | None:
         await websocket.close(code=4001, reason="Missing token")
         return None
     try:
-        payload = jwt.decode(token, cfg.jwt_secret_key, algorithms=[cfg.jwt_algorithm])
-        if payload.get("type") != "access":
-            await websocket.close(code=4001, reason="Not an access token")
-            return None
-        user = await get_user_by_id(payload["sub"])
-        if not user or not user.is_active:
-            await websocket.close(code=4001, reason="User inactive")
-            return None
+        user = await get_current_user_from_token_str(token)
         return user.id
-    except JWTError as exc:
-        await websocket.close(code=4001, reason=f"Token error: {exc}")
+    except Exception as exc:
+        await websocket.close(code=4001, reason=str(exc))
         return None
 
 

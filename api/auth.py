@@ -117,6 +117,17 @@ async def issue_tokens(user: User) -> TokenResponse:
 
 # ── FastAPI dependencies ──────────────────────────────────────────────────────
 
+async def get_current_user_from_token_str(token: str) -> User:
+    """Used by WebSocket upgrade where token comes from query param."""
+    payload = _decode_token(token)
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Not an access token")
+    user = await get_user_by_id(payload["sub"])
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="User not found or inactive")
+    return user
+
+
 async def get_current_user(token: Annotated[str, Depends(_oauth2_scheme)]) -> User:
     payload = _decode_token(token)
     if payload.get("type") != "access":
