@@ -90,3 +90,11 @@ def encode_images_batch(images: list[Union[str, Path, Image.Image, bytes]]) -> l
 def embedding_dim() -> int:
     model, _ = _load()
     return model.config.projection_dim
+
+
+def similarity(a: list[float], b: list[float]) -> float:
+    """Cosine similarity between two L2-normalised CLIP embeddings."""
+    import numpy as np
+    va, vb = np.array(a), np.array(b)
+    denom = (np.linalg.norm(va) * np.linalg.norm(vb))
+    return float(np.dot(va, vb) / denom) if denom > 0 else 0.0
