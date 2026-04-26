@@ -87,6 +87,17 @@ def list_keys(prefix: str = "") -> list[str]:
     return [obj.object_name for obj in objects]
 
 
+def copy(src_key: str, dst_key: str) -> None:
+    """Server-side copy within the same bucket."""
+    from minio.commonconfig import CopySource
+    _get_client().copy_object(
+        cfg.minio_bucket,
+        dst_key,
+        CopySource(cfg.minio_bucket, src_key),
+    )
+    logger.info("Copied %s → %s", src_key, dst_key)
+
+
 def ping() -> bool:
     try:
         _get_client().bucket_exists(cfg.minio_bucket)
