@@ -15,6 +15,7 @@ from observability.logging_config import setup_logging
 from observability.tracing import setup_tracing
 from api.routes import router
 from api.websocket import ws_router
+from api.middleware import RequestIDMiddleware, RateLimitMiddleware
 from storage.database import create_tables, close_engine
 from storage.object_store import ensure_bucket
 
@@ -60,6 +61,10 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # ── Middleware ────────────────────────────────────────────────────────────
+    app.add_middleware(RequestIDMiddleware)
+    app.add_middleware(RateLimitMiddleware)
 
     # ── Prometheus ────────────────────────────────────────────────────────────
     Instrumentator(
