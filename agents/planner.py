@@ -76,6 +76,10 @@ class PlannerAgent(BaseAgent):
         # Enforce max_subtasks cap
         plan["subtasks"] = plan["subtasks"][: cfg.planner_max_subtasks]
 
+        # Resolve task dependencies: ensure each id is unique and ascending
+        for i, task in enumerate(plan["subtasks"], 1):
+            task["id"] = i   # re-number in case LLM produced duplicates
+
         self.logger.info(
             "Plan: type=%s  subtasks=%d  retrieval=%s  code=%s",
             plan.get("query_type"),
