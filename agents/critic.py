@@ -115,6 +115,12 @@ Minimum passing threshold: {cfg.critic_min_score}"""
         )
         scores["pass"] = scores["overall"] >= cfg.critic_min_score
 
+        # Record per-dimension scores in Prometheus
+        from observability.metrics import critic_score_histogram, critic_pass_counter
+        for dim in ("groundedness", "faithfulness", "completeness", "overall"):
+            critic_score_histogram.labels(dimension=dim).observe(scores[dim])
+        critic_pass_counter.labels(result="pass" if scores["pass"] else "fail").inc()
+
         self.logger.info(
             "Critic scores — G=%.2f F=%.2f C=%.2f overall=%.2f pass=%s",
             scores["groundedness"], scores["faithfulness"],
