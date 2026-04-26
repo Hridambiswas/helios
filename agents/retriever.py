@@ -12,12 +12,16 @@ from agents.base import BaseAgent
 import retrieval.vector_store as vs
 import retrieval.bm25_search as bm25
 from retrieval.clip_encoder import encode_text
+from observability.metrics import retrieval_docs_histogram, retrieval_score_summary
 
 logger = logging.getLogger("helios.agents.retriever")
 
 
 def _deduplicate(hits: list[dict]) -> list[dict]:
-    """Merge CLIP and BM25 results: deduplicate by id, keep highest score."""
+    """
+    Merge results from multiple retrieval paths.
+    Deduplicates by doc id, keeps the highest score across all sources.
+    """
     seen: dict[str, dict] = {}
     for hit in hits:
         doc_id = hit["id"]
@@ -28,11 +32,8 @@ def _deduplicate(hits: list[dict]) -> list[dict]:
 
 class RetrieverAgent(BaseAgent):
     """
-    Hybrid retriever combining:
-      - Dense semantic search via CLIP text embeddings → ChromaDB
-      - Sparse keyword search via BM25
-
-    Scores are weighted (cfg.retriever_clip_weight / bm25_weight) and merged.
+    Hybrid retriever: OpenAI dense embedding + CLIP + BM25 sparse.
+    Scores weighted by cfg.retriever_clip_weight / bm25_weight, then merged.
     """
 
     name = "retriever"
@@ -62,6 +63,9 @@ class RetrieverAgent(BaseAgent):
             for h in dense_hits:
                 h["score"] = h["score"] * cfg.retriever_clip_weight
                 h["source"] = "dense"
+            retrieval_docs_histogram.labels(source="dense").observe(len(dense_hits))
+            for h in dense_hits:
+                retrieval_score_summary.labels(source="dense").observe(h["score"])
         except Exception as exc:
             self.logger.warning("Dense retrieval failed: %s", exc)
 
@@ -73,6 +77,7 @@ class RetrieverAgent(BaseAgent):
             for h in clip_hits:
                 h["score"] = h["score"] * cfg.retriever_clip_weight
                 h["source"] = "clip"
+            retrieval_docs_histogram.labels(source="clip").observe(len(clip_hits))
         except Exception as exc:
             self.logger.warning("CLIP retrieval failed: %s", exc)
 
@@ -83,10 +88,14 @@ class RetrieverAgent(BaseAgent):
             for h in sparse_hits:
                 h["score"] = h["score"] * cfg.retriever_bm25_weight
                 h["source"] = "bm25"
+            retrieval_docs_histogram.labels(source="bm25").observe(len(sparse_hits))
+            for h in sparse_hits:
+                retrieval_score_summary.labels(source="bm25").observe(h["score"])
         except Exception as exc:
             self.logger.warning("BM25 retrieval failed: %s", exc)
 
         merged = _deduplicate(dense_hits + clip_hits + sparse_hits)[:top_k]
+        retrieval_docs_histogram.labels(source="merged").observe(len(merged))
 
         self.logger.info(
             "Retrieved %d docs (dense=%d  clip=%d  bm25=%d → merged=%d)",
