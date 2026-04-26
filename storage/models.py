@@ -29,8 +29,8 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False)
-    email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False)
+    username: Mapped[str] = mapped_column(String(64), unique=True, nullable=False, index=True)
+    email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False, index=True)
     hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
@@ -47,11 +47,11 @@ class QueryRecord(Base):
     user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
     query_text: Mapped[str] = mapped_column(Text, nullable=False)
     answer: Mapped[str | None] = mapped_column(Text)
-    plan: Mapped[dict | None] = mapped_column(JSON)          # planner output
+    plan: Mapped[dict | None] = mapped_column(JSON)
     retrieved_docs: Mapped[list | None] = mapped_column(JSON)
-    critic_scores: Mapped[dict | None] = mapped_column(JSON) # {groundedness, faithfulness, completeness}
+    critic_scores: Mapped[dict | None] = mapped_column(JSON)
     latency_ms: Mapped[float | None] = mapped_column(Float)
-    status: Mapped[str] = mapped_column(String(32), default="pending")  # pending/running/done/failed
+    status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     user: Mapped["User"] = relationship(back_populates="queries")
@@ -73,12 +73,13 @@ class Document(Base):
     minio_key: Mapped[str] = mapped_column(String(512), nullable=False, unique=True)
     chunk_count: Mapped[int] = mapped_column(Integer, default=0)
     size_bytes: Mapped[int] = mapped_column(Integer, default=0)
-    indexed: Mapped[bool] = mapped_column(Boolean, default=False)
+    indexed: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     uploaded_by: Mapped[str | None] = mapped_column(ForeignKey("users.id"))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
 
     __table_args__ = (
         Index("ix_documents_created_at", "created_at"),
+        Index("ix_documents_uploaded_by", "uploaded_by"),
     )
 
 
@@ -88,8 +89,8 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
-    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
     token_hash: Mapped[str] = mapped_column(String(256), nullable=False, unique=True)
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
-    revoked: Mapped[bool] = mapped_column(Boolean, default=False)
+    revoked: Mapped[bool] = mapped_column(Boolean, default=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
