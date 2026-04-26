@@ -34,7 +34,15 @@ app.conf.update(
 app.conf.beat_schedule = {
     "chroma-index-health-check": {
         "task": "workers.tasks.health_check_task",
-        "schedule": 60.0,   # every 60 seconds
+        "schedule": 60.0,
+    },
+    "expire-refresh-tokens": {
+        "task": "workers.beat_tasks.expire_refresh_tokens",
+        "schedule": 3600.0,   # every hour
+    },
+    "bm25-index-stats": {
+        "task": "workers.beat_tasks.bm25_index_stats",
+        "schedule": 300.0,    # every 5 min
     },
 }
 
