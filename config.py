@@ -65,8 +65,9 @@ class Settings(BaseSettings):
     # ── Agent Tuning ──────────────────────────────────────────────────────────
     planner_max_subtasks: int = 5
     retriever_top_k: int = 10
-    retriever_clip_weight: float = 0.4
-    retriever_bm25_weight: float = 0.6
+    retriever_dense_weight: float = 0.6
+    retriever_clip_weight: float = 0.3
+    retriever_bm25_weight: float = 0.1
     executor_timeout_seconds: int = 15
     critic_min_score: float = 0.7
 

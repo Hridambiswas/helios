@@ -2,13 +2,14 @@
 # Author: Hridam Biswas | Project: Helios
 
 from retrieval.bm25_search import BM25Index, get_index as get_bm25_index
-from retrieval.clip_encoder import CLIPEncoder
+from retrieval.clip_encoder import encode_text, encode_image
 from retrieval.vector_store import query as vector_query, upsert_batch, ping as vector_ping
 
 __all__ = [
     "BM25Index",
     "get_bm25_index",
-    "CLIPEncoder",
+    "encode_text",
+    "encode_image",
     "vector_query",
     "upsert_batch",
     "vector_ping",

@@ -61,7 +61,7 @@ class RetrieverAgent(BaseAgent):
             embedding = self._embedder.embed_query(query)
             dense_hits = vs.query(embedding, top_k=top_k)
             for h in dense_hits:
-                h["score"] = h["score"] * cfg.retriever_clip_weight
+                h["score"] = h["score"] * cfg.retriever_dense_weight
                 h["source"] = "dense"
             retrieval_docs_histogram.labels(source="dense").observe(len(dense_hits))
             for h in dense_hits:
