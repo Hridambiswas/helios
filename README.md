@@ -205,12 +205,12 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis DSN |
 | `MINIO_ENDPOINT` | `localhost:9000` | MinIO host:port |
 | `CHROMA_HOST` | `localhost` | ChromaDB host |
-| `RETRIEVER_TOP_K` | `5` | Documents per retrieval path |
-| `RETRIEVER_DENSE_WEIGHT` | `0.6` | Dense retrieval weight |
+| `RETRIEVER_TOP_K` | `10` | Documents per retrieval path |
+| `RETRIEVER_DENSE_WEIGHT` | `0.6` | Dense (OpenAI) retrieval weight |
 | `RETRIEVER_CLIP_WEIGHT` | `0.3` | CLIP retrieval weight |
-| `RETRIEVER_BM25_WEIGHT` | `0.1` | BM25 weight |
-| `EXECUTOR_TIMEOUT_SECONDS` | `10` | Sandboxed execution timeout |
-| `CRITIC_MIN_SCORE` | `0.6` | Minimum critic score to pass |
+| `RETRIEVER_BM25_WEIGHT` | `0.1` | BM25 sparse weight |
+| `EXECUTOR_TIMEOUT_SECONDS` | `15` | Sandboxed execution timeout |
+| `CRITIC_MIN_SCORE` | `0.7` | Minimum critic score to pass |
 | `PLANNER_MAX_SUBTASKS` | `5` | Cap on decomposed subtasks |
 | `APP_ENV` | `development` | `development` or `production` |
 
