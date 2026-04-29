@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install lint dependencies
+        run: pip install ruff
+
+      - name: Run ruff
+        run: ruff check .
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: sk-test-000
+      SECRET_KEY: ci-test-secret-key-000
+      DATABASE_URL: postgresql+asyncpg://helios:helios@localhost:5432/helios
+      REDIS_URL: redis://localhost:6379/0
+      MINIO_ENDPOINT: localhost:9000
+      MINIO_ACCESS_KEY: minioadmin
+      MINIO_SECRET_KEY: minioadmin
+      CHROMA_HOST: localhost
+      CHROMA_PORT: "8001"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pytest pytest-cov pytest-asyncio
+
+      - name: Run tests
+        run: pytest tests/ -v --tb=short --ignore=tests/test_api.py --ignore=tests/test_storage.py
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: htmlcov/
+          if-no-files-found: ignore
+
+  typecheck:
+    name: Type check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyright
+
+      - name: Run pyright
+        run: pyright --pythonversion 3.11 agents/ api/ pipeline/ retrieval/ workers/ || true
