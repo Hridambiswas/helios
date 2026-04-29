@@ -2,8 +2,7 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 
 # ── Executor tests (no LLM needed) ────────────────────────────────────────────
@@ -36,7 +35,6 @@ class TestExecutorAgent:
 
     def test_timeout_enforcement(self):
         from agents.executor import ExecutorAgent
-        from unittest.mock import patch
         agent = ExecutorAgent()
         state = {
             "query": "infinite loop",
@@ -46,7 +44,7 @@ class TestExecutorAgent:
         with patch("config.cfg.executor_timeout_seconds", 1):
             result = agent.run(state)
         assert result["execution_result"]["success"] is False
-        assert "timeout" in result["execution_result"]["error"].lower()
+        assert "timed out" in result["execution_result"]["error"].lower()
 
     def test_skips_when_not_required(self):
         from agents.executor import ExecutorAgent
@@ -125,6 +123,7 @@ class TestBM25Index:
         idx = BM25Index()
         idx.add("doc1", "CARLE is a compression algorithm for semantic maps")
         idx.add("doc2", "PyTorch is a deep learning framework")
+        idx.add("doc3", "Attention mechanisms in neural networks process sequences")
         results = idx.search("semantic compression", top_k=2)
         assert len(results) > 0
         assert results[0]["id"] == "doc1"

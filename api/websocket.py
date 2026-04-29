@@ -9,9 +9,7 @@ import uuid
 from typing import Any
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from jose import JWTError, jwt
 
-from config import cfg
 from api.auth import get_current_user_from_token_str
 from pipeline.run import run_pipeline
 from observability.metrics import active_websocket_gauge

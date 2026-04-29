@@ -2,8 +2,7 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 
 def _mock_planner_output(state):

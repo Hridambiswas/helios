@@ -77,5 +77,6 @@ def inject_celery_context(headers: dict) -> dict:
 def extract_celery_context(headers: dict) -> None:
     """Restore trace context on the Celery worker side."""
     from opentelemetry.propagate import extract
+    from opentelemetry import context as otel_context
     ctx = extract(headers)
-    trace.use_span(trace.NonRecordingSpan(trace.INVALID_SPAN_CONTEXT), end_on_exit=False)
+    otel_context.attach(ctx)

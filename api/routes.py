@@ -7,9 +7,9 @@ import time
 import uuid
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select, desc
+from sqlalchemy import select
 
 from api.auth import (
     CurrentUser, get_user_by_username, create_user,

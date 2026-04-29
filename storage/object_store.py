@@ -8,7 +8,6 @@ from datetime import timedelta
 from typing import BinaryIO
 
 from minio import Minio
-from minio.error import S3Error
 
 from config import cfg
 

@@ -103,7 +103,6 @@ async def issue_tokens(user: User) -> TokenResponse:
     refresh = create_refresh_token_str(user.id)
     token_hash = hashlib.sha256(refresh.encode()).hexdigest()
 
-    from datetime import timezone
     expires = _utcnow() + timedelta(days=cfg.jwt_refresh_expiry_days)
     async with get_session() as session:
         session.add(RefreshToken(user_id=user.id, token_hash=token_hash, expires_at=expires))

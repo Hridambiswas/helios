@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from eval.questions import EVAL_QUESTIONS, QuestionType
+from eval.questions import EVAL_QUESTIONS
 from eval.harness import run_harness
 
 

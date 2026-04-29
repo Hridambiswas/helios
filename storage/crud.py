@@ -2,11 +2,10 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-from datetime import datetime, timezone
 from sqlalchemy import select, desc, update
 
 from storage.database import get_session
-from storage.models import QueryRecord, Document, User
+from storage.models import QueryRecord, Document
 
 
 # ── QueryRecord ───────────────────────────────────────────────────────────────

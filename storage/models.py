@@ -9,7 +9,6 @@ from sqlalchemy import (
     String, Text, Float, Integer, Boolean,
     DateTime, ForeignKey, Index, JSON,
 )
-from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from storage.database import Base

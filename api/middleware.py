@@ -9,7 +9,7 @@ from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from storage.cache import incr, TTL_MEDIUM
+from storage.cache import incr
 
 logger = logging.getLogger("helios.api.middleware")
 

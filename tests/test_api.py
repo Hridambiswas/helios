@@ -17,6 +17,7 @@ def client():
         patch("observability.tracing.setup_tracing"),
         patch("observability.logging_config.setup_logging"),
         patch("storage.database.close_engine", new_callable=AsyncMock),
+        patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
     ):
         from main import app
         return TestClient(app)

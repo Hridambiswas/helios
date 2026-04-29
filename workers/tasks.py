@@ -2,7 +2,6 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import asyncio
 import logging
 
 from celery import Task
