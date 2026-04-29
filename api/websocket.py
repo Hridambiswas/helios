@@ -13,7 +13,7 @@ from jose import JWTError, jwt
 
 from config import cfg
 from api.auth import get_current_user_from_token_str
-from graph.pipeline import run_pipeline
+from pipeline.run import run_pipeline
 from observability.metrics import active_websocket_gauge
 
 logger = logging.getLogger("helios.api.websocket")
