@@ -47,7 +47,7 @@ def run_pipeline_task(self, query: str, user_id: str | None = None) -> dict:
     Celery task that executes the full Helios agent pipeline.
     Retries up to 3 times on transient failures.
     """
-    from graph.pipeline import run_pipeline
+    from pipeline.run import run_pipeline
     from observability.tracing import extract_celery_context
 
     extract_celery_context(self.request.headers or {})
