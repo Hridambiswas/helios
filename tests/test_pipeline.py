@@ -41,7 +41,7 @@ class TestPipelineRouting:
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
         ):
-            from graph.pipeline import run_pipeline
+            from pipeline.run import run_pipeline
             result = run_pipeline("What is CARLE?")
             assert result["answer"] == "CARLE is a lossless semantic compression method."
             assert result["critic_passed"] is True
@@ -49,7 +49,7 @@ class TestPipelineRouting:
 
     def test_pipeline_returns_error_key_on_crash(self):
         with patch("agents.planner.PlannerAgent._run", side_effect=RuntimeError("LLM timeout")):
-            from graph.pipeline import run_pipeline
+            from pipeline.run import run_pipeline
             result = run_pipeline("test query")
             assert result.get("error") is not None
 
@@ -76,6 +76,6 @@ class TestPipelineRouting:
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
         ):
-            from graph.pipeline import run_pipeline
+            from pipeline.run import run_pipeline
             run_pipeline("compute 2+2", code_to_run="print(2+2)")
             assert called["retriever"] is False
