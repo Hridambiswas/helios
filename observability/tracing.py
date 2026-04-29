@@ -37,7 +37,10 @@ def setup_tracing() -> None:
 def get_tracer() -> trace.Tracer:
     global _tracer
     if _tracer is None:
-        setup_tracing()
+        if cfg.is_production:
+            setup_tracing()
+        else:
+            _tracer = trace.get_tracer(cfg.otel_service_name)
     return _tracer
 
 
