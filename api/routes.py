@@ -26,7 +26,7 @@ from storage.object_store import ping as minio_ping, upload, ensure_bucket
 from storage.models import QueryRecord, Document
 from storage.crud import list_user_queries, mark_document_indexed
 from retrieval.vector_store import ping as chroma_ping, upsert_batch
-from graph.pipeline import run_pipeline
+from pipeline.run import run_pipeline
 from workers.tasks import run_pipeline_task
 
 logger = logging.getLogger("helios.api.routes")
