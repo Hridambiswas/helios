@@ -60,7 +60,6 @@ class Settings(BaseSettings):
     app_env: str = "development"
     log_level: str = "INFO"
     log_format: str = "json"
-    metrics_port: int = 8001
 
     # ── Agent Tuning ──────────────────────────────────────────────────────────
     planner_max_subtasks: int = 5

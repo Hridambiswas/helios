@@ -54,7 +54,6 @@ htmlcov/
 .tox/
 
 # Docker
-*.dockerignore
 
 # K8s secrets
 k8s/secrets/

@@ -46,7 +46,7 @@ cp .env.example .env
 # Edit .env — at minimum set OPENAI_API_KEY
 
 # 5. Start all backing services (Postgres, Redis, ChromaDB, MinIO)
-docker compose up -d postgres redis chromadb minio
+docker compose up -d postgres redis chroma minio
 
 # 6. Run database migrations
 make migrate

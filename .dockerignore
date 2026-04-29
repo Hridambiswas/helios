@@ -1,0 +1,46 @@
+# Secrets
+.env
+.env.*
+secrets/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Tests
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Dev-only directories
+scripts/
+eval/
+graphs/
+
+# Git & CI
+.git/
+.github/
+
+# Docs
+*.md
+LICENSE
+
+# Tooling config
+.ruff_cache/
+pyrightconfig.json
+pytest.ini
+
+# K8s manifests
+k8s/
+
+# Monitoring config (mounted at runtime via docker-compose)
+prometheus.yml
+otel-config.yaml

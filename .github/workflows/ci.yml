@@ -12,25 +12,44 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-
       - name: Install lint dependencies
-        run: pip install ruff
-
+        run: pip install "ruff==0.6.9"
       - name: Run ruff
         run: ruff check .
 
   test:
     name: Test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: helios
+          POSTGRES_PASSWORD: helios
+          POSTGRES_DB: helios
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     env:
       OPENAI_API_KEY: sk-test-000
-      SECRET_KEY: ci-test-secret-key-000
+      JWT_SECRET_KEY: ci-test-secret-key-000
       DATABASE_URL: postgresql+asyncpg://helios:helios@localhost:5432/helios
       REDIS_URL: redis://localhost:6379/0
       MINIO_ENDPOINT: localhost:9000
@@ -38,22 +57,28 @@ jobs:
       MINIO_SECRET_KEY: minioadmin
       CHROMA_HOST: localhost
       CHROMA_PORT: "8001"
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-
+      - name: Start MinIO
+        run: |
+          docker run -d --name minio \
+            -p 9000:9000 \
+            -e MINIO_ROOT_USER=minioadmin \
+            -e MINIO_ROOT_PASSWORD=minioadmin \
+            minio/minio server /data
+          until curl -sf http://localhost:9000/minio/health/live; do sleep 1; done
+      - name: Start ChromaDB
+        run: |
+          docker run -d --name chroma -p 8001:8000 chromadb/chroma
+          until curl -sf http://localhost:8001/api/v1/heartbeat; do sleep 1; done
       - name: Install dependencies
-        run: pip install -r requirements.txt pytest pytest-cov pytest-asyncio
-
+        run: pip install -r requirements.txt "pytest==8.3.3" "pytest-cov==5.0.0" "pytest-asyncio==0.24.0"
       - name: Run tests
-        run: pytest tests/ -v --tb=short --ignore=tests/test_api.py --ignore=tests/test_storage.py
-
+        run: pytest tests/ -v --tb=short --cov=. --cov-report=html
       - name: Upload coverage
         if: always()
         uses: actions/upload-artifact@v4
@@ -67,15 +92,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-
       - name: Install dependencies
-        run: pip install -r requirements.txt pyright
-
+        run: pip install -r requirements.txt "pyright==1.1.381"
       - name: Run pyright
-        run: pyright --pythonversion 3.11 agents/ api/ pipeline/ retrieval/ workers/ || true
+        run: pyright --pythonversion 3.11 agents/ api/ pipeline/ retrieval/ workers/

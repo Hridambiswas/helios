@@ -1,7 +1,4 @@
-# Makefile — Helios dev shortcuts
-# Author: Hridam Biswas | Project: Helios
-
-.PHONY: up down build test lint migrate eval bench ingest
+.PHONY: up down build logs test test-cov lint fmt typecheck migrate migrate-gen migrate-down dev worker beat eval bench ingest
 
 ## ── Docker ───────────────────────────────────────────────────────────────────
 
@@ -28,10 +25,13 @@ test-cov:
 ## ── Lint ─────────────────────────────────────────────────────────────────────
 
 lint:
-	ruff check . && mypy . --ignore-missing-imports
+	ruff check .
 
 fmt:
 	ruff format .
+
+typecheck:
+	pyright --pythonversion 3.11 agents/ api/ pipeline/ retrieval/ workers/
 
 ## ── Database ─────────────────────────────────────────────────────────────────
 
