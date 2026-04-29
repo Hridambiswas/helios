@@ -63,6 +63,24 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
 
 ---
 
+## Performance Graphs
+
+Visualisation scripts are in `graphs/`. Run from the repo root after installing requirements:
+
+```bash
+python graphs/agent_latency.py             # p50/p95/p99 latency per agent stage
+python graphs/retrieval_score_fusion.py    # Dense / CLIP / BM25 weight breakdown by query type
+python graphs/critic_score_distribution.py # Groundedness, faithfulness, completeness distributions
+```
+
+| Script | What it shows |
+|---|---|
+| `agent_latency.py` | Grouped bar chart of p50/p95/p99 latency for each of the 5 pipeline agents |
+| `retrieval_score_fusion.py` | Stacked bar + pie of retrieval signal weights across query categories |
+| `critic_score_distribution.py` | Histograms of critic scores with gate threshold and block-rate annotation |
+
+---
+
 ## Agents
 
 | Agent | Model | Role | Key behaviour |
