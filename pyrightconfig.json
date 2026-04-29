@@ -1,0 +1,25 @@
+{
+  "pythonVersion": "3.11",
+  "include": [
+    "agents",
+    "api",
+    "config.py",
+    "eval",
+    "main.py",
+    "observability",
+    "pipeline",
+    "retrieval",
+    "scripts",
+    "storage",
+    "workers"
+  ],
+  "exclude": [
+    "graphs",
+    "k8s",
+    "tests"
+  ],
+  "reportMissingImports": true,
+  "reportMissingModuleSource": false,
+  "reportUnusedImports": true,
+  "reportUnusedVariable": true
+}

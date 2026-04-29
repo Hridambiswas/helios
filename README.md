@@ -3,7 +3,7 @@
 **Distributed Multi-Modal Agentic GenAI Platform**
 
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.111-green.svg)](https://fastapi.tiangolo.com)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2-orange.svg)](https://langchain-ai.github.io/langgraph/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-OTLP-purple.svg)](https://opentelemetry.io)
@@ -289,6 +289,7 @@ Helios Agent Benchmark — 20 iterations per agent
 ```
 helios/
 ├── agents/
+│   ├── __init__.py        # Exports all agent classes
 │   ├── base.py            # Timing + Prometheus instrumentation mixin
 │   ├── planner.py         # GPT-4o query decomposition
 │   ├── retriever.py       # Hybrid dense+CLIP+BM25 retrieval
@@ -296,24 +297,29 @@ helios/
 │   ├── synthesizer.py     # Grounded answer synthesis with citations
 │   └── critic.py          # LLM-as-judge scoring
 ├── api/
+│   ├── __init__.py        # Exports routers and auth helpers
 │   ├── auth.py            # bcrypt + JWT + refresh token rotation
 │   ├── middleware.py      # Request-ID header, Redis rate limiter
 │   ├── routes.py          # REST endpoints
 │   ├── schemas.py         # Pydantic v2 request/response models
 │   └── websocket.py       # JWT-authenticated streaming WebSocket
 ├── eval/
+│   ├── __init__.py        # Exports scorers and harness
 │   ├── questions.py       # 30-question bank
 │   ├── scorers.py         # Keyword + critic score computation
 │   ├── harness.py         # End-to-end eval runner with CSV/JSON reports
 │   └── calibration.py     # ECE + overconfidence check
-├── graph/
-│   ├── pipeline.py        # LangGraph StateGraph — 5 nodes, conditional routing
-│   └── checkpointing.py   # Redis-backed per-session state snapshots
 ├── observability/
+│   ├── __init__.py        # Exports setup_logging, setup_tracing, span
 │   ├── metrics.py         # All Prometheus metric definitions
 │   ├── tracing.py         # OTLP setup + span() context manager
 │   └── logging_config.py  # structlog JSON/Console renderer
+├── pipeline/
+│   ├── __init__.py        # Exports run_pipeline, HeliosState
+│   ├── run.py             # LangGraph StateGraph — 5 nodes, conditional routing
+│   └── checkpointing.py   # Redis-backed per-session state snapshots
 ├── retrieval/
+│   ├── __init__.py        # Exports vector_query, BM25Index, encode_text
 │   ├── vector_store.py    # ChromaDB HTTP client wrapper
 │   ├── clip_encoder.py    # CLIP text+image encoder (L2-normalised)
 │   └── bm25_search.py     # Thread-safe BM25 in-memory index
@@ -322,6 +328,7 @@ helios/
 │   ├── run_eval.py        # Eval harness CLI wrapper
 │   └── benchmark.py       # Agent latency benchmark
 ├── storage/
+│   ├── __init__.py        # Exports session, models, CRUD helpers
 │   ├── database.py        # Async SQLAlchemy engine + session factory
 │   ├── models.py          # ORM: User, QueryRecord, Document, RefreshToken
 │   ├── crud.py            # Reusable async CRUD helpers
@@ -329,19 +336,24 @@ helios/
 │   ├── object_store.py    # MinIO upload/download/presign/copy
 │   └── migrations/        # Alembic async migration environment
 ├── workers/
+│   ├── __init__.py        # Exports celery_app and task handles
 │   ├── celery_app.py      # Celery app — broker, beat schedule, signals
 │   ├── tasks.py           # run_pipeline_task, ingest_document_task
 │   └── beat_tasks.py      # Periodic: token cleanup, BM25 stats
 ├── tests/
+│   ├── conftest.py        # Shared fixtures
 │   ├── test_agents.py     # Executor, scorer, BM25 unit tests
 │   ├── test_api.py        # Health + auth route tests (mocked)
 │   ├── test_pipeline.py   # LangGraph integration smoke tests
 │   └── test_storage.py    # Cache + object store unit tests
 ├── k8s/                   # Kubernetes Deployment, Service, Ingress, ConfigMap
+├── graphs/                # Standalone visualisation scripts (matplotlib)
 ├── config.py              # Pydantic BaseSettings with lru_cache
 ├── main.py                # FastAPI app factory + lifespan hooks
 ├── Dockerfile
 ├── docker-compose.yml
+├── pyrightconfig.json
+├── pytest.ini
 ├── prometheus.yml
 └── otel-config.yaml
 ```
@@ -354,15 +366,16 @@ helios/
 
 | Metric | Type | Labels |
 |---|---|---|
-| `helios_agent_latency_seconds` | Histogram | `agent` |
+| `helios_agent_latency_ms` | Histogram | `agent` |
 | `helios_agent_errors_total` | Counter | `agent` |
-| `helios_pipeline_latency_seconds` | Histogram | — |
+| `helios_pipeline_latency_ms` | Histogram | — |
 | `helios_pipeline_requests_total` | Counter | `status` (success/failed/critic_failed) |
-| `helios_retrieval_docs_total` | Histogram | `source` (dense/clip/bm25) |
-| `helios_critic_score` | Histogram | `dimension` (groundedness/faithfulness/completeness) |
+| `helios_retrieval_docs_returned` | Histogram | `source` (dense/clip/bm25/merged) |
+| `helios_retrieval_score` | Summary | `source` |
+| `helios_critic_score` | Histogram | `dimension` (groundedness/faithfulness/completeness/overall) |
 | `helios_critic_pass_total` | Counter | `result` (pass/fail) |
 | `helios_active_websockets` | Gauge | — |
-| `helios_celery_tasks_total` | Counter | `task`, `state` |
+| `helios_celery_tasks_total` | Counter | `task_name`, `status` (sent/success/failure/retry) |
 
 ### Tracing
 

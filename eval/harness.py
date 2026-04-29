@@ -12,7 +12,7 @@ from typing import Any
 
 from eval.questions import EVAL_QUESTIONS, EvalQuestion
 from eval.scorers import score_answer, batch_score, DimensionScore
-from graph.pipeline import run_pipeline
+from pipeline.run import run_pipeline
 
 logger = logging.getLogger("helios.eval.harness")
 

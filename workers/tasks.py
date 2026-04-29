@@ -121,7 +121,8 @@ def health_check_task() -> dict:
 
     try:
         import redis
-        r = redis.from_url("redis://localhost:6379/1")
+        from config import cfg
+        r = redis.from_url(cfg.celery_broker_url)
         depth = r.llen("celery")
         celery_queue_depth_gauge.set(depth)
     except Exception:

@@ -11,9 +11,9 @@ services:
       redis:
         condition: service_healthy
       minio:
-        condition: service_started
+        condition: service_healthy
       chroma:
-        condition: service_started
+        condition: service_healthy
     restart: unless-stopped
 
   # ── Celery Worker ───────────────────────────────────────────────────────────
@@ -76,6 +76,12 @@ services:
       MINIO_ROOT_PASSWORD: minioadmin
     volumes:
       - minio_data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # ── ChromaDB ────────────────────────────────────────────────────────────────
@@ -85,6 +91,12 @@ services:
       - "8001:8000"
     volumes:
       - chroma_data:/chroma/.chroma/index
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     restart: unless-stopped
 
   # ── OpenTelemetry Collector ──────────────────────────────────────────────────
