@@ -43,9 +43,27 @@ export function Footer() {
           <span className="font-mono text-[10px] text-[#333]">
             HELIOS — DISTRIBUTED MULTI-MODAL AGENTIC AI
           </span>
-          <span className="font-mono text-[10px] text-[#333]">
-            {new Date().getFullYear()} · HRIDAM BISWAS
-          </span>
+          <div className="flex items-center gap-6">
+            <a
+              href="https://github.com/Hridambiswas/helios"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-[#444] hover:text-crimson transition-colors uppercase tracking-wider"
+            >
+              GitHub
+            </a>
+            <a
+              href="/api/v1/docs"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-[10px] text-[#444] hover:text-crimson transition-colors uppercase tracking-wider"
+            >
+              API Docs
+            </a>
+            <span className="font-mono text-[10px] text-[#333]">
+              {new Date().getFullYear()} · HRIDAM BISWAS
+            </span>
+          </div>
         </div>
       </div>
     </footer>
