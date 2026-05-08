@@ -87,3 +87,11 @@ celery_queue_depth_gauge = Gauge(
     "helios_celery_queue_depth",
     "Approximate Celery queue depth",
 )
+
+# ── Resilience metrics ────────────────────────────────────────────────────────
+
+circuit_breaker_trips_counter = Counter(
+    "helios_circuit_breaker_trips_total",
+    "Total times a circuit breaker transitioned to OPEN",
+    ["circuit"],
+)
