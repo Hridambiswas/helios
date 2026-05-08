@@ -44,6 +44,7 @@ export function AuthModal({ onClose, onLogin, onRegister }: Props) {
 
   const handleKey = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') submit()
+    if (e.key === 'Escape') onClose()
   }
 
   return (
