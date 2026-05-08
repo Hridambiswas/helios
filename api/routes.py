@@ -579,3 +579,10 @@ async def health():
 async def version():
     from config import cfg
     return {"version": "1.0.0", "environment": cfg.app_env}
+
+
+@router.get("/health/circuits", dependencies=[Depends(CurrentUser)])
+async def circuit_breaker_status():
+    """Return state of all registered circuit breakers (authenticated admins only)."""
+    from resilience.circuit_breaker import list_breakers
+    return {"circuits": list_breakers()}
