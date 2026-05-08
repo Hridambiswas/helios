@@ -1,0 +1,52 @@
+import { useState, useEffect, useCallback } from 'react'
+import { auth } from '../api/client'
+
+export type User = { id: string; username: string; email: string; is_active: boolean }
+
+export function useAuth() {
+  const [user, setUser] = useState<User | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchMe = useCallback(async () => {
+    const token = localStorage.getItem('access_token')
+    if (!token) { setLoading(false); return }
+    try {
+      const { data } = await auth.me()
+      setUser(data)
+    } catch {
+      localStorage.clear()
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    fetchMe()
+    const handler = () => setUser(null)
+    window.addEventListener('helios:logout', handler)
+    return () => window.removeEventListener('helios:logout', handler)
+  }, [fetchMe])
+
+  const login = async (username: string, password: string) => {
+    const { data } = await auth.login(username, password)
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('refresh_token', data.refresh_token)
+    await fetchMe()
+  }
+
+  const register = async (username: string, email: string, password: string) => {
+    const { data } = await auth.register(username, email, password)
+    localStorage.setItem('access_token', data.access_token)
+    localStorage.setItem('refresh_token', data.refresh_token)
+    await fetchMe()
+  }
+
+  const logout = async () => {
+    const refresh = localStorage.getItem('refresh_token')
+    if (refresh) { try { await auth.logout(refresh) } catch { /* ignore */ } }
+    localStorage.clear()
+    setUser(null)
+  }
+
+  return { user, loading, login, register, logout }
+}

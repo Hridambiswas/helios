@@ -1,0 +1,117 @@
+import { useState } from 'react'
+import { Hero } from './components/Hero'
+import { QueryInterface } from './components/QueryInterface'
+import { PipelineSection } from './components/PipelineSection'
+import { HistorySection } from './components/HistorySection'
+import { UploadSection } from './components/UploadSection'
+import { Navbar } from './components/Navbar'
+import { Footer } from './components/Footer'
+import { AuthModal } from './components/AuthModal'
+import { useAuth } from './hooks/useAuth'
+import type { QueryResponse } from './api/client'
+
+export default function App() {
+  const { user, loading, login, register, logout } = useAuth()
+  const [showAuth, setShowAuth] = useState(false)
+  const [pendingQuery, setPendingQuery] = useState<string | undefined>()
+  const [historyRefresh, setHistoryRefresh] = useState(0)
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <div className="status-dot" />
+          <span className="font-mono text-xs text-[#555] tracking-widest">INITIALIZING...</span>
+        </div>
+      </div>
+    )
+  }
+
+  const handleNewResult = (_: QueryResponse) => {
+    setHistoryRefresh(n => n + 1)
+  }
+
+  const handleQuerySubmit = (q: string) => {
+    setPendingQuery(undefined)
+    setTimeout(() => setPendingQuery(q), 0)
+  }
+
+  return (
+    <>
+      {/* Scanline effect */}
+      <div className="scanline" />
+
+      <Navbar
+        user={user}
+        onAuthClick={() => setShowAuth(true)}
+        onLogout={logout}
+      />
+
+      <main className="pt-12">
+        <Hero
+          onQuerySubmit={handleQuerySubmit}
+          onAuthClick={() => setShowAuth(true)}
+          isLoggedIn={!!user}
+        />
+
+        {/* Ink divider */}
+        <InkDivider />
+
+        <div id="query-section">
+          <QueryInterface
+            initialQuery={pendingQuery}
+            onNewResult={handleNewResult}
+          />
+        </div>
+
+        <InkDivider flip />
+
+        <div id="pipeline-section">
+          <PipelineSection />
+        </div>
+
+        <InkDivider />
+
+        <div id="history-section">
+          <HistorySection isLoggedIn={!!user} refreshTrigger={historyRefresh} />
+        </div>
+
+        <div id="upload-section">
+          <UploadSection isLoggedIn={!!user} />
+        </div>
+
+        <Footer />
+      </main>
+
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onLogin={login}
+          onRegister={register}
+        />
+      )}
+    </>
+  )
+}
+
+function InkDivider({ flip = false }: { flip?: boolean }) {
+  return (
+    <div className={`relative h-16 overflow-hidden ${flip ? 'scale-y-[-1]' : ''}`}>
+      <svg
+        viewBox="0 0 1400 64"
+        className="absolute inset-0 w-full h-full"
+        preserveAspectRatio="none"
+      >
+        <path
+          d="M0,0 C200,64 400,0 700,32 C1000,64 1200,0 1400,32 L1400,64 L0,64 Z"
+          fill="rgba(196,30,58,0.04)"
+        />
+        <path
+          d="M0,20 C150,64 350,8 600,36 C850,64 1100,8 1400,40 L1400,64 L0,64 Z"
+          fill="rgba(196,30,58,0.02)"
+        />
+      </svg>
+      <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-crimson/20 to-transparent" />
+    </div>
+  )
+}

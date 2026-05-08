@@ -1,0 +1,134 @@
+services:
+  # ── Helios API ──────────────────────────────────────────────────────────────
+  - type: web
+    name: helios-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: helios-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: CHROMA_HOST
+        fromService:
+          name: helios-chroma
+          type: web
+          property: host
+      - key: CHROMA_PORT
+        value: "8000"
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+      - key: MINIO_BUCKET
+        value: helios-docs
+      - key: CORS_ALLOWED_ORIGINS
+        sync: false
+
+  # ── Celery Worker ───────────────────────────────────────────────────────────
+  - type: worker
+    name: helios-worker
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A workers.celery_app worker --loglevel=info --concurrency=2
+    plan: starter
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: helios-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: CHROMA_HOST
+        fromService:
+          name: helios-chroma
+          type: web
+          property: host
+      - key: CHROMA_PORT
+        value: "8000"
+      - key: MINIO_ENDPOINT
+        sync: false
+      - key: MINIO_ACCESS_KEY
+        sync: false
+      - key: MINIO_SECRET_KEY
+        sync: false
+
+  # ── Celery Beat ─────────────────────────────────────────────────────────────
+  - type: worker
+    name: helios-beat
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerCommand: celery -A workers.celery_app beat --loglevel=info
+    plan: starter
+    envVars:
+      - key: CELERY_BROKER_URL
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          name: helios-redis
+          type: redis
+          property: connectionString
+
+  # ── ChromaDB ────────────────────────────────────────────────────────────────
+  - type: web
+    name: helios-chroma
+    runtime: docker
+    dockerContext: .
+    dockerfilePath: ./Dockerfile.chroma
+    plan: starter
+    disk:
+      name: chroma-data
+      mountPath: /chroma/.chroma
+      sizeGB: 5
+
+databases:
+  - name: helios-postgres
+    databaseName: helios
+    user: helios
+    plan: starter
+
+  - name: helios-redis
+    plan: starter
