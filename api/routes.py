@@ -581,8 +581,8 @@ async def version():
     return {"version": "1.0.0", "environment": cfg.app_env}
 
 
-@router.get("/health/circuits", dependencies=[Depends(CurrentUser)])
-async def circuit_breaker_status():
-    """Return state of all registered circuit breakers (authenticated admins only)."""
+@router.get("/health/circuits")
+async def circuit_breaker_status(current_user: CurrentUser):
+    """Return state of all registered circuit breakers (authenticated users only)."""
     from resilience.circuit_breaker import list_breakers
     return {"circuits": list_breakers()}

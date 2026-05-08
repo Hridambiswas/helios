@@ -39,6 +39,7 @@ class HeliosState(TypedDict, total=False):
     error: Optional[str]
     failed_agent: Optional[str]
     pipeline_start_ms: Optional[float]   # wall-clock start for per-node latency budgeting
+    pipeline_version: Optional[str]
 
 
 # ── Agent singletons ──────────────────────────────────────────────────────────

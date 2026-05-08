@@ -92,7 +92,7 @@ Now produce the final answer:"""
             HumanMessage(content=user_msg),
         ]
         response = self._llm.invoke(messages, timeout=45)
-        answer = response.content.strip()
+        answer = (response.content if isinstance(response.content, str) else str(response.content)).strip()
 
         # Extract cited doc IDs from the answer
         import re

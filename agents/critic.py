@@ -100,7 +100,7 @@ Minimum passing threshold: {cfg.critic_min_score}"""
             HumanMessage(content=user_msg),
         ]
         response = self._llm.invoke(messages, timeout=30)
-        raw = response.content.strip()
+        raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
 
         try:
             scores = json.loads(raw)
