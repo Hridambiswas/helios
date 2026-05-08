@@ -62,7 +62,7 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
   }, [handleMouseMove])
 
   const submit = () => {
-    const q = query.trim()
+    const q = query.trim().slice(0, 500)
     if (!q) return
     onQuerySubmit(q)
     setQuery('')
