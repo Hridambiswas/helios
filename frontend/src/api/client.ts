@@ -78,7 +78,7 @@ export const auth = {
 
 export const queries = {
   run: (query: string) => api.post<QueryResponse>('/query', { query }),
-  history: (limit = 20) => api.get<HistoryItem[]>(`/query/history?limit=${limit}`),
+  history: (limit = 20, offset = 0) => api.get<HistoryItem[]>(`/query/history?limit=${limit}&offset=${offset}`),
   get: (id: string) => api.get<HistoryItem>(`/query/${id}`),
 }
 
