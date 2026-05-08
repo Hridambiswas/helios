@@ -42,9 +42,10 @@ export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
       loadDocs()
     } catch (e: unknown) {
       clearInterval(interval)
+      setProgress(0)
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setStatus('error')
-      setMessage(msg ?? 'Upload failed')
+      setMessage(msg ?? 'Upload failed — check file type and size (max 50 MB)')
     }
   }
 
