@@ -70,6 +70,11 @@ class Settings(BaseSettings):
     executor_timeout_seconds: int = 15
     critic_min_score: float = 0.7
 
+
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    rate_limit_per_user: int = 7
+    rate_limit_window_seconds: int = 60
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
