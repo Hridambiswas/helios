@@ -383,13 +383,18 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
 # ── Documents (read path — CQRS) ──────────────────────────────────────────────
 
 @router.get("/documents", response_model=list[dict])
-async def list_documents(current_user: CurrentUser, limit: int = Query(50, ge=1, le=200)):
+async def list_documents(
+    current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
     async with get_read_session() as session:
         result = await session.execute(
             select(Document)
             .where(Document.uploaded_by == current_user.id)
             .order_by(desc(Document.created_at))
             .limit(limit)
+            .offset(offset)
         )
         docs = list(result.scalars().all())
     return [
@@ -398,6 +403,49 @@ async def list_documents(current_user: CurrentUser, limit: int = Query(50, ge=1,
          "created_at": d.created_at.isoformat()}
         for d in docs
     ]
+
+
+@router.get("/documents/{doc_id}", response_model=dict)
+async def get_document(doc_id: str, current_user: CurrentUser):
+    async with get_read_session() as session:
+        result = await session.execute(select(Document).where(Document.id == doc_id))
+        doc = result.scalar_one_or_none()
+    if not doc or doc.uploaded_by != current_user.id:
+        raise HTTPException(404, "Document not found")
+    return {
+        "id": doc.id, "filename": doc.filename, "chunk_count": doc.chunk_count,
+        "size_bytes": doc.size_bytes, "indexed": doc.indexed,
+        "content_type": doc.content_type, "minio_key": doc.minio_key,
+        "created_at": doc.created_at.isoformat(),
+    }
+
+
+@router.delete("/documents/{doc_id}", status_code=204)
+async def delete_document(doc_id: str, current_user: CurrentUser):
+    """Delete document from MinIO, ChromaDB, and PostgreSQL."""
+    from sqlalchemy import delete as sa_delete
+    async with get_read_session() as session:
+        result = await session.execute(select(Document).where(Document.id == doc_id))
+        doc = result.scalar_one_or_none()
+    if not doc or doc.uploaded_by != current_user.id:
+        raise HTTPException(404, "Document not found")
+
+    chunk_count = doc.chunk_count or 0
+    chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(chunk_count)]
+
+    try:
+        minio_delete(doc.minio_key)
+    except Exception:
+        pass
+    try:
+        if chunk_ids:
+            chroma_delete_batch(chunk_ids)
+    except Exception:
+        pass
+
+    async with get_session() as session:
+        await session.execute(sa_delete(Document).where(Document.id == doc_id))
+    logger.info("Deleted document %s (%s)", doc_id, doc.filename)
 
 
 # ── Health ────────────────────────────────────────────────────────────────────
