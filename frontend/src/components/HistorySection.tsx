@@ -79,8 +79,8 @@ export function HistorySection({ isLoggedIn, refreshTrigger }: {
             />
           </div>
           <a
-            href="/api/v1/query/history/export"
-            download
+            href={`${import.meta.env.VITE_API_URL ?? ''}/api/v1/query/history/export`}
+            download="helios-history.csv"
             className="flex items-center gap-1.5 font-mono text-[10px] text-[#555] hover:text-crimson border border-white/10 hover:border-crimson/30 px-3 py-2 transition-all uppercase"
           >
             <Download size={11} />
