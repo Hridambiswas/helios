@@ -31,9 +31,12 @@ def _get_client() -> Minio:
 def ensure_bucket() -> None:
     """Create the bucket if it doesn't exist (idempotent)."""
     client = _get_client()
-    if not client.bucket_exists(cfg.minio_bucket):
-        client.make_bucket(cfg.minio_bucket)
-        logger.info("MinIO bucket created: %s", cfg.minio_bucket)
+    bucket = cfg.minio_bucket
+    if not client.bucket_exists(bucket):
+        client.make_bucket(bucket)
+        logger.info("MinIO bucket created: %s", bucket)
+    else:
+        logger.debug("MinIO bucket already exists: %s", bucket)
 
 
 def upload(key: str, data: bytes | BinaryIO, content_type: str = "application/octet-stream") -> str:
