@@ -74,11 +74,15 @@ class active_pipeline:
     async def __aenter__(self) -> "active_pipeline":
         global _active_pipelines
         _active_pipelines += 1
+        from observability.metrics import active_pipelines_gauge
+        active_pipelines_gauge.set(_active_pipelines)
         return self
 
     async def __aexit__(self, *_: object) -> None:
         global _active_pipelines
         _active_pipelines -= 1
+        from observability.metrics import active_pipelines_gauge
+        active_pipelines_gauge.set(_active_pipelines)
 
 
 def get_active_pipeline_count() -> int:
