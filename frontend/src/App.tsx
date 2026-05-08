@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Hero } from './components/Hero'
 import { QueryInterface } from './components/QueryInterface'
 import { PipelineSection } from './components/PipelineSection'
@@ -107,7 +107,30 @@ export default function App() {
           onRegister={register}
         />
       )}
+
+      <ScrollToTop />
     </>
+  )
+}
+
+function ScrollToTop() {
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    const handler = () => setVisible(window.scrollY > 400)
+    window.addEventListener('scroll', handler, { passive: true })
+    return () => window.removeEventListener('scroll', handler)
+  }, [])
+  if (!visible) return null
+  return (
+    <button
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+      className="fixed bottom-6 right-6 z-50 w-10 h-10 bg-ink border border-crimson/30 hover:border-crimson flex items-center justify-center text-crimson hover:bg-crimson/10 transition-all"
+      aria-label="Scroll to top"
+    >
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor">
+        <path d="M6 1L11 8H1L6 1Z" />
+      </svg>
+    </button>
   )
 }
 
