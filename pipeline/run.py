@@ -17,6 +17,7 @@ from observability.metrics import pipeline_latency_histogram, pipeline_requests_
 from observability.tracing import span
 
 _PIPELINE_TIMEOUT_SECONDS = 120
+_PIPELINE_VERSION = "1.0.0"
 
 logger = logging.getLogger("helios.pipeline.run")
 
@@ -160,6 +161,7 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
         "critic_passed": None,
         "error": None,
         "pipeline_start_ms": time.perf_counter() * 1000,
+        "pipeline_version": _PIPELINE_VERSION,
         **extra,
     }
 
