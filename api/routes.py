@@ -269,10 +269,10 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
 
     # ── Extension whitelist ───────────────────────────────────────────────────
     ext = pathlib.Path(safe_name).suffix.lower()
-    if ext not in cfg.allowed_upload_extensions:
+    if ext not in cfg.allowed_extensions_list:
         raise HTTPException(
             400,
-            detail=f"File type '{ext}' not allowed. Permitted: {cfg.allowed_upload_extensions}",
+            detail=f"File type '{ext}' not allowed. Permitted: {cfg.allowed_extensions_list}",
         )
 
     ensure_bucket()

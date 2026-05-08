@@ -3,9 +3,8 @@
 
 from __future__ import annotations
 from functools import lru_cache
-from typing import Any
 import json
-from pydantic import SecretStr, model_validator
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -102,26 +101,30 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
 
     # ── Security ──────────────────────────────────────────────────────────────
-    cors_allowed_origins: list[str] = []
+    cors_allowed_origins: str = ""
     max_upload_bytes: int = 52_428_800  # 50 MB
     trusted_proxy_count: int = 0
-    allowed_upload_extensions: list[str] = [".txt", ".md", ".pdf", ".csv", ".json", ".rst"]
+    allowed_upload_extensions: str = ".txt,.md,.pdf,.csv,.json,.rst"
 
-    @model_validator(mode="before")
-    @classmethod
-    def _parse_list_env_vars(cls, values: Any) -> Any:
-        if not isinstance(values, dict):
-            return values
-        for field in ("cors_allowed_origins", "allowed_upload_extensions"):
-            v = values.get(field)
-            if isinstance(v, str):
-                v = v.strip()
-                try:
-                    parsed = json.loads(v)
-                    values[field] = parsed
-                except (json.JSONDecodeError, ValueError):
-                    values[field] = [i.strip() for i in v.split(",") if i.strip()]
-        return values
+    @property
+    def cors_origins_list(self) -> list[str]:
+        v = self.cors_allowed_origins.strip()
+        if not v:
+            return []
+        try:
+            return json.loads(v)  # type: ignore[no-any-return]
+        except (json.JSONDecodeError, ValueError):
+            return [i.strip() for i in v.split(",") if i.strip()]
+
+    @property
+    def allowed_extensions_list(self) -> list[str]:
+        v = self.allowed_upload_extensions.strip()
+        if not v:
+            return []
+        try:
+            return json.loads(v)  # type: ignore[no-any-return]
+        except (json.JSONDecodeError, ValueError):
+            return [i.strip() for i in v.split(",") if i.strip()]
     ws_max_message_bytes: int = 65_536      # 64 KB per WebSocket message
     ws_max_connections_per_user: int = 3    # concurrent WS sessions per user
 

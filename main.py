@@ -58,7 +58,7 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ─────────────────────────────────────────────────────────────────
-    origins = ["*"] if cfg.is_development else cfg.cors_allowed_origins
+    origins = ["*"] if cfg.is_development else cfg.cors_origins_list
     app.add_middleware(
         CORSMiddleware,
         allow_origins=origins,
