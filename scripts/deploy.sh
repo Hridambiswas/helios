@@ -31,7 +31,7 @@ echo "==> Starting services..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 echo "==> Waiting for DB to be ready..."
-sleep 8
+timeout 60 bash -c 'until docker compose exec postgres pg_isready -U helios; do sleep 2; done'
 
 echo "==> Running migrations..."
 docker compose -f docker-compose.yml -f docker-compose.prod.yml exec api alembic upgrade head
