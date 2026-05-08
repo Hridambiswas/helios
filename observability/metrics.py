@@ -95,3 +95,9 @@ circuit_breaker_trips_counter = Counter(
     "Total times a circuit breaker transitioned to OPEN",
     ["circuit"],
 )
+
+bulkhead_rejected_counter = Counter(
+    "helios_bulkhead_rejected_total",
+    "Requests rejected by bulkhead isolation",
+    ["agent"],
+)
