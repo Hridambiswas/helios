@@ -2,22 +2,36 @@ import { useState, useRef } from 'react'
 import { Upload, FileText, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { documents } from '../api/client'
 
+function formatBytes(bytes: number) {
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
 export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   const [dragging, setDragging] = useState(false)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [progress, setProgress] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
 
   if (!isLoggedIn) return null
 
   const upload = async (file: File) => {
+    setSelectedFile(file)
     setStatus('uploading')
     setMessage('')
+    setProgress(0)
+    const interval = setInterval(() => setProgress(p => Math.min(p + 8, 90)), 300)
     try {
       const { data } = await documents.upload(file)
+      clearInterval(interval)
+      setProgress(100)
       setStatus('done')
       setMessage(`Ingested ${data.chunk_count} chunks from "${data.filename}"`)
     } catch (e: unknown) {
+      clearInterval(interval)
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
       setStatus('error')
       setMessage(msg ?? 'Upload failed')
@@ -73,9 +87,9 @@ export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
               </div>
             )}
 
-            <div>
+            <div className="w-full max-w-sm">
               <p className="text-white/70 text-sm">
-                {status === 'uploading' ? 'Chunking, embedding, indexing...' :
+                {status === 'uploading' ? `Processing "${selectedFile?.name}"…` :
                  status === 'done' ? message :
                  status === 'error' ? message :
                  'Drop a file here or click to browse'}
@@ -84,6 +98,17 @@ export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                 <p className="font-mono text-[10px] text-[#444] mt-1 tracking-wider">
                   .TXT · .MD · .PDF · .CSV · .JSON · .RST · max 50 MB
                 </p>
+              )}
+              {status === 'uploading' && (
+                <div className="mt-3">
+                  <div className="flex justify-between font-mono text-[10px] text-[#444] mb-1">
+                    <span>{selectedFile ? formatBytes(selectedFile.size) : ''}</span>
+                    <span>{progress}%</span>
+                  </div>
+                  <div className="h-0.5 bg-white/5">
+                    <div className="h-full bg-crimson transition-all duration-300" style={{ width: `${progress}%` }} />
+                  </div>
+                </div>
               )}
             </div>
 
