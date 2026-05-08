@@ -17,11 +17,35 @@ from observability.metrics import retrieval_docs_histogram, retrieval_score_summ
 logger = logging.getLogger("helios.agents.retriever")
 
 
+def _reciprocal_rank_fusion(
+    ranked_lists: list[list[dict]],
+    k: int = 60,
+) -> list[dict]:
+    """
+    Combine multiple ranked result lists using Reciprocal Rank Fusion (RRF).
+
+    RRF score = Σ 1/(k + rank_i) across all lists.
+    Outperforms simple score addition when list scales differ.
+    """
+    rrf_scores: dict[str, float] = {}
+    hit_by_id: dict[str, dict] = {}
+
+    for ranked in ranked_lists:
+        for rank, hit in enumerate(ranked, start=1):
+            doc_id = hit["id"]
+            rrf_scores[doc_id] = rrf_scores.get(doc_id, 0.0) + 1.0 / (k + rank)
+            if doc_id not in hit_by_id or hit.get("score", 0) > hit_by_id[doc_id].get("score", 0):
+                hit_by_id[doc_id] = hit
+
+    merged = []
+    for doc_id, rrf_score in sorted(rrf_scores.items(), key=lambda x: x[1], reverse=True):
+        entry = {**hit_by_id[doc_id], "score": rrf_score}
+        merged.append(entry)
+    return merged
+
+
 def _deduplicate(hits: list[dict]) -> list[dict]:
-    """
-    Merge results from multiple retrieval paths.
-    Deduplicates by doc id, keeps the highest score across all sources.
-    """
+    """Deduplicate by doc id, keep highest score. Used for single-list cleanup."""
     seen: dict[str, dict] = {}
     for hit in hits:
         doc_id = hit["id"]
@@ -91,7 +115,9 @@ class RetrieverAgent(BaseAgent):
         except Exception as exc:
             self.logger.warning("BM25 retrieval failed: %s", exc)
 
-        merged = _deduplicate(dense_hits + clip_hits + sparse_hits)[:top_k]
+        merged = _reciprocal_rank_fusion(
+            [h for h in [dense_hits, clip_hits, sparse_hits] if h]
+        )[:top_k]
         retrieval_docs_histogram.labels(source="merged").observe(len(merged))
 
         self.logger.info(
