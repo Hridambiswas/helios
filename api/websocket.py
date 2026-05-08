@@ -74,6 +74,14 @@ async def ws_query(websocket: WebSocket):
     try:
         while True:
             raw = await websocket.receive_text()
+
+            from config import cfg
+            if len(raw.encode()) > cfg.ws_max_message_bytes:
+                await _send(websocket, "error", {
+                    "message": f"Message too large — max {cfg.ws_max_message_bytes // 1024} KB"
+                })
+                continue
+
             try:
                 msg = json.loads(raw)
             except json.JSONDecodeError:
@@ -83,6 +91,10 @@ async def ws_query(websocket: WebSocket):
             query = msg.get("query", "").strip()
             if not query:
                 await _send(websocket, "error", {"message": "Empty query"})
+                continue
+
+            if len(query) > 4096:
+                await _send(websocket, "error", {"message": "Query too long — max 4096 characters"})
                 continue
 
             # Stream progress events while pipeline runs in executor
