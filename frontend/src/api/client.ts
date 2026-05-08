@@ -45,7 +45,7 @@ export type QueryResponse = {
   plan: { query_type: string; subtasks: { id: number; type: string; description: string }[] } | null
   retrieved_docs: { id: string; document: string; metadata: Record<string, unknown>; score: number; source: string }[]
   execution_result: { stdout: string; stderr: string; success: boolean } | null
-  critic_scores: { groundedness: number; faithfulness: number; completeness: number; overall: number; pass: boolean; reasoning: string } | null
+  critic_scores: { groundedness: number; faithfulness: number; completeness: number; overall: number; pass: boolean; reasoning: string; suggestions?: string[] } | null
   critic_passed: boolean | null
   latency_ms: number
   status: string
