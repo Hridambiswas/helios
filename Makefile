@@ -53,6 +53,9 @@ test-fast:
 lint:
 	ruff check .
 
+lint-fix:
+	ruff check . --fix
+
 fmt:
 	ruff format .
 
