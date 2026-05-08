@@ -73,6 +73,13 @@ def delete(doc_id: str) -> None:
     _get_collection().delete(ids=[doc_id])
 
 
+def delete_batch(ids: list[str]) -> None:
+    """Remove a batch of chunk IDs — used by saga compensation."""
+    if ids:
+        _get_collection().delete(ids=ids)
+        logger.info("Deleted %d chunks from ChromaDB", len(ids))
+
+
 # ── Query ops ─────────────────────────────────────────────────────────────────
 
 def query_by_text(text: str, top_k: int | None = None, where: dict | None = None) -> list[dict]:
