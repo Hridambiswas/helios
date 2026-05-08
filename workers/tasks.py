@@ -134,9 +134,15 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
     content = download(minio_key)
     text = content.decode("utf-8", errors="replace")
 
+    chunk_size = cfg.ingest_chunk_size
+    overlap = cfg.ingest_chunk_overlap
+    max_chunks = cfg.ingest_max_chunks
+
     raw_chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 20]
+    if not raw_chunks:
+        # Fallback: treat entire text as one paragraph if no double-newlines
+        raw_chunks = [text.strip()]
     chunks: list[str] = []
-    chunk_size, overlap = 500, 50
     for para in raw_chunks:
         start = 0
         while start < len(para):
@@ -144,6 +150,9 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
             if start + chunk_size >= len(para):
                 break
             start += chunk_size - overlap
+    if len(chunks) > max_chunks:
+        logger.warning("Doc %s produced %d chunks; capping at %d", doc_id, len(chunks), max_chunks)
+        chunks = chunks[:max_chunks]
 
     embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
