@@ -155,14 +155,25 @@ async def query_history(
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    records = await list_user_queries(current_user.id, limit=limit, offset=offset)
-    return records
+    from sqlalchemy import desc
+    async with get_read_session() as session:
+        result = await session.execute(
+            select(QueryRecord)
+            .where(QueryRecord.user_id == current_user.id)
+            .order_by(desc(QueryRecord.created_at))
+            .limit(limit)
+            .offset(offset)
+        )
+        return list(result.scalars().all())
 
 
 @router.get("/query/{query_id}", response_model=QueryHistoryItem)
 async def get_query_detail(query_id: str, current_user: CurrentUser):
-    from storage.crud import get_query
-    record = await get_query(query_id)
+    async with get_read_session() as session:
+        result = await session.execute(
+            select(QueryRecord).where(QueryRecord.id == query_id)
+        )
+        record = result.scalar_one_or_none()
     if not record or record.user_id != current_user.id:
         raise HTTPException(404, "Query not found")
     return record
