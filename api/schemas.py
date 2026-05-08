@@ -153,6 +153,16 @@ class QueryHistoryItem(BaseModel):
     model_config = {"from_attributes": True}
 
 
+# ── Task status (async pipeline polling) ─────────────────────────────────────
+
+class TaskStatusResponse(BaseModel):
+    task_id: str
+    query_id: str | None = None
+    celery_state: str           # PENDING / STARTED / SUCCESS / FAILURE / RETRY
+    status: str                 # queued / running / done / failed
+    result: dict | None = None  # present when celery_state == SUCCESS
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):

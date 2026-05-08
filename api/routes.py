@@ -21,7 +21,7 @@ from api.auth import (
 from api.schemas import (
     RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
     UserResponse, QueryRequest, QueryResponse, IngestResponse,
-    QueryHistoryItem, HealthResponse,
+    QueryHistoryItem, HealthResponse, TaskStatusResponse,
 )
 from storage.database import get_session, ping as db_ping
 from storage.models import QueryRecord, Document, RefreshToken
@@ -174,8 +174,51 @@ async def query(body: QueryRequest, current_user: CurrentUser):
 )
 async def query_async(body: QueryRequest, current_user: CurrentUser):
     """Dispatch pipeline to Celery worker pool; return task ID immediately."""
-    task = run_pipeline_task.delay(body.query, user_id=current_user.id)
-    return {"task_id": task.id, "status": "queued"}
+    query_id = str(uuid.uuid4())
+    async with get_session() as session:
+        record = QueryRecord(
+            id=query_id,
+            user_id=current_user.id,
+            query_text=body.query,
+            status="queued",
+        )
+        session.add(record)
+
+    task = run_pipeline_task.delay(body.query, user_id=current_user.id, query_id=query_id)
+    return {"task_id": task.id, "query_id": query_id, "status": "queued"}
+
+
+@router.get("/query/task/{task_id}", response_model=TaskStatusResponse)
+async def get_task_status(task_id: str, current_user: CurrentUser):
+    """Poll the Celery task state for an async pipeline request."""
+    from celery.result import AsyncResult
+    from workers.celery_app import app as celery_app
+
+    result = AsyncResult(task_id, app=celery_app)
+    celery_state = result.state  # PENDING / STARTED / SUCCESS / FAILURE / RETRY
+
+    _state_map = {
+        "PENDING": "queued",
+        "STARTED": "running",
+        "RETRY": "running",
+        "SUCCESS": "done",
+        "FAILURE": "failed",
+    }
+    status = _state_map.get(celery_state, "unknown")
+
+    payload: dict | None = None
+    if celery_state == "SUCCESS" and isinstance(result.result, dict):
+        payload = result.result
+
+    query_id_header = result.info.get("query_id") if isinstance(result.info, dict) else None
+
+    return TaskStatusResponse(
+        task_id=task_id,
+        query_id=query_id_header,
+        celery_state=celery_state,
+        status=status,
+        result=payload,
+    )
 
 
 # ── Query (read path — CQRS: routed to read replica) ─────────────────────────
