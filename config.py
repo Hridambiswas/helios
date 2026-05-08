@@ -5,7 +5,7 @@ from __future__ import annotations
 from functools import lru_cache
 from typing import Any
 import json
-from pydantic import SecretStr, field_validator
+from pydantic import SecretStr, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -107,15 +107,21 @@ class Settings(BaseSettings):
     trusted_proxy_count: int = 0
     allowed_upload_extensions: list[str] = [".txt", ".md", ".pdf", ".csv", ".json", ".rst"]
 
-    @field_validator("cors_allowed_origins", "allowed_upload_extensions", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def parse_str_list(cls, v: Any) -> Any:
-        if isinstance(v, str):
-            v = v.strip()
-            if v.startswith("["):
-                return json.loads(v)
-            return [i.strip() for i in v.split(",") if i.strip()]
-        return v
+    def _parse_list_env_vars(cls, values: Any) -> Any:
+        if not isinstance(values, dict):
+            return values
+        for field in ("cors_allowed_origins", "allowed_upload_extensions"):
+            v = values.get(field)
+            if isinstance(v, str):
+                v = v.strip()
+                try:
+                    parsed = json.loads(v)
+                    values[field] = parsed
+                except (json.JSONDecodeError, ValueError):
+                    values[field] = [i.strip() for i in v.split(",") if i.strip()]
+        return values
     ws_max_message_bytes: int = 65_536      # 64 KB per WebSocket message
     ws_max_connections_per_user: int = 3    # concurrent WS sessions per user
 
