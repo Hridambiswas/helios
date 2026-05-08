@@ -65,3 +65,10 @@ media/
 # Eval output (keep directory, ignore generated reports)
 eval/reports/*.json
 eval/reports/*.csv
+
+# Frontend build artifacts
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
