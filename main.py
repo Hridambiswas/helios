@@ -16,6 +16,7 @@ from observability.tracing import setup_tracing
 from api.routes import router
 from api.websocket import ws_router
 from api.middleware import RequestIDMiddleware, RateLimitMiddleware
+from api.security import SecurityHeadersMiddleware, AuthBruteForceMiddleware
 from gateway.router import GatewayMiddleware
 from storage.database import create_tables, close_engine
 from storage.object_store import ensure_bucket
@@ -57,15 +58,18 @@ def create_app() -> FastAPI:
     )
 
     # ── CORS ─────────────────────────────────────────────────────────────────
+    origins = ["*"] if cfg.is_development else cfg.cors_allowed_origins
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"] if cfg.is_development else [],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
 
     # ── Middleware (outermost first — executed in reverse order) ─────────────
+    app.add_middleware(SecurityHeadersMiddleware)
+    app.add_middleware(AuthBruteForceMiddleware)
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(GatewayMiddleware)
