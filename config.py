@@ -98,6 +98,12 @@ class Settings(BaseSettings):
     rate_limit_per_user: int = 7
     rate_limit_window_seconds: int = 60
 
+    # ── Security ──────────────────────────────────────────────────────────────
+    cors_allowed_origins: list[str] = []
+    max_upload_bytes: int = 52_428_800  # 50 MB
+    trusted_proxy_count: int = 0
+    allowed_upload_extensions: list[str] = [".txt", ".md", ".pdf", ".csv", ".json", ".rst"]
+
     @property
     def is_production(self) -> bool:
         return self.app_env == "production"
