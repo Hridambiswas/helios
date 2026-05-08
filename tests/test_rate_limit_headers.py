@@ -41,7 +41,6 @@ class TestRateLimitHeaders:
         assert "X-RateLimit-Limit" in resp.headers
 
     def test_x_ratelimit_limit_matches_config(self, client):
-        from config import cfg
         resp = _health_resp(client)
         # Health is excluded from rate limiting — header should not appear there
         # Use a non-excluded path instead — test the middleware logic directly
