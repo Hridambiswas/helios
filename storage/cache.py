@@ -18,6 +18,7 @@ _redis: aioredis.Redis | None = None
 TTL_SHORT = 60          # ephemeral — live streaming state
 TTL_MEDIUM = 300        # 5 min — query in-progress
 TTL_LONG = 3600         # 1 hr — retrieved docs, embeddings
+TTL_DAY = 86_400        # 24 hr — user preferences, infrequently changing data
 
 
 def _client() -> aioredis.Redis:
