@@ -188,3 +188,29 @@ body::before {
   0%, 100% { box-shadow: 0 0 4px var(--crimson); }
   50% { box-shadow: 0 0 16px var(--crimson), 0 0 32px rgba(196,30,58,0.3); }
 }
+
+/* Slide-up animation for result cards and toasts */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slide-up 0.25s ease-out;
+}
+
+/* Flicker effect for logo */
+@keyframes flicker {
+  0%, 96%, 100% { opacity: 1; }
+  97% { opacity: 0.85; }
+  98% { opacity: 1; }
+  99% { opacity: 0.9; }
+}
+.animate-flicker {
+  animation: flicker 6s ease-in-out infinite;
+}
+
+/* Mobile-friendly touch targets */
+@media (max-width: 640px) {
+  .card-dark { border-radius: 0; }
+  button, a { min-height: 36px; }
+}
