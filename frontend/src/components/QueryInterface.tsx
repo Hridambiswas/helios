@@ -2,6 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader } from 'lucide-react'
 import { queries, connectQueryWS, type QueryResponse } from '../api/client'
 
+const GUEST_KEY = 'helios_guest_queries'
+const getGuestCount = () => parseInt(localStorage.getItem(GUEST_KEY) ?? '0', 10)
+const incGuestCount = () => localStorage.setItem(GUEST_KEY, String(getGuestCount() + 1))
+
 type PipelineStep = 'idle' | 'planning' | 'retrieving' | 'executing' | 'evaluating' | 'done' | 'error'
 
 const STEP_LABELS: Record<string, string> = {
@@ -24,9 +28,11 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
 
 const STEPS: PipelineStep[] = ['planning', 'retrieving', 'executing', 'evaluating', 'done']
 
-export function QueryInterface({ initialQuery, onNewResult }: {
+export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRequired }: {
   initialQuery?: string
   onNewResult?: (r: QueryResponse) => void
+  isLoggedIn?: boolean
+  onAuthRequired?: (q: string) => void
 }) {
   const [query, setQuery] = useState(initialQuery ?? '')
   const [step, setStep] = useState<PipelineStep>('idle')
@@ -46,6 +52,12 @@ export function QueryInterface({ initialQuery, onNewResult }: {
 
   const runQuery = async (q: string) => {
     if (!q.trim() || step !== 'idle') return
+
+    if (!isLoggedIn && getGuestCount() >= 1) {
+      onAuthRequired?.(q)
+      return
+    }
+
     setResult(null)
     setErrorMsg('')
 
@@ -93,6 +105,7 @@ export function QueryInterface({ initialQuery, onNewResult }: {
         const { data } = await queries.run(q)
         setResult(data)
         setStep('done')
+        if (!isLoggedIn) incGuestCount()
         onNewResult?.(data)
       } catch (e: unknown) {
         const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail

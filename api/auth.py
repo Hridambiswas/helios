@@ -144,6 +144,25 @@ async def get_current_user(token: Annotated[str, Depends(_oauth2_scheme)]) -> Us
 
 CurrentUser = Annotated[User, Depends(get_current_user)]
 
+_oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
+
+
+async def get_current_user_optional(
+    token: Annotated[str | None, Depends(_oauth2_scheme_optional)],
+) -> User | None:
+    if not token:
+        return None
+    try:
+        payload = _decode_token(token)
+        if payload.get("type") != "access":
+            return None
+        return await get_user_by_id(payload["sub"])
+    except Exception:
+        return None
+
+
+OptionalUser = Annotated[User | None, Depends(get_current_user_optional)]
+
 
 async def refresh_access_token(refresh_token: str) -> TokenResponse:
     payload = _decode_token(refresh_token)

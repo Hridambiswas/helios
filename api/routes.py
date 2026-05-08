@@ -15,7 +15,7 @@ from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, desc
 
 from api.auth import (
-    CurrentUser, get_user_by_username, create_user,
+    CurrentUser, OptionalUser, get_user_by_username, create_user,
     verify_password, issue_tokens, refresh_access_token,
 )
 from api.schemas import (
@@ -108,39 +108,43 @@ async def me(current_user: CurrentUser):
     response_model=QueryResponse,
     dependencies=[Depends(_backpressure_guard)],
 )
-async def query(body: QueryRequest, current_user: CurrentUser):
-    """Run the full Helios pipeline synchronously."""
+async def query(body: QueryRequest, current_user: OptionalUser):
+    """Run the full Helios pipeline. Auth is optional — first query is free for guests."""
     query_id = str(uuid.uuid4())
     t0 = time.perf_counter()
 
-    async with get_session() as session:
-        record = QueryRecord(
-            id=query_id,
-            user_id=current_user.id,
-            query_text=body.query,
-            status="running",
-        )
-        session.add(record)
+    if current_user:
+        async with get_session() as session:
+            record = QueryRecord(
+                id=query_id,
+                user_id=current_user.id,
+                query_text=body.query,
+                status="running",
+            )
+            session.add(record)
 
     async with active_pipeline():
-        state = await asyncio.to_thread(run_pipeline, body.query, user_id=current_user.id)
+        state = await asyncio.to_thread(
+            run_pipeline, body.query, user_id=current_user.id if current_user else None
+        )
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
     status_str = "done" if not state.get("error") else "failed"
 
-    async with get_session() as session:
-        result = await session.execute(select(QueryRecord).where(QueryRecord.id == query_id))
-        rec = result.scalar_one_or_none()
-        if rec is None:
-            raise HTTPException(500, detail="Query record lost — storage error")
-        rec.answer = state.get("answer")
-        rec.plan = state.get("plan")
-        rec.retrieved_docs = [
-            {"id": d["id"], "score": d.get("score", 0)} for d in state.get("retrieved_docs", [])
-        ]
-        rec.critic_scores = state.get("critic_scores")
-        rec.latency_ms = elapsed_ms
-        rec.status = status_str
+    if current_user:
+        async with get_session() as session:
+            result = await session.execute(select(QueryRecord).where(QueryRecord.id == query_id))
+            rec = result.scalar_one_or_none()
+            if rec:
+                rec.answer = state.get("answer")
+                rec.plan = state.get("plan")
+                rec.retrieved_docs = [
+                    {"id": d["id"], "score": d.get("score", 0)}
+                    for d in state.get("retrieved_docs", [])
+                ]
+                rec.critic_scores = state.get("critic_scores")
+                rec.latency_ms = elapsed_ms
+                rec.status = status_str
 
     if state.get("error"):
         raise HTTPException(

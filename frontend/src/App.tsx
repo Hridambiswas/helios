@@ -14,7 +14,17 @@ export default function App() {
   const { user, loading, login, register, logout } = useAuth()
   const [showAuth, setShowAuth] = useState(false)
   const [pendingQuery, setPendingQuery] = useState<string | undefined>()
+  const [pendingGuestQuery, setPendingGuestQuery] = useState<string | undefined>()
   const [historyRefresh, setHistoryRefresh] = useState(0)
+
+  // After login/register, auto-run the query the guest was trying to submit
+  useEffect(() => {
+    if (user && pendingGuestQuery) {
+      handleQuerySubmit(pendingGuestQuery)
+      setPendingGuestQuery(undefined)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user])
 
   if (loading) {
     return (
@@ -34,6 +44,11 @@ export default function App() {
   const handleQuerySubmit = (q: string) => {
     setPendingQuery(undefined)
     setTimeout(() => setPendingQuery(q), 0)
+  }
+
+  const handleAuthRequired = (q: string) => {
+    setPendingGuestQuery(q)
+    setShowAuth(true)
   }
 
   return (
@@ -61,6 +76,8 @@ export default function App() {
           <QueryInterface
             initialQuery={pendingQuery}
             onNewResult={handleNewResult}
+            isLoggedIn={!!user}
+            onAuthRequired={handleAuthRequired}
           />
         </div>
 
