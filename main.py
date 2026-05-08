@@ -64,9 +64,10 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
-    # ── Middleware ────────────────────────────────────────────────────────────
+    # ── Middleware (outermost first — executed in reverse order) ─────────────
     app.add_middleware(RequestIDMiddleware)
     app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(GatewayMiddleware)
 
     # ── Prometheus ────────────────────────────────────────────────────────────
     Instrumentator(
