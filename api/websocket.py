@@ -122,15 +122,22 @@ async def ws_query(websocket: WebSocket):
                 state = await loop.run_in_executor(None, _run)
                 await _send(websocket, "evaluating", {})
 
-                await _send(websocket, "done", {
-                    "answer": state.get("answer", ""),
-                    "critic_scores": state.get("critic_scores"),
-                    "critic_passed": state.get("critic_passed"),
-                    "retrieved_doc_count": len(state.get("retrieved_docs", [])),
-                })
+                if state.get("error"):
+                    from config import cfg
+                    err_msg = state["error"] if cfg.is_development else "Pipeline error — please try again"
+                    await _send(websocket, "error", {"message": err_msg})
+                else:
+                    await _send(websocket, "done", {
+                        "answer": state.get("answer", ""),
+                        "critic_scores": state.get("critic_scores"),
+                        "critic_passed": state.get("critic_passed"),
+                        "retrieved_doc_count": len(state.get("retrieved_docs", [])),
+                    })
             except Exception as exc:
                 logger.exception("WS pipeline error: %s", exc)
-                await _send(websocket, "error", {"message": str(exc)})
+                from config import cfg
+                msg = str(exc) if cfg.is_development else "Pipeline error — please try again"
+                await _send(websocket, "error", {"message": msg})
 
     except WebSocketDisconnect:
         logger.info("WS session %s disconnected", session_id)
