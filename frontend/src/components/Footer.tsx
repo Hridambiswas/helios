@@ -53,7 +53,7 @@ export function Footer() {
               GitHub
             </a>
             <a
-              href="/api/v1/docs"
+              href={`${import.meta.env.VITE_API_URL ?? ''}/docs`}
               target="_blank"
               rel="noopener noreferrer"
               className="font-mono text-[10px] text-[#444] hover:text-crimson transition-colors uppercase tracking-wider"
