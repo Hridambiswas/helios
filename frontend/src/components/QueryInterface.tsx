@@ -186,8 +186,8 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
           </div>
           <div className="px-4 pb-2 flex items-center justify-between border-t border-white/5 pt-2">
             <span className="font-mono text-[10px] text-[#333]">Enter to submit · Shift+Enter for newline</span>
-            <span className={`font-mono text-[10px] ${query.length > 3800 ? 'text-crimson' : 'text-[#333]'}`}>
-              {query.length}/4096
+            <span className={`font-mono text-[10px] ${query.length > 450 ? 'text-crimson' : 'text-[#333]'}`}>
+              {query.length}/500
             </span>
           </div>
         </div>
