@@ -6,6 +6,8 @@ import logging
 import time
 from typing import Any, TypedDict, Optional
 
+_PIPELINE_TIMEOUT_SECONDS = 120
+
 from langgraph.graph import StateGraph, END
 
 from agents.planner import PlannerAgent
@@ -35,6 +37,7 @@ class HeliosState(TypedDict, total=False):
     critic_passed: Optional[bool]
     error: Optional[str]
     failed_agent: Optional[str]
+    pipeline_start_ms: Optional[float]   # wall-clock start for per-node latency budgeting
 
 
 # ── Agent singletons ──────────────────────────────────────────────────────────
@@ -156,6 +159,7 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
         "critic_scores": None,
         "critic_passed": None,
         "error": None,
+        "pipeline_start_ms": time.perf_counter() * 1000,
         **extra,
     }
 
