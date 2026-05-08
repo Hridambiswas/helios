@@ -139,7 +139,7 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
   }
 
   const handleSubmit = () => {
-    const q = query.trim()
+    const q = query.trim().slice(0, 500)
     if (!q) return
     setStep('idle')
     setTimeout(() => runQuery(q), 0)
