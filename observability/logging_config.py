@@ -52,5 +52,6 @@ def setup_logging() -> None:
     root_logger.setLevel(getattr(logging, cfg.log_level.upper(), logging.INFO))
 
     # Silence noisy third-party loggers
-    for noisy in ("httpx", "httpcore", "urllib3", "chromadb", "uvicorn.access"):
+    for noisy in ("httpx", "httpcore", "urllib3", "chromadb", "uvicorn.access",
+                  "celery", "kombu", "amqp", "multipart"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
