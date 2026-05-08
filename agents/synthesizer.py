@@ -91,7 +91,7 @@ Now produce the final answer:"""
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
-        response = self._llm.invoke(messages)
+        response = self._llm.invoke(messages, timeout=45)
         answer = response.content.strip()
 
         # Extract cited doc IDs from the answer

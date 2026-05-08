@@ -99,7 +99,7 @@ Minimum passing threshold: {cfg.critic_min_score}"""
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
-        response = self._llm.invoke(messages)
+        response = self._llm.invoke(messages, timeout=30)
         raw = response.content.strip()
 
         try:
