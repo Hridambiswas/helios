@@ -51,6 +51,8 @@ class QueryRecord(Base):
     critic_scores: Mapped[dict | None] = mapped_column(JSON)
     latency_ms: Mapped[float | None] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
+    ip_address: Mapped[str | None] = mapped_column(String(45))  # IPv4 or IPv6
+    user_agent: Mapped[str | None] = mapped_column(String(512))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now, onupdate=_now)
 
