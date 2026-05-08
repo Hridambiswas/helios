@@ -110,7 +110,7 @@ async def ws_query(websocket: WebSocket):
             # Stream progress events while pipeline runs in executor
             await _send(websocket, "planning", {"query": query})
 
-            loop = asyncio.get_event_loop()
+            loop = asyncio.get_running_loop()
             state: dict = {}
 
             def _run() -> dict:
