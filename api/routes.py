@@ -448,6 +448,25 @@ async def delete_document(doc_id: str, current_user: CurrentUser):
     logger.info("Deleted document %s (%s)", doc_id, doc.filename)
 
 
+# ── Stats ────────────────────────────────────────────────────────────────────
+
+@router.get("/stats")
+async def stats():
+    """Public aggregate stats (no auth required)."""
+    from sqlalchemy import func
+    async with get_read_session() as session:
+        query_count = await session.scalar(select(func.count(QueryRecord.id))) or 0
+        doc_count = await session.scalar(select(func.count(Document.id))) or 0
+        user_count = await session.scalar(
+            select(func.count()).select_from(__import__('storage.models', fromlist=['User']).User)
+        ) or 0
+    return {
+        "total_queries": query_count,
+        "total_documents": doc_count,
+        "total_users": user_count,
+    }
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @router.get("/health", response_model=HealthResponse)
