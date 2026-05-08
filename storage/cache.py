@@ -78,6 +78,24 @@ async def incr(namespace: str, key: str, ttl: int = TTL_MEDIUM) -> int:
     return count
 
 
+async def ttl_seconds(namespace: str, key: str) -> int:
+    """Return remaining TTL in seconds, or -1 on miss/error."""
+    try:
+        val = await _client().ttl(_key(namespace, key))
+        return int(val)
+    except Exception:
+        return -1
+
+
+async def get_count(namespace: str, key: str) -> int:
+    """Read current counter value without incrementing; returns 0 on miss/error."""
+    try:
+        raw = await _client().get(_key(namespace, key))
+        return int(raw) if raw is not None else 0
+    except Exception:
+        return 0
+
+
 async def get_many(namespace: str, keys: list[str]) -> dict[str, Any]:
     """Batch GET — returns {key: value} for all keys that hit."""
     client = _client()
