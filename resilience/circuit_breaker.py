@@ -58,6 +58,26 @@ class CircuitBreaker:
     def failure_count(self) -> int:
         return self._failure_count
 
+    def reset(self) -> None:
+        """Force the breaker back to CLOSED and clear failure count."""
+        with self._lock:
+            self._state = CircuitState.CLOSED
+            self._failure_count = 0
+            self._last_failure_time = None
+            self._logger.info("Circuit '%s' manually reset → CLOSED", self.name)
+
+    def status(self) -> dict:
+        """Return a snapshot of the breaker's current state (safe to serialise)."""
+        with self._lock:
+            return {
+                "name": self.name,
+                "state": self._state.value,
+                "failure_count": self._failure_count,
+                "failure_threshold": self.failure_threshold,
+                "recovery_timeout_s": self.recovery_timeout,
+                "last_failure_time": self._last_failure_time,
+            }
+
     # ── Internal state transitions ────────────────────────────────────────────
 
     def _maybe_transition_to_half_open(self) -> None:
@@ -146,3 +166,9 @@ def get_breaker(name: str) -> CircuitBreaker:
                 recovery_timeout=cfg.circuit_breaker_recovery_timeout_seconds,
             )
         return _registry[name]
+
+
+def list_breakers() -> list[dict]:
+    """Return status snapshots for all registered circuit breakers."""
+    with _registry_lock:
+        return [b.status() for b in _registry.values()]
