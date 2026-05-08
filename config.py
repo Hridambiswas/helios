@@ -97,8 +97,9 @@ class Settings(BaseSettings):
     circuit_breaker_recovery_timeout_seconds: float = 30.0
 
     # ── Rate Limiting ─────────────────────────────────────────────────────────
-    rate_limit_per_user: int = 7
+    rate_limit_per_user: int = 60
     rate_limit_window_seconds: int = 60
+    guest_query_limit: int = 1
 
     # ── Security ──────────────────────────────────────────────────────────────
     cors_allowed_origins: str = ""
