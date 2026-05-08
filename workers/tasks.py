@@ -27,7 +27,7 @@ class PipelineTask(Task):
         logger.warning("Task %s retrying: %s", task_id, exc)
 
     def on_success(self, retval, task_id, args, kwargs):
-        logger.info("Task %s completed", task_id)
+        logger.info("Task %s completed successfully", task_id)
 
 
 # ── Pipeline task ─────────────────────────────────────────────────────────────
@@ -55,7 +55,7 @@ def run_pipeline_task(
     from observability.tracing import extract_celery_context
 
     extract_celery_context(self.request.headers or {})
-    logger.info("Task %s: pipeline for user=%s query=%.60s...", self.request.id, user_id, query)
+    logger.info("Task %s: pipeline start user=%s query=%.80s", self.request.id, user_id, query)
 
     t0 = time.perf_counter()
     try:
