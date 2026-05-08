@@ -17,6 +17,7 @@ from sqlalchemy import select, desc
 from api.auth import (
     CurrentUser, OptionalUser, get_user_by_username, create_user,
     verify_password, issue_tokens, refresh_access_token,
+    validate_password_strength,
 )
 from api.schemas import (
     RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
@@ -60,6 +61,9 @@ async def _backpressure_guard() -> None:
 
 @router.post("/auth/register", response_model=TokenResponse, status_code=201)
 async def register(body: RegisterRequest):
+    pw_errors = validate_password_strength(body.password)
+    if pw_errors:
+        raise HTTPException(400, f"Password must contain: {', '.join(pw_errors)}")
     existing = await get_user_by_username(body.username)
     if existing:
         raise HTTPException(400, "Username already taken")

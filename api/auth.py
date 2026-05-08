@@ -26,6 +26,23 @@ _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 # ── Password helpers ──────────────────────────────────────────────────────────
 
+_MIN_PASSWORD_LENGTH = 8
+
+
+def validate_password_strength(password: str) -> list[str]:
+    """Return a list of unmet password requirements, empty if valid."""
+    errors: list[str] = []
+    if len(password) < _MIN_PASSWORD_LENGTH:
+        errors.append(f"at least {_MIN_PASSWORD_LENGTH} characters")
+    if not any(c.isdigit() for c in password):
+        errors.append("at least one digit")
+    if not any(c.isupper() for c in password):
+        errors.append("at least one uppercase letter")
+    if not any(c.islower() for c in password):
+        errors.append("at least one lowercase letter")
+    return errors
+
+
 def hash_password(plain: str) -> str:
     return _pwd_ctx.hash(plain)
 
