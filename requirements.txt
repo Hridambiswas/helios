@@ -57,3 +57,4 @@ pydantic-settings>=2.5.0
 python-dotenv>=1.0.0
 structlog>=24.4.0
 tenacity>=9.0.0
+python-slugify>=8.0.0          # URL-safe slug generation for document names
