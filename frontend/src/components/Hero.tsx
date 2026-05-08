@@ -39,7 +39,6 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
   const submit = () => {
     const q = query.trim()
     if (!q) return
-    if (!isLoggedIn) { onAuthClick(); return }
     onQuerySubmit(q)
     setQuery('')
     document.getElementById('query-section')?.scrollIntoView({ behavior: 'smooth' })
@@ -122,10 +121,11 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
           </div>
           {!isLoggedIn && (
             <p className="text-xs text-[#555] mt-2 font-mono text-center">
+              1 free query — {' '}
               <button onClick={onAuthClick} className="text-crimson hover:text-crimson-light transition-colors">
-                Sign in
+                sign in
               </button>
-              {' '}to run queries
+              {' '}to unlock unlimited
             </p>
           )}
         </div>
