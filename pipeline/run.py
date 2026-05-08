@@ -66,7 +66,9 @@ def route_after_planner(state: HeliosState) -> str:
     After planning: route to retriever if retrieval needed,
     else skip straight to executor (code-only queries).
     """
-    plan = state.get("plan", {})
+    if state.get("error"):
+        return "synthesizer"  # skip retrieval/execution; let synthesizer surface the error
+    plan: dict = state.get("plan") or {}
     if plan.get("requires_retrieval", True):
         return "retriever"
     if plan.get("requires_code", False):
@@ -75,7 +77,7 @@ def route_after_planner(state: HeliosState) -> str:
 
 
 def route_after_retriever(state: HeliosState) -> str:
-    plan = state.get("plan", {})
+    plan: dict = state.get("plan") or {}
     if plan.get("requires_code", False):
         return "executor"
     return "synthesizer"
