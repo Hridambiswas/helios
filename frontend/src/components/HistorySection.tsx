@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react'
-import { Clock, CheckCircle, XCircle, Loader, Search, ChevronDown } from 'lucide-react'
+import { Clock, CheckCircle, XCircle, Loader, Search, ChevronDown, Download } from 'lucide-react'
 import { queries, type HistoryItem } from '../api/client'
 
 function SkeletonRow() {
@@ -66,16 +66,26 @@ export function HistorySection({ isLoggedIn, refreshTrigger }: {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-6">
-          <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#444]" />
-          <input
-            type="text"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Filter queries..."
-            className="w-full bg-white/3 border border-white/10 text-white font-mono text-xs pl-8 pr-3 py-2 outline-none focus:border-crimson/30 transition-colors placeholder-[#333]"
-          />
+        {/* Search + Export */}
+        <div className="flex gap-2 mb-6">
+          <div className="relative flex-1">
+            <Search size={12} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#444]" />
+            <input
+              type="text"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Filter queries..."
+              className="w-full bg-white/3 border border-white/10 text-white font-mono text-xs pl-8 pr-3 py-2 outline-none focus:border-crimson/30 transition-colors placeholder-[#333]"
+            />
+          </div>
+          <a
+            href="/api/v1/query/history/export"
+            download
+            className="flex items-center gap-1.5 font-mono text-[10px] text-[#555] hover:text-crimson border border-white/10 hover:border-crimson/30 px-3 py-2 transition-all uppercase"
+          >
+            <Download size={11} />
+            CSV
+          </a>
         </div>
 
         {loading && (
