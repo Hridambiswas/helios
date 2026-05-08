@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     setup_logging()
     setup_tracing()
     cfg.validate_secrets()
-    logger.info("Helios starting up (env=%s)", cfg.app_env)
+    logger.info("Helios v1.0.0 starting up (env=%s, host=%s:%s)", cfg.app_env, cfg.app_host, cfg.app_port)
 
     await create_tables()
     ensure_bucket()
