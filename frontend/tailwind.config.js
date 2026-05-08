@@ -26,6 +26,7 @@ export default {
         'flicker': 'flicker 3s linear infinite',
         'slide-up': 'slide-up 0.6s ease-out forwards',
         'fade-in': 'fade-in 0.8s ease-out forwards',
+        'spin-slow': 'spin 3s linear infinite',
       },
       keyframes: {
         'pulse-red': {
