@@ -74,6 +74,13 @@ class Settings(BaseSettings):
 
 
 
+
+    # ── Read Replica (CQRS) ───────────────────────────────────────────────────
+    postgres_read_url: str = ""  # Falls back to primary when empty
+
+    # ── API Gateway ───────────────────────────────────────────────────────────
+    canary_percentage: int = 0  # % of traffic to canary pipeline (0 = off)
+
     # ── Backpressure ──────────────────────────────────────────────────────────
     backpressure_queue_depth_threshold: int = 100
     backpressure_active_pipelines_threshold: int = 20
