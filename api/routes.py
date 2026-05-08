@@ -18,15 +18,15 @@ from api.auth import (
     verify_password, issue_tokens, refresh_access_token,
 )
 from api.schemas import (
-    RegisterRequest, TokenResponse, RefreshRequest,
+    RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
     UserResponse, QueryRequest, QueryResponse, IngestResponse,
     QueryHistoryItem, HealthResponse,
 )
 from storage.database import get_session, ping as db_ping
+from storage.models import QueryRecord, Document, RefreshToken
 from storage.read_replica import get_read_session
 from storage.cache import ping as redis_ping
 from storage.object_store import ping as minio_ping, upload, ensure_bucket, delete as minio_delete
-from storage.models import QueryRecord, Document
 from storage.crud import mark_document_indexed
 from retrieval.vector_store import ping as chroma_ping, upsert_batch, delete_batch as chroma_delete_batch
 from pipeline.run import run_pipeline
@@ -79,6 +79,20 @@ async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]):
 @router.post("/auth/refresh", response_model=TokenResponse)
 async def refresh(body: RefreshRequest):
     return await refresh_access_token(body.refresh_token)
+
+
+@router.post("/auth/logout", status_code=204)
+async def logout(body: LogoutRequest, current_user: CurrentUser):
+    """Revoke the supplied refresh token so it can no longer be exchanged."""
+    import hashlib
+    from sqlalchemy import update
+    token_hash = hashlib.sha256(body.refresh_token.encode()).hexdigest()
+    async with get_session() as session:
+        await session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.token_hash == token_hash, RefreshToken.user_id == current_user.id)
+            .values(revoked=True)
+        )
 
 
 @router.get("/auth/me", response_model=UserResponse)
