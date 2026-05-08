@@ -452,9 +452,18 @@ async def delete_document(doc_id: str, current_user: CurrentUser):
 
 @router.get("/health", response_model=HealthResponse)
 async def health():
-    pg = await db_ping()
-    rd = await redis_ping()
-    mn = minio_ping()
-    ch = chroma_ping()
+    import time
+    t0 = time.perf_counter()
+    pg, rd, mn, ch = await asyncio.gather(
+        db_ping(),
+        redis_ping(),
+        asyncio.to_thread(minio_ping),
+        asyncio.to_thread(chroma_ping),
+        return_exceptions=True,
+    )
+    pg = pg is True
+    rd = rd is True
+    mn = mn is True
+    ch = ch is True
     overall = "ok" if all([pg, rd, mn, ch]) else ("degraded" if any([pg, rd]) else "down")
     return HealthResponse(status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch)
