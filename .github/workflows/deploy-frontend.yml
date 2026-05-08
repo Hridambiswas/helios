@@ -8,10 +8,15 @@ on:
       - '.github/workflows/deploy-frontend.yml'
   workflow_dispatch:
 
+concurrency:
+  group: deploy-frontend-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   deploy:
     name: Deploy to Vercel
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
