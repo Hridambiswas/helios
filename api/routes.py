@@ -94,6 +94,7 @@ async def logout(body: LogoutRequest, current_user: CurrentUser):
             .where(RefreshToken.token_hash == token_hash, RefreshToken.user_id == current_user.id)
             .values(revoked=True)
         )
+    logger.info("User %s revoked refresh token", current_user.id)
 
 
 @router.get("/auth/me", response_model=UserResponse)
