@@ -16,6 +16,7 @@ def expire_refresh_tokens() -> dict:
     Runs via asyncio.run since SQLAlchemy sessions are async.
     """
     import asyncio
+    import time
     from datetime import datetime, timezone
     from sqlalchemy import delete
     from storage.database import get_session
@@ -29,12 +30,13 @@ def expire_refresh_tokens() -> dict:
                     (RefreshToken.expires_at < now) | (RefreshToken.revoked == True)  # noqa: E712
                 )
             )
-            deleted = result.rowcount  # type: ignore[union-attr]
-        logger.info("Expired %d refresh tokens", deleted)
-        return deleted
+            return result.rowcount  # type: ignore[union-attr]
 
+    t0 = time.perf_counter()
     deleted = asyncio.run(_cleanup())
-    return {"deleted_tokens": deleted}
+    elapsed_ms = (time.perf_counter() - t0) * 1000
+    logger.info("Expired %d refresh tokens in %.0f ms", deleted, elapsed_ms)
+    return {"deleted_tokens": deleted, "elapsed_ms": round(elapsed_ms, 1)}
 
 
 @app.task(name="workers.beat_tasks.bm25_index_stats")
