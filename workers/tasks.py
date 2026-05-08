@@ -124,14 +124,22 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
     Download document from MinIO, chunk, embed, and upsert into ChromaDB + BM25.
     Runs in Celery worker so HTTP requests don't block the FastAPI event loop.
     """
+    import time as _time
     from storage.object_store import download
     from retrieval.vector_store import upsert_batch
     from retrieval.bm25_search import get_index
     from langchain_community.embeddings import HuggingFaceEmbeddings
     from config import cfg
+    from observability.metrics import (
+        ingest_latency_histogram,
+        ingest_chunk_count_histogram,
+        ingest_bytes_histogram,
+    )
 
+    _t0 = _time.perf_counter()
     logger.info("Ingesting doc %s from MinIO key %s", doc_id, minio_key)
     content = download(minio_key)
+    ingest_bytes_histogram.observe(len(content))
     text = content.decode("utf-8", errors="replace")
 
     chunk_size = cfg.ingest_chunk_size
@@ -166,7 +174,10 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
     from storage.crud import mark_document_indexed
     asyncio.run(mark_document_indexed(doc_id))
 
-    logger.info("Ingested %d chunks for doc %s", len(chunks), doc_id)
+    elapsed_ms = (_time.perf_counter() - _t0) * 1000
+    ingest_chunk_count_histogram.observe(len(chunks))
+    ingest_latency_histogram.observe(elapsed_ms)
+    logger.info("Ingested %d chunks for doc %s in %.0f ms", len(chunks), doc_id, elapsed_ms)
     return {"doc_id": doc_id, "chunk_count": len(chunks)}
 
 
