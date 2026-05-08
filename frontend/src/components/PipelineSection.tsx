@@ -31,7 +31,7 @@ const AGENTS = [
     attrs: [
       { label: 'TIMEOUT', value: '15s' },
       { label: 'SANDBOX', value: 'AST GUARD' },
-      { label: 'BUILTINS', value: 'FILTERED' },
+      { label: 'WHITELIST', value: '14 MODULES' },
     ],
     color: '#6b0a1a',
   },
