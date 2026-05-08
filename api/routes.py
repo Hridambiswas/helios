@@ -78,7 +78,11 @@ async def me(current_user: CurrentUser):
 
 # ── Query ─────────────────────────────────────────────────────────────────────
 
-@router.post("/query", response_model=QueryResponse)
+@router.post(
+    "/query",
+    response_model=QueryResponse,
+    dependencies=[Depends(_backpressure_guard)],
+)
 async def query(body: QueryRequest, current_user: CurrentUser):
     """Run the full Helios pipeline synchronously."""
     query_id = str(uuid.uuid4())
@@ -93,7 +97,8 @@ async def query(body: QueryRequest, current_user: CurrentUser):
         )
         session.add(record)
 
-    state = run_pipeline(body.query, user_id=current_user.id)
+    async with active_pipeline():
+        state = run_pipeline(body.query, user_id=current_user.id)
     elapsed_ms = (time.perf_counter() - t0) * 1000
     status_str = "done" if not state.get("error") else "failed"
 
@@ -133,7 +138,11 @@ async def query(body: QueryRequest, current_user: CurrentUser):
     )
 
 
-@router.post("/query/async", status_code=202)
+@router.post(
+    "/query/async",
+    status_code=202,
+    dependencies=[Depends(_backpressure_guard)],
+)
 async def query_async(body: QueryRequest, current_user: CurrentUser):
     """Dispatch pipeline to Celery worker pool; return task ID immediately."""
     task = run_pipeline_task.delay(body.query, user_id=current_user.id)
