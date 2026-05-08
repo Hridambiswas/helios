@@ -19,6 +19,20 @@ export default function App() {
   const [pendingGuestQuery, setPendingGuestQuery] = useState<string | undefined>()
   const [historyRefresh, setHistoryRefresh] = useState(0)
 
+  // Pre-fill query from ?q= URL parameter so users can share deep links
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const q = params.get('q')
+    if (q) {
+      handleQuerySubmit(q.trim())
+      // Remove the param so refreshing doesn't re-submit
+      const url = new URL(window.location.href)
+      url.searchParams.delete('q')
+      window.history.replaceState({}, '', url.toString())
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // After login/register, auto-run the query the guest was trying to submit
   useEffect(() => {
     if (user && pendingGuestQuery) {
