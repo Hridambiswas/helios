@@ -127,6 +127,12 @@ prod-restart:
 deploy:
 	bash scripts/deploy.sh
 
+## ── Docker cleanup ───────────────────────────────────────────────────────────
+
+prune:
+	docker system prune -f
+	docker volume prune -f
+
 ## ── Help ─────────────────────────────────────────────────────────────────────
 
 help:
