@@ -41,6 +41,9 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Content-Security-Policy"] = (
             "default-src 'none'; frame-ancestors 'none'"
         )
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Embedder-Policy"] = "require-corp"
+        response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
         if cfg.is_production:
             response.headers["Strict-Transport-Security"] = (
                 "max-age=63072000; includeSubDomains; preload"
