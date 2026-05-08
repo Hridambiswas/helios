@@ -63,6 +63,8 @@ class AuthBruteForceMiddleware(BaseHTTPMiddleware):
 
         if count > _BRUTE_MAX:
             logger.warning("Brute-force detected: ip=%s count=%d", client_ip, count)
+            from observability.metrics import brute_force_blocked_counter
+            brute_force_blocked_counter.labels(path=request.url.path).inc()
             return JSONResponse(
                 status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 content={"detail": "Too many login attempts — try again later"},
