@@ -2,8 +2,8 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import uuid
 import logging
+import uuid
 
 from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
@@ -16,6 +16,11 @@ logger = logging.getLogger("helios.api.middleware")
 # Rate limit: max requests per window per IP
 RATE_LIMIT_REQUESTS = 60
 RATE_LIMIT_WINDOW_SECONDS = 60
+
+_EXCLUDED = frozenset({
+    "/api/v1/health", "/metrics", "/docs", "/redoc", "/openapi.json",
+    "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
+})
 
 
 class RequestIDMiddleware(BaseHTTPMiddleware):
@@ -35,10 +40,29 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
     Applies per client IP; health and metrics endpoints are excluded.
     """
 
-    _EXCLUDED = frozenset({"/api/v1/health", "/metrics", "/docs", "/redoc", "/openapi.json"})
+    @staticmethod
+    def _extract_rate_key(request: Request) -> str:
+        """
+        Return user:{user_id} if a valid Bearer token is present,
+        otherwise ip:{client_ip} as a fallback.
+        """
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+            try:
+                from jose import jwt as jose_jwt
+                from config import cfg
+                payload = jose_jwt.decode(
+                    token, cfg.jwt_secret_key, algorithms=[cfg.jwt_algorithm]
+                )
+                return f"user:{payload['sub']}"
+            except Exception:
+                pass
+        client_ip = request.client.host if request.client else "unknown"
+        return f"ip:{client_ip}"
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        if request.url.path in self._EXCLUDED:
+        if request.url.path in _EXCLUDED:
             return await call_next(request)
 
         client_ip = request.client.host if request.client else "unknown"
