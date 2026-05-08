@@ -3,6 +3,8 @@
 
 from __future__ import annotations
 import logging
+import pathlib
+import re
 import time
 import uuid
 from typing import Annotated
@@ -35,6 +37,12 @@ from resilience.saga import Saga, SagaExecutionError
 logger = logging.getLogger("helios.api.routes")
 
 router = APIRouter()
+
+
+def _safe_error(internal: str, public: str = "Internal server error") -> str:
+    """Return detailed message in dev, generic message in production."""
+    from config import cfg
+    return internal if cfg.is_development else public
 
 
 # ── Shared dependencies ───────────────────────────────────────────────────────
@@ -118,7 +126,10 @@ async def query(body: QueryRequest, current_user: CurrentUser):
         rec.status = status_str
 
     if state.get("error"):
-        raise HTTPException(500, detail=state["error"])
+        raise HTTPException(
+            500,
+            detail=_safe_error(state["error"], "Pipeline execution failed"),
+        )
 
     docs = [
         {"id": d["id"], "document": d["document"], "metadata": d.get("metadata", {}),
@@ -190,10 +201,31 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     Steps: MinIO upload → ChromaDB embed+index → BM25 index → PostgreSQL record.
     Any failure triggers compensating transactions in reverse order.
     """
+    from config import cfg
+
+    # ── Filename sanitization (path traversal prevention) ─────────────────────
+    raw_name = pathlib.Path(file.filename or "upload").name
+    safe_name = re.sub(r"[^\w\-.]", "_", raw_name)[:255] or "upload"
+
+    # ── Extension whitelist ───────────────────────────────────────────────────
+    ext = pathlib.Path(safe_name).suffix.lower()
+    if ext not in cfg.allowed_upload_extensions:
+        raise HTTPException(
+            400,
+            detail=f"File type '{ext}' not allowed. Permitted: {cfg.allowed_upload_extensions}",
+        )
+
     ensure_bucket()
     doc_id = str(uuid.uuid4())
-    minio_key = f"docs/{doc_id}/{file.filename}"
+    minio_key = f"docs/{doc_id}/{safe_name}"
     content = await file.read()
+
+    # ── Size limit ────────────────────────────────────────────────────────────
+    if len(content) > cfg.max_upload_bytes:
+        raise HTTPException(
+            413,
+            detail=f"File too large — max {cfg.max_upload_bytes // 1_048_576} MB",
+        )
 
     # ── Prepare chunks + embeddings (before the saga so failures here are cheap) ─
     text = content.decode("utf-8", errors="replace")
@@ -204,13 +236,12 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
             chunks.append(chunk[i: i + 500])
 
     from langchain_openai import OpenAIEmbeddings
-    from config import cfg
     import retrieval.bm25_search as bm25
 
     embedder = OpenAIEmbeddings(model=cfg.openai_embedding_model, api_key=cfg.openai_api_key)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
     embeddings = embedder.embed_documents(chunks)
-    metas = [{"doc_id": doc_id, "filename": file.filename, "chunk_idx": i} for i in range(len(chunks))]
+    metas = [{"doc_id": doc_id, "filename": safe_name, "chunk_idx": i} for i in range(len(chunks))]
 
     # ── Compensators ──────────────────────────────────────────────────────────
     def _delete_minio() -> None:
@@ -228,7 +259,7 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     async def _insert_db() -> None:
         async with get_session() as session:
             session.add(Document(
-                id=doc_id, filename=file.filename,
+                id=doc_id, filename=safe_name,
                 content_type=file.content_type or "text/plain",
                 minio_key=minio_key, chunk_count=len(chunks),
                 size_bytes=len(content), indexed=True,
@@ -269,12 +300,18 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
         await saga.execute()
     except SagaExecutionError as exc:
         logger.error("Ingest saga failed at step '%s': %s", exc.step, exc.cause)
-        raise HTTPException(500, detail=f"Ingest failed at '{exc.step}': {exc.cause}")
+        raise HTTPException(
+            500,
+            detail=_safe_error(
+                f"Ingest failed at '{exc.step}': {exc.cause}",
+                "Document ingest failed — please try again",
+            ),
+        )
 
     await mark_document_indexed(doc_id)
     logger.info("Ingested doc %s: %d chunks", doc_id, len(chunks))
     return IngestResponse(
-        document_id=doc_id, filename=file.filename,
+        document_id=doc_id, filename=safe_name,
         chunk_count=len(chunks), size_bytes=len(content), indexed=True,
     )
 
