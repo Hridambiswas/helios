@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check } from 'lucide-react'
+import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check, Share2 } from 'lucide-react'
 import { queries, connectQueryWS, type QueryResponse } from '../api/client'
 
 function CopyButton({ text }: { text: string }) {
@@ -263,6 +263,24 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
   )
 }
 
+function ShareButton({ query }: { query: string }) {
+  const [shared, setShared] = useState(false)
+  const share = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('q', query)
+    navigator.clipboard.writeText(url.toString()).then(() => {
+      setShared(true)
+      setTimeout(() => setShared(false), 2000)
+    })
+  }
+  return (
+    <button onClick={share} className="flex items-center gap-1 font-mono text-[10px] text-[#555] hover:text-crimson transition-colors">
+      {shared ? <Check size={11} className="text-green-400" /> : <Share2 size={11} />}
+      {shared ? 'COPIED' : 'SHARE'}
+    </button>
+  )
+}
+
 function ResultCard({ result }: { result: QueryResponse }) {
   const [activeTab, setActiveTab] = useState<'answer' | 'docs' | 'plan' | 'eval'>('answer')
 
@@ -288,6 +306,7 @@ function ResultCard({ result }: { result: QueryResponse }) {
             {result.critic_passed ? '✓ CRITIC PASS' : '✗ CRITIC FAIL'}
           </span>
           <span>{result.latency_ms.toFixed(0)} ms</span>
+          <ShareButton query={result.query} />
         </div>
       </div>
 
