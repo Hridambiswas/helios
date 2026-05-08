@@ -21,17 +21,30 @@ from api.schemas import (
     QueryHistoryItem, HealthResponse,
 )
 from storage.database import get_session, ping as db_ping
+from storage.read_replica import get_read_session
 from storage.cache import ping as redis_ping
-from storage.object_store import ping as minio_ping, upload, ensure_bucket
+from storage.object_store import ping as minio_ping, upload, ensure_bucket, delete as minio_delete
 from storage.models import QueryRecord, Document
-from storage.crud import list_user_queries, mark_document_indexed
-from retrieval.vector_store import ping as chroma_ping, upsert_batch
+from storage.crud import mark_document_indexed
+from retrieval.vector_store import ping as chroma_ping, upsert_batch, delete_batch as chroma_delete_batch
 from pipeline.run import run_pipeline
 from workers.tasks import run_pipeline_task
+from resilience.backpressure import check_backpressure, active_pipeline, BackpressureError
+from resilience.saga import Saga, SagaExecutionError
 
 logger = logging.getLogger("helios.api.routes")
 
 router = APIRouter()
+
+
+# ── Shared dependencies ───────────────────────────────────────────────────────
+
+async def _backpressure_guard() -> None:
+    """FastAPI dependency — rejects new work when the system is overloaded."""
+    try:
+        await check_backpressure()
+    except BackpressureError as exc:
+        raise HTTPException(status_code=503, detail=str(exc))
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
