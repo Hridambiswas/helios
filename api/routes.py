@@ -228,8 +228,15 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
 
 @router.get("/documents", response_model=list[dict])
 async def list_documents(current_user: CurrentUser, limit: int = Query(50, ge=1, le=200)):
-    from storage.crud import list_documents as _list
-    docs = await _list(user_id=current_user.id, limit=limit)
+    from sqlalchemy import desc
+    async with get_read_session() as session:
+        result = await session.execute(
+            select(Document)
+            .where(Document.uploaded_by == current_user.id)
+            .order_by(desc(Document.created_at))
+            .limit(limit)
+        )
+        docs = list(result.scalars().all())
     return [
         {"id": d.id, "filename": d.filename, "chunk_count": d.chunk_count,
          "size_bytes": d.size_bytes, "indexed": d.indexed,
