@@ -20,6 +20,8 @@ ws_router = APIRouter()
 
 # Active sessions: session_id → WebSocket
 _sessions: dict[str, WebSocket] = {}
+# Per-user connection counts
+_user_connections: dict[str, int] = {}
 
 
 async def _authenticate_ws(websocket: WebSocket) -> str | None:
@@ -66,8 +68,16 @@ async def ws_query(websocket: WebSocket):
     if not user_id:
         return
 
+    from config import cfg
+    current_conns = _user_connections.get(user_id, 0)
+    if current_conns >= cfg.ws_max_connections_per_user:
+        await websocket.close(code=4029, reason="Too many open connections")
+        logger.warning("WS connection limit reached for user %s (%d)", user_id, current_conns)
+        return
+
     session_id = str(uuid.uuid4())
     _sessions[session_id] = websocket
+    _user_connections[user_id] = current_conns + 1
     active_websocket_gauge.inc()
     logger.info("WS session %s opened for user %s", session_id, user_id)
 
@@ -126,4 +136,6 @@ async def ws_query(websocket: WebSocket):
         logger.info("WS session %s disconnected", session_id)
     finally:
         _sessions.pop(session_id, None)
+        if user_id in _user_connections:
+            _user_connections[user_id] = max(0, _user_connections[user_id] - 1)
         active_websocket_gauge.dec()
