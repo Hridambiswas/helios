@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { api } from '../api/client'
 
 const TAGLINES = [
   'MULTI-AGENT RAG PIPELINE',
@@ -17,6 +18,11 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
   const [tagline, setTagline] = useState(0)
   const [displayText, setDisplayText] = useState('')
   const [charIdx, setCharIdx] = useState(0)
+  const [liveStats, setLiveStats] = useState<{ total_queries: number; total_documents: number } | null>(null)
+
+  useEffect(() => {
+    api.get('/stats').then(({ data }) => setLiveStats(data)).catch(() => {})
+  }, [])
 
   useEffect(() => {
     const target = TAGLINES[tagline]
@@ -131,7 +137,7 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center justify-center gap-8 mt-12 text-xs font-mono text-[#555] tracking-wider">
+        <div className="flex flex-wrap items-center justify-center gap-6 sm:gap-8 mt-12 text-xs font-mono text-[#555] tracking-wider">
           {[
             ['PLANNER', 'LLM DECOMPOSE'],
             ['RETRIEVER', 'HYBRID RAG'],
@@ -143,6 +149,19 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
               <div className="text-[10px] mt-0.5">{sub}</div>
             </div>
           ))}
+          {liveStats && (
+            <>
+              <div className="w-px h-6 bg-white/10 hidden sm:block" />
+              <div className="text-center">
+                <div className="text-crimson text-[10px]">{liveStats.total_queries.toLocaleString()}</div>
+                <div className="text-[10px] mt-0.5">QUERIES RUN</div>
+              </div>
+              <div className="text-center">
+                <div className="text-crimson text-[10px]">{liveStats.total_documents.toLocaleString()}</div>
+                <div className="text-[10px] mt-0.5">DOCS INDEXED</div>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
