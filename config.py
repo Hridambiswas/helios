@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 from functools import lru_cache
+from pydantic import SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ───────────────────────────────────────────────────────────────────
-    openai_api_key: str = "sk-placeholder"
+    openai_api_key: SecretStr = SecretStr("sk-placeholder")
     openai_model: str = "gpt-4o"
     openai_embedding_model: str = "text-embedding-3-small"
 

@@ -4,7 +4,7 @@
 from __future__ import annotations
 import logging
 import time
-from typing import Any
+from typing import Any, TypedDict, Optional
 
 from langgraph.graph import StateGraph, END
 
@@ -18,10 +18,23 @@ from observability.tracing import span
 
 logger = logging.getLogger("helios.pipeline.run")
 
-# ── State type alias ──────────────────────────────────────────────────────────
-# LangGraph passes this dict between nodes; each agent reads what it needs
-# and merges its output back in.
-HeliosState = dict[str, Any]
+# ── State schema ──────────────────────────────────────────────────────────────
+# TypedDict satisfies LangGraph's StateGraph schema requirement while keeping
+# type safety across node functions.  All fields are Optional because nodes
+# only write the fields they produce; the rest carry over from prior nodes.
+class HeliosState(TypedDict, total=False):
+    query: str
+    user_id: Optional[str]
+    plan: Optional[dict]
+    retrieved_docs: list
+    code_to_run: Optional[str]
+    execution_result: Optional[dict]
+    answer: Optional[str]
+    cited_doc_ids: list
+    critic_scores: Optional[dict]
+    critic_passed: Optional[bool]
+    error: Optional[str]
+    failed_agent: Optional[str]
 
 
 # ── Agent singletons ──────────────────────────────────────────────────────────
@@ -36,27 +49,27 @@ _critic = CriticAgent()
 
 def node_planner(state: HeliosState) -> HeliosState:
     with span("helios.planner", {"query": state.get("query", "")[:80]}):
-        return _planner.run(state)
+        return _planner.run(state)  # type: ignore[arg-type, return-value]
 
 
 def node_retriever(state: HeliosState) -> HeliosState:
     with span("helios.retriever"):
-        return _retriever.run(state)
+        return _retriever.run(state)  # type: ignore[arg-type, return-value]
 
 
 def node_executor(state: HeliosState) -> HeliosState:
     with span("helios.executor"):
-        return _executor.run(state)
+        return _executor.run(state)  # type: ignore[arg-type, return-value]
 
 
 def node_synthesizer(state: HeliosState) -> HeliosState:
     with span("helios.synthesizer"):
-        return _synthesizer.run(state)
+        return _synthesizer.run(state)  # type: ignore[arg-type, return-value]
 
 
 def node_critic(state: HeliosState) -> HeliosState:
     with span("helios.critic"):
-        return _critic.run(state)
+        return _critic.run(state)  # type: ignore[arg-type, return-value]
 
 
 # ── Conditional routing ───────────────────────────────────────────────────────
@@ -95,13 +108,15 @@ def route_after_critic(state: HeliosState) -> str:
 # ── Build graph ───────────────────────────────────────────────────────────────
 
 def _build_graph() -> StateGraph:
-    g = StateGraph(HeliosState)
+    # type: ignore comments below suppress LangGraph stub false-positives;
+    # TypedDict state schemas work correctly at runtime.
+    g = StateGraph(HeliosState)  # type: ignore[arg-type]
 
-    g.add_node("planner",     node_planner)
-    g.add_node("retriever",   node_retriever)
-    g.add_node("executor",    node_executor)
-    g.add_node("synthesizer", node_synthesizer)
-    g.add_node("critic",      node_critic)
+    g.add_node("planner",     node_planner)      # type: ignore[arg-type]
+    g.add_node("retriever",   node_retriever)    # type: ignore[arg-type]
+    g.add_node("executor",    node_executor)     # type: ignore[arg-type]
+    g.add_node("synthesizer", node_synthesizer)  # type: ignore[arg-type]
+    g.add_node("critic",      node_critic)       # type: ignore[arg-type]
 
     g.set_entry_point("planner")
 

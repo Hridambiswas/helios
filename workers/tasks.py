@@ -171,8 +171,8 @@ def health_check_task() -> dict:
         import redis
         from config import cfg
         r = redis.from_url(cfg.celery_broker_url)
-        depth = r.llen("celery")
-        celery_queue_depth_gauge.set(depth)
+        depth: int = r.llen("celery")  # type: ignore[assignment]  # sync client always returns int
+        celery_queue_depth_gauge.set(float(depth))
     except Exception:
         pass
 
