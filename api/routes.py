@@ -578,4 +578,4 @@ async def health():
 @router.get("/version")
 async def version():
     from config import cfg
-    return {"version": "1.0.0", "environment": cfg.environment}
+    return {"version": "1.0.0", "environment": cfg.app_env}
