@@ -34,8 +34,8 @@ async def _authenticate_ws(websocket: WebSocket) -> str | None:
     try:
         user = await get_current_user_from_token_str(token)
         return user.id
-    except Exception as exc:
-        await websocket.close(code=4001, reason=str(exc))
+    except Exception:
+        await websocket.close(code=4001, reason="Authentication failed")
         return None
 
 
