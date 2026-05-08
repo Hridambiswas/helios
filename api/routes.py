@@ -9,7 +9,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.security import OAuth2PasswordRequestForm
-from sqlalchemy import select
+from sqlalchemy import select, desc
 
 from api.auth import (
     CurrentUser, get_user_by_username, create_user,
@@ -76,7 +76,7 @@ async def me(current_user: CurrentUser):
     return current_user
 
 
-# ── Query ─────────────────────────────────────────────────────────────────────
+# ── Query (write path) ────────────────────────────────────────────────────────
 
 @router.post(
     "/query",
@@ -99,6 +99,7 @@ async def query(body: QueryRequest, current_user: CurrentUser):
 
     async with active_pipeline():
         state = run_pipeline(body.query, user_id=current_user.id)
+
     elapsed_ms = (time.perf_counter() - t0) * 1000
     status_str = "done" if not state.get("error") else "failed"
 
@@ -149,13 +150,14 @@ async def query_async(body: QueryRequest, current_user: CurrentUser):
     return {"task_id": task.id, "status": "queued"}
 
 
+# ── Query (read path — CQRS: routed to read replica) ─────────────────────────
+
 @router.get("/query/history", response_model=list[QueryHistoryItem])
 async def query_history(
     current_user: CurrentUser,
     limit: int = Query(20, ge=1, le=100),
     offset: int = Query(0, ge=0),
 ):
-    from sqlalchemy import desc
     async with get_read_session() as session:
         result = await session.execute(
             select(QueryRecord)
@@ -179,20 +181,24 @@ async def get_query_detail(query_id: str, current_user: CurrentUser):
     return record
 
 
-# ── Document ingest ───────────────────────────────────────────────────────────
+# ── Document ingest (Saga pattern) ────────────────────────────────────────────
 
 @router.post("/ingest", response_model=IngestResponse, status_code=201)
 async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser):
+    """
+    Ingest a document using the Saga pattern.
+    Steps: MinIO upload → ChromaDB embed+index → BM25 index → PostgreSQL record.
+    Any failure triggers compensating transactions in reverse order.
+    """
     ensure_bucket()
     doc_id = str(uuid.uuid4())
     minio_key = f"docs/{doc_id}/{file.filename}"
-
     content = await file.read()
-    upload(minio_key, content, content_type=file.content_type or "application/octet-stream")
 
+    # ── Prepare chunks + embeddings (before the saga so failures here are cheap) ─
     text = content.decode("utf-8", errors="replace")
     raw_chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 20]
-    chunks = []
+    chunks: list[str] = []
     for chunk in raw_chunks:
         for i in range(0, len(chunk), 500):
             chunks.append(chunk[i: i + 500])
@@ -206,17 +212,64 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     embeddings = embedder.embed_documents(chunks)
     metas = [{"doc_id": doc_id, "filename": file.filename, "chunk_idx": i} for i in range(len(chunks))]
 
-    upsert_batch(chunk_ids, embeddings, chunks, metas)
-    bm25.get_index().add_batch(chunk_ids, chunks, metas)
+    # ── Compensators ──────────────────────────────────────────────────────────
+    def _delete_minio() -> None:
+        try:
+            minio_delete(minio_key)
+        except Exception:
+            pass
 
-    async with get_session() as session:
-        session.add(Document(
-            id=doc_id, filename=file.filename,
-            content_type=file.content_type or "text/plain",
-            minio_key=minio_key, chunk_count=len(chunks),
-            size_bytes=len(content), indexed=True,
-            uploaded_by=current_user.id,
-        ))
+    def _delete_chroma() -> None:
+        try:
+            chroma_delete_batch(chunk_ids)
+        except Exception:
+            pass
+
+    async def _insert_db() -> None:
+        async with get_session() as session:
+            session.add(Document(
+                id=doc_id, filename=file.filename,
+                content_type=file.content_type or "text/plain",
+                minio_key=minio_key, chunk_count=len(chunks),
+                size_bytes=len(content), indexed=True,
+                uploaded_by=current_user.id,
+            ))
+
+    async def _delete_db() -> None:
+        from sqlalchemy import delete as sa_delete
+        async with get_session() as session:
+            await session.execute(sa_delete(Document).where(Document.id == doc_id))
+
+    # ── Execute saga ──────────────────────────────────────────────────────────
+    saga = (
+        Saga("document-ingest")
+        .step(
+            "upload-minio",
+            action=lambda: upload(minio_key, content, content_type=file.content_type or "application/octet-stream"),
+            compensate=_delete_minio,
+        )
+        .step(
+            "embed-index-chroma",
+            action=lambda: upsert_batch(chunk_ids, embeddings, chunks, metas),
+            compensate=_delete_chroma,
+        )
+        .step(
+            "index-bm25",
+            action=lambda: bm25.get_index().add_batch(chunk_ids, chunks, metas),
+            compensate=lambda: None,  # BM25 is in-memory; no persistent compensation needed
+        )
+        .step(
+            "persist-db",
+            action=_insert_db,
+            compensate=_delete_db,
+        )
+    )
+
+    try:
+        await saga.execute()
+    except SagaExecutionError as exc:
+        logger.error("Ingest saga failed at step '%s': %s", exc.step, exc.cause)
+        raise HTTPException(500, detail=f"Ingest failed at '{exc.step}': {exc.cause}")
 
     await mark_document_indexed(doc_id)
     logger.info("Ingested doc %s: %d chunks", doc_id, len(chunks))
@@ -226,9 +279,10 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     )
 
 
+# ── Documents (read path — CQRS) ──────────────────────────────────────────────
+
 @router.get("/documents", response_model=list[dict])
 async def list_documents(current_user: CurrentUser, limit: int = Query(50, ge=1, le=200)):
-    from sqlalchemy import desc
     async with get_read_session() as session:
         result = await session.execute(
             select(Document)
