@@ -73,6 +73,11 @@ class Settings(BaseSettings):
 
 
 
+
+    # ── Backpressure ──────────────────────────────────────────────────────────
+    backpressure_queue_depth_threshold: int = 100
+    backpressure_active_pipelines_threshold: int = 20
+
     # ── Bulkhead ──────────────────────────────────────────────────────────────
     bulkhead_executor_limit: int = 3
     bulkhead_retriever_limit: int = 8
