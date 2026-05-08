@@ -5,7 +5,7 @@ const AGENTS = [
     role: 'Query Decomposition',
     description: 'Breaks your query into atomic subtasks. Decides whether retrieval, code execution, or direct synthesis is needed.',
     attrs: [
-      { label: 'MODEL', value: 'GPT-4o' },
+      { label: 'MODEL', value: 'Llama 3.3 70B' },
       { label: 'MAX SUBTASKS', value: '5' },
       { label: 'TEMPERATURE', value: '0.0' },
     ],
@@ -15,7 +15,7 @@ const AGENTS = [
     num: '02',
     name: 'RETRIEVER',
     role: 'Hybrid Search',
-    description: 'Runs three parallel retrieval paths — OpenAI dense embeddings via ChromaDB, CLIP multi-modal embeddings, and BM25 sparse search — then fuses results.',
+    description: 'Runs three parallel retrieval paths — HuggingFace dense embeddings via ChromaDB, CLIP multi-modal embeddings, and BM25 sparse search — then score-fuses results.',
     attrs: [
       { label: 'DENSE WEIGHT', value: '0.6' },
       { label: 'BM25 WEIGHT', value: '0.1' },
