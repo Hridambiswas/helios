@@ -8,10 +8,12 @@ import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { AuthModal } from './components/AuthModal'
 import { useAuth } from './hooks/useAuth'
+import { useToast } from './hooks/useToast'
 import type { QueryResponse } from './api/client'
 
 export default function App() {
   const { user, loading, login, register, logout } = useAuth()
+  const { toasts, add: addToast, remove: removeToast } = useToast()
   const [showAuth, setShowAuth] = useState(false)
   const [pendingQuery, setPendingQuery] = useState<string | undefined>()
   const [pendingGuestQuery, setPendingGuestQuery] = useState<string | undefined>()
@@ -103,10 +105,27 @@ export default function App() {
       {showAuth && (
         <AuthModal
           onClose={() => setShowAuth(false)}
-          onLogin={login}
-          onRegister={register}
+          onLogin={async (u, p) => { await login(u, p); addToast(`Welcome back, ${u}!`, 'success') }}
+          onRegister={async (u, e, p) => { await register(u, e, p); addToast(`Account created — welcome, ${u}!`, 'success') }}
         />
       )}
+
+      {/* Toast notifications */}
+      <div className="fixed top-16 right-4 z-50 flex flex-col gap-2 pointer-events-none">
+        {toasts.map(t => (
+          <div
+            key={t.id}
+            className={`pointer-events-auto flex items-center gap-3 px-4 py-2.5 border font-mono text-xs animate-slide-up max-w-xs ${
+              t.type === 'success' ? 'bg-ink border-green-500/30 text-green-400' :
+              t.type === 'error'   ? 'bg-ink border-crimson/30 text-crimson' :
+                                     'bg-ink border-white/10 text-white/70'
+            }`}
+          >
+            <span className="flex-1">{t.message}</span>
+            <button onClick={() => removeToast(t.id)} className="text-[#555] hover:text-white">×</button>
+          </div>
+        ))}
+      </div>
 
       <ScrollToTop />
     </>
