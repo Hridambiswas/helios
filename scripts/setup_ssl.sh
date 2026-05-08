@@ -3,7 +3,7 @@
 # Run as: bash scripts/setup_ssl.sh
 set -e
 
-DOMAIN="3-110-161-146.sslip.io"
+DOMAIN="helios-hridam.ddns.net"
 EMAIL="hridambiswas2005@gmail.com"
 HELIOS_DIR="/home/ubuntu/helios"
 
