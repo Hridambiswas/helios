@@ -32,6 +32,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown hooks."""
     setup_logging()
     setup_tracing()
+    cfg.validate_secrets()
     logger.info("Helios starting up (env=%s)", cfg.app_env)
 
     await create_tables()
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         docs_url="/docs" if cfg.is_development else None,
         redoc_url="/redoc" if cfg.is_development else None,
+        openapi_url="/openapi.json" if cfg.is_development else None,
         lifespan=lifespan,
     )
 

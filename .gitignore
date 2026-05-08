@@ -56,7 +56,7 @@ htmlcov/
 # Docker
 
 # K8s secrets
-k8s/secrets/
+deploy/k8s/secrets/
 
 # MinIO / object store
 uploads/
@@ -72,3 +72,15 @@ frontend/dist/
 frontend/.env
 frontend/.env.local
 frontend/.env.production
+
+# Vercel CLI project linkage (contains project/org IDs — not secrets but
+# specific to each developer's linked account; commit-safe alternative is
+# to set VERCEL_PROJECT_ID and VERCEL_ORG_ID as CI/CD env vars instead)
+.vercel/
+frontend/.vercel/
+
+# Backup archives
+backups/
+
+# Ruff cache
+.ruff_cache/

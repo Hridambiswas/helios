@@ -17,12 +17,14 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ───────────────────────────────────────────────────────────────────
-    groq_api_key: SecretStr = SecretStr("placeholder")
+    groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "llama-3.3-70b-versatile"
     embedding_model: str = "all-MiniLM-L6-v2"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
-    jwt_secret_key: str = "change-me-in-production"
+    # Must be set to a strong random value in production:
+    #   python -c "import secrets; print(secrets.token_hex(32))"
+    jwt_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     jwt_expiry_minutes: int = 60
     jwt_refresh_expiry_days: int = 7
@@ -32,8 +34,8 @@ class Settings(BaseSettings):
     postgres_port: int = 5432
     postgres_db: str = "helios"
     postgres_user: str = "helios"
-    postgres_password: str = "helios_pass"
-    database_url: str = "postgresql+asyncpg://helios:helios_pass@localhost:5432/helios"
+    postgres_password: str = ""
+    database_url: str = ""
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
@@ -42,8 +44,8 @@ class Settings(BaseSettings):
 
     # ── MinIO ─────────────────────────────────────────────────────────────────
     minio_endpoint: str = "localhost:9000"
-    minio_access_key: str = "minioadmin"
-    minio_secret_key: str = "minioadmin"
+    minio_access_key: str = ""
+    minio_secret_key: str = ""
     minio_bucket: str = "helios-docs"
     minio_secure: bool = False
 
@@ -142,6 +144,25 @@ class Settings(BaseSettings):
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"
+
+    def validate_secrets(self) -> None:
+        """Raise ValueError if required secrets are missing in production."""
+        if not self.is_production:
+            return
+        missing: list[str] = []
+        if not self.groq_api_key.get_secret_value():
+            missing.append("GROQ_API_KEY")
+        if not self.jwt_secret_key:
+            missing.append("JWT_SECRET_KEY")
+        if not self.postgres_password:
+            missing.append("POSTGRES_PASSWORD")
+        if not self.minio_access_key or not self.minio_secret_key:
+            missing.append("MINIO_ACCESS_KEY / MINIO_SECRET_KEY")
+        if missing:
+            raise ValueError(
+                f"Missing required environment variables: {', '.join(missing)}. "
+                "Copy .env.production.example to .env and fill in all values."
+            )
 
 
 @lru_cache(maxsize=1)

@@ -9,6 +9,11 @@ TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
 BACKUP_PATH="$BACKUP_DIR/$TIMESTAMP"
 mkdir -p "$BACKUP_PATH"
 
+# Read MinIO credentials from env (same values used in docker-compose)
+MINIO_URL="${MINIO_ENDPOINT:-http://localhost:9000}"
+MINIO_USER="${MINIO_ACCESS_KEY:?Set MINIO_ACCESS_KEY in your environment}"
+MINIO_PASS="${MINIO_SECRET_KEY:?Set MINIO_SECRET_KEY in your environment}"
+
 echo "[backup] Starting Helios backup — $TIMESTAMP"
 
 # ── PostgreSQL dump ───────────────────────────────────────────────────────────
@@ -25,8 +30,8 @@ echo "[backup] PostgreSQL dump: $(du -sh "$BACKUP_PATH/helios_pg.dump" | cut -f1
 # ── MinIO object snapshot ─────────────────────────────────────────────────────
 echo "[backup] Mirroring MinIO bucket..."
 if command -v mc &>/dev/null; then
-  mc alias set helios_local http://localhost:9000 minioadmin minioadmin 2>/dev/null || true
-  mc mirror helios_local/helios-docs "$BACKUP_PATH/minio_objects/" --quiet || true
+  mc alias set helios_local "$MINIO_URL" "$MINIO_USER" "$MINIO_PASS" 2>/dev/null || true
+  mc mirror "helios_local/${MINIO_BUCKET:-helios-docs}" "$BACKUP_PATH/minio_objects/" --quiet || true
   echo "[backup] MinIO mirror: $(du -sh "$BACKUP_PATH/minio_objects/" 2>/dev/null | cut -f1 || echo 'empty')"
 else
   echo "[backup] mc not found — skipping MinIO snapshot (install from https://min.io/docs/minio/linux/reference/minio-mc.html)"

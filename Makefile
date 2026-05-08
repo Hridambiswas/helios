@@ -1,7 +1,7 @@
 .PHONY: up down build logs restart status test test-cov lint fmt typecheck \
         migrate migrate-gen migrate-down dev worker beat \
         eval bench ingest ssl-setup frontend-dev frontend-build \
-        backup shell-api shell-db prod-restart
+        backup shell-api shell-db prod-restart deploy
 
 ## ── Docker (local dev) ────────────────────────────────────────────────────────
 
@@ -120,6 +120,9 @@ shell-db:
 
 prod-restart:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml restart api worker
+
+deploy:
+	bash scripts/deploy.sh
 
 ## ── Help ─────────────────────────────────────────────────────────────────────
 
