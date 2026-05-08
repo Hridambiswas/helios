@@ -65,6 +65,12 @@ class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4096)
     stream: bool = False    # if True, use WebSocket instead
 
+    @field_validator("query")
+    @classmethod
+    def strip_control_chars(cls, v: str) -> str:
+        # Remove null bytes and other ASCII control chars (except tab/newline/CR)
+        return re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", v)
+
 
 class SubTask(BaseModel):
     id: int
