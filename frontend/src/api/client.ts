@@ -88,7 +88,9 @@ export const documents = {
     fd.append('file', file)
     return api.post('/ingest', fd, { headers: { 'Content-Type': 'multipart/form-data' } })
   },
-  list: () => api.get('/documents'),
+  list: (limit = 50, offset = 0) => api.get(`/documents?limit=${limit}&offset=${offset}`),
+  get: (id: string) => api.get(`/documents/${id}`),
+  delete: (id: string) => api.delete(`/documents/${id}`),
 }
 
 // WebSocket connection for streaming queries
