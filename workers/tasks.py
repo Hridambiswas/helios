@@ -14,7 +14,7 @@ logger = logging.getLogger("helios.workers.tasks")
 class PipelineTask(Task):
     """Custom Task base that propagates OTEL trace context."""
 
-    def apply_async(self, args=None, kwargs=None, **options):
+    def apply_async(self, args=None, kwargs=None, **options):  # type: ignore[override]
         from observability.tracing import inject_celery_context
         headers = options.pop("headers", {}) or {}
         inject_celery_context(headers)

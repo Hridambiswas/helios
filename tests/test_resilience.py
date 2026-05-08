@@ -6,7 +6,7 @@ import asyncio
 import threading
 import time
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 
 # ── Circuit Breaker ───────────────────────────────────────────────────────────
@@ -204,14 +204,12 @@ class TestBulkhead:
 class TestBackpressure:
 
     def test_allows_requests_below_pipeline_threshold(self):
-        import asyncio
         from resilience import backpressure as bp
         bp._active_pipelines = 0
         with patch("config.cfg.backpressure_active_pipelines_threshold", 20):
             asyncio.get_event_loop().run_until_complete(bp.check_backpressure())  # must not raise
 
     def test_raises_when_pipeline_limit_reached(self):
-        import asyncio
         from resilience import backpressure as bp
         from resilience.backpressure import BackpressureError
         bp._active_pipelines = 20

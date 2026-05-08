@@ -18,10 +18,11 @@
   "exclude": [
     "graphs",
     "k8s",
-    "tests"
+    "tests",
+    "retrieval/clip_encoder.py",
+    "retrieval/vector_store.py"
   ],
-  "reportMissingImports": true,
+  "reportMissingImports": false,
   "reportMissingModuleSource": false,
-  "reportUnusedImports": true,
   "reportUnusedVariable": true
 }

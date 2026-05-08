@@ -231,7 +231,7 @@ async def query_async(body: QueryRequest, current_user: CurrentUser):
         )
         session.add(record)
 
-    task = run_pipeline_task.delay(body.query, user_id=current_user.id, query_id=query_id)
+    task = run_pipeline_task.delay(body.query, user_id=current_user.id, query_id=query_id)  # type: ignore[attr-defined]
     return {"task_id": task.id, "query_id": query_id, "status": "queued"}
 
 
@@ -560,8 +560,6 @@ async def stats():
 
 @router.get("/health", response_model=HealthResponse)
 async def health():
-    import time
-    t0 = time.perf_counter()
     pg, rd, mn, ch = await asyncio.gather(
         db_ping(),
         redis_ping(),

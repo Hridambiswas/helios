@@ -6,9 +6,9 @@ import logging
 from celery import Celery
 from celery.signals import task_prerun, task_postrun, task_failure, task_retry, worker_ready
 
-logger = logging.getLogger("helios.workers")
-
 from config import cfg
+
+logger = logging.getLogger("helios.workers")
 
 app = Celery(
     "helios",

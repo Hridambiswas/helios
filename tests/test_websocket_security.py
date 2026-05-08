@@ -39,7 +39,7 @@ def _valid_token(user_id: str = "u1") -> str:
 class TestWebSocketAuthentication:
 
     def test_ws_without_token_closes_4001(self, client):
-        with client.websocket_connect("/ws/query") as ws:
+        with client.websocket_connect("/ws/query") as _ws:
             # Server should close immediately — TestClient raises on disconnect
             pass
         # If we get here the connection was closed cleanly or with 4001
@@ -131,7 +131,7 @@ class TestWebSocketConnectionLimit:
         ):
             from main import app
             with TestClient(app) as c:
-                with c.websocket_connect(f"/ws/query?token={_valid_token('conn-test-user')}") as ws:
+                with c.websocket_connect(f"/ws/query?token={_valid_token('conn-test-user')}") as _ws:
                     assert _user_connections.get("conn-test-user", 0) == initial + 1
                 # After disconnect counter decrements
         assert _user_connections.get("conn-test-user", 0) == initial

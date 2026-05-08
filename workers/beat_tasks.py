@@ -29,7 +29,7 @@ def expire_refresh_tokens() -> dict:
                     (RefreshToken.expires_at < now) | (RefreshToken.revoked == True)  # noqa: E712
                 )
             )
-            deleted = result.rowcount
+            deleted = result.rowcount  # type: ignore[union-attr]
         logger.info("Expired %d refresh tokens", deleted)
         return deleted
 

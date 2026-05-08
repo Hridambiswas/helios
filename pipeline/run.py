@@ -6,8 +6,6 @@ import logging
 import time
 from typing import Any, TypedDict, Optional
 
-_PIPELINE_TIMEOUT_SECONDS = 120
-
 from langgraph.graph import StateGraph, END
 
 from agents.planner import PlannerAgent
@@ -17,6 +15,8 @@ from agents.synthesizer import SynthesizerAgent
 from agents.critic import CriticAgent
 from observability.metrics import pipeline_latency_histogram, pipeline_requests_counter
 from observability.tracing import span
+
+_PIPELINE_TIMEOUT_SECONDS = 120
 
 logger = logging.getLogger("helios.pipeline.run")
 

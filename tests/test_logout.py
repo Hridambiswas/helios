@@ -2,7 +2,6 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import hashlib
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -76,7 +75,6 @@ class TestLogout:
         mock_session.execute = fake_execute
 
         refresh_token = "my.refresh.token"
-        expected_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
