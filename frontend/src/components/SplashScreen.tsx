@@ -1,281 +1,267 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import oniMask from '../assets/oni-mask.png'
 
-interface Particle {
-  x: number
-  y: number
-  radius: number
-  opacity: number
-  speed: number
-  drift: number
-  age: number
-  maxAge: number
-}
-
-function createParticle(width: number, height: number): Particle {
-  return {
-    x: Math.random() * width,
-    y: height + Math.random() * 100,
-    radius: 4 + Math.random() * 20,
-    opacity: 0.05 + Math.random() * 0.18,
-    speed: 0.4 + Math.random() * 0.8,
-    drift: (Math.random() - 0.5) * 0.6,
-    age: 0,
-    maxAge: 180 + Math.random() * 200,
-  }
-}
-
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
-  const maskRef = useRef<HTMLDivElement>(null)
-  const particlesRef = useRef<Particle[]>([])
   const rafRef = useRef<number>(0)
+  const [phase, setPhase] = useState<'rise' | 'glow' | 'exit' | 'done'>('rise')
+  const [mouse, setMouse] = useState({ x: 0, y: 0 })
 
-  const [phase, setPhase] = useState<'enter' | 'glow' | 'exit' | 'done'>('enter')
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
-
-  // Smoke canvas
+  /* ── Smoke canvas ── */
   useEffect(() => {
     const canvas = canvasRef.current
     if (!canvas) return
     const ctx = canvas.getContext('2d')!
 
-    const resize = () => {
-      canvas.width = window.innerWidth
-      canvas.height = window.innerHeight
-    }
+    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight }
     resize()
     window.addEventListener('resize', resize)
 
-    // Seed initial particles
-    for (let i = 0; i < 60; i++) {
-      const p = createParticle(canvas.width, canvas.height)
-      p.y = Math.random() * canvas.height  // spread initial smoke across screen
-      p.age = Math.random() * p.maxAge
-      particlesRef.current.push(p)
-    }
+    type P = { x: number; y: number; r: number; op: number; sp: number; dr: number; age: number; max: number }
+    const spawn = (): P => ({
+      x: Math.random() * canvas.width,
+      y: canvas.height + 40,
+      r: 30 + Math.random() * 60,
+      op: 0.06 + Math.random() * 0.12,
+      sp: 0.3 + Math.random() * 0.5,
+      dr: (Math.random() - 0.5) * 0.4,
+      age: 0,
+      max: 300 + Math.random() * 200,
+    })
 
-    const draw = () => {
+    const ps: P[] = Array.from({ length: 80 }, () => {
+      const p = spawn(); p.y = Math.random() * canvas.height; p.age = Math.random() * p.max; return p
+    })
+
+    const tick = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height)
-
-      // Spawn new particles
-      if (particlesRef.current.length < 120) {
-        particlesRef.current.push(createParticle(canvas.width, canvas.height))
+      if (ps.length < 120) ps.push(spawn())
+      for (let i = ps.length - 1; i >= 0; i--) {
+        const p = ps[i]
+        const life = Math.sin((p.age / p.max) * Math.PI)
+        const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r)
+        g.addColorStop(0, `rgba(120,10,10,${p.op * life})`)
+        g.addColorStop(0.5, `rgba(60,0,0,${p.op * life * 0.4})`)
+        g.addColorStop(1, 'rgba(0,0,0,0)')
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2)
+        ctx.fillStyle = g; ctx.fill()
+        p.y -= p.sp; p.x += p.dr + Math.sin(p.age * 0.02) * 0.5
+        p.r += 0.15; p.age++
+        if (p.age >= p.max || p.y < -100) ps.splice(i, 1)
       }
-
-      particlesRef.current = particlesRef.current.filter(p => {
-        const lifeRatio = p.age / p.maxAge
-        const alpha = p.opacity * Math.sin(lifeRatio * Math.PI)
-
-        const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.radius)
-        grad.addColorStop(0, `rgba(180, 180, 180, ${alpha})`)
-        grad.addColorStop(1, `rgba(80, 0, 0, 0)`)
-
-        ctx.beginPath()
-        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2)
-        ctx.fillStyle = grad
-        ctx.fill()
-
-        p.y -= p.speed
-        p.x += p.drift + Math.sin(p.age * 0.03) * 0.3
-        p.radius += 0.08
-        p.age++
-
-        return p.age < p.maxAge && p.y > -100
-      })
-
-      rafRef.current = requestAnimationFrame(draw)
+      rafRef.current = requestAnimationFrame(tick)
     }
-    draw()
-
-    return () => {
-      cancelAnimationFrame(rafRef.current)
-      window.removeEventListener('resize', resize)
-    }
+    tick()
+    return () => { cancelAnimationFrame(rafRef.current); window.removeEventListener('resize', resize) }
   }, [])
 
-  // Phase timing
+  /* ── Phase timing ── */
   useEffect(() => {
-    const t1 = setTimeout(() => setPhase('glow'), 1400)
-    const t2 = setTimeout(() => setPhase('exit'), 3000)
-    const t3 = setTimeout(() => {
-      setPhase('done')
-      onComplete()
-    }, 4200)
+    const t1 = setTimeout(() => setPhase('glow'), 1600)
+    const t2 = setTimeout(() => setPhase('exit'), 3400)
+    const t3 = setTimeout(() => { setPhase('done'); onComplete() }, 4600)
     return () => [t1, t2, t3].forEach(clearTimeout)
   }, [onComplete])
 
-  // Mouse parallax
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    const x = (e.clientX / window.innerWidth - 0.5) * 2
-    const y = (e.clientY / window.innerHeight - 0.5) * 2
-    setMousePos({ x, y })
+  /* ── Mouse parallax ── */
+  const onMove = useCallback((e: MouseEvent) => {
+    setMouse({ x: (e.clientX / window.innerWidth - 0.5) * 2, y: (e.clientY / window.innerHeight - 0.5) * 2 })
   }, [])
-
-  useEffect(() => {
-    window.addEventListener('mousemove', handleMouseMove)
-    return () => window.removeEventListener('mousemove', handleMouseMove)
-  }, [handleMouseMove])
+  useEffect(() => { window.addEventListener('mousemove', onMove); return () => window.removeEventListener('mousemove', onMove) }, [onMove])
 
   if (phase === 'done') return null
 
-  const tiltX = mousePos.y * -8
-  const tiltY = mousePos.x * 8
+  const tiltX = mouse.y * -10
+  const tiltY = mouse.x * 10
+
+  /* ── Animation styles per phase ── */
+  const maskAnim = phase === 'rise'
+    ? 'maskRise 1.4s cubic-bezier(0.16,1,0.3,1) forwards'
+    : phase === 'exit'
+    ? 'maskExit 1s cubic-bezier(0.4,0,1,1) forwards'
+    : 'maskBreathe 4s ease-in-out infinite'
+
+  const isGlowing = phase === 'glow' || phase === 'exit'
 
   return (
-    <div
-      className={`splash-screen ${phase}`}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        background: 'radial-gradient(ellipse at center, #1a0005 0%, #080808 60%, #000 100%)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'none',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Smoke canvas */}
-      <canvas
-        ref={canvasRef}
-        style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}
-      />
+    <div style={{
+      position: 'fixed', inset: 0, zIndex: 9999, overflow: 'hidden', cursor: 'none',
+      background: '#000',
+    }}>
 
-      {/* Red vignette pulse */}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'radial-gradient(ellipse at center, transparent 30%, rgba(196,30,58,0.25) 100%)',
-          animation: phase === 'glow' ? 'vignetteBreath 1.2s ease-in-out infinite alternate' : 'none',
-          pointerEvents: 'none',
-        }}
-      />
+      {/* ── Deep background: full-screen mask at very low opacity as wallpaper ── */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        backgroundImage: `url(${oniMask})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        opacity: 0.06,
+        filter: 'blur(2px) saturate(0.3) brightness(0.5)',
+        transform: `scale(1.05) translate(${mouse.x * -6}px, ${mouse.y * -6}px)`,
+        transition: 'transform 0.3s ease-out',
+      }} />
 
-      {/* Oni Mask container */}
-      <div
-        ref={maskRef}
-        style={{
-          position: 'relative',
-          width: 'min(520px, 85vw)',
-          transformStyle: 'preserve-3d',
-          transform: `
-            perspective(900px)
-            rotateX(${tiltX}deg)
-            rotateY(${tiltY}deg)
-          `,
-          transition: 'transform 0.1s ease-out',
-          animation: phase === 'enter'
-            ? 'maskRise 1.2s cubic-bezier(0.16,1,0.3,1) forwards'
-            : phase === 'exit'
-            ? 'maskExplode 1s cubic-bezier(0.4,0,1,1) forwards'
-            : 'maskFloat 3s ease-in-out infinite',
-        }}
-      >
-        {/* Glow behind mask */}
+      {/* ── Atmospheric red glow from center-bottom ── */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 80% 60% at 50% 85%, rgba(140,0,0,0.55) 0%, rgba(80,0,0,0.25) 40%, transparent 70%)',
+        animation: isGlowing ? 'atmospherePulse 1.8s ease-in-out infinite alternate' : 'none',
+      }} />
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse 60% 50% at 50% 100%, rgba(196,30,58,0.3) 0%, transparent 60%)',
+      }} />
+
+      {/* ── Smoke ── */}
+      <canvas ref={canvasRef} style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }} />
+
+      {/* ── Vignette ── */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.85) 100%)',
+        pointerEvents: 'none',
+      }} />
+
+      {/* ── Mask stage ── */}
+      <div style={{
+        position: 'absolute', inset: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        perspective: '1000px',
+      }}>
+
+        {/* Cast shadow on "floor" — same shape, blurred below the mask */}
         <div style={{
           position: 'absolute',
-          inset: '-20px',
-          background: 'radial-gradient(ellipse, rgba(196,30,58,0.4) 0%, transparent 70%)',
-          filter: 'blur(30px)',
-          opacity: phase === 'glow' || phase === 'exit' ? 1 : 0,
+          top: '50%', left: '50%',
+          transform: 'translate(-50%, 20%) scaleY(0.18) scaleX(0.9)',
+          width: 'min(600px, 88vw)',
+          opacity: isGlowing ? 0.9 : 0.4,
+          filter: 'blur(28px)',
           transition: 'opacity 0.8s ease',
-          animation: phase === 'glow' ? 'glowBreath 1.5s ease-in-out infinite alternate' : 'none',
-        }} />
+          backgroundImage: `url(${oniMask})`,
+          backgroundSize: 'contain',
+          backgroundRepeat: 'no-repeat',
+          backgroundPosition: 'center',
+          aspectRatio: '1.6',
+          mixBlendMode: 'normal',
+        }}>
+          <div style={{ position:'absolute',inset:0, background:'rgba(196,30,58,0.9)', borderRadius:'50%' }} />
+        </div>
 
-        {/* Mask image */}
-        <img
-          src={oniMask}
-          alt="Oni"
-          style={{
-            width: '100%',
-            display: 'block',
-            filter: phase === 'glow' || phase === 'exit'
-              ? 'drop-shadow(0 0 30px rgba(196,30,58,0.8)) drop-shadow(0 0 60px rgba(196,30,58,0.4)) brightness(1.1)'
-              : 'drop-shadow(0 0 10px rgba(196,30,58,0.3)) brightness(0.9)',
-            transition: 'filter 0.8s ease',
-            transform: 'translateZ(20px)',
-          }}
-        />
-
-        {/* Left eye glow */}
+        {/* The mask itself — 3D container */}
         <div style={{
-          position: 'absolute',
-          left: '31%',
-          top: '34%',
-          width: '12%',
-          height: '10%',
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(255,200,0,0.9) 0%, rgba(196,30,58,0.8) 40%, transparent 70%)',
-          filter: 'blur(4px)',
-          opacity: phase === 'glow' || phase === 'exit' ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          animation: phase === 'glow' ? 'eyePulse 0.8s ease-in-out infinite alternate' : 'none',
-          transform: 'translateZ(30px)',
-          mixBlendMode: 'screen',
-        }} />
+          position: 'relative',
+          width: 'min(600px, 88vw)',
+          transformStyle: 'preserve-3d',
+          animation: maskAnim,
+          transform: phase === 'glow'
+            ? `perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg)`
+            : undefined,
+          transition: phase === 'glow' ? 'transform 0.12s ease-out' : undefined,
+        }}>
 
-        {/* Right eye glow */}
-        <div style={{
-          position: 'absolute',
-          right: '31%',
-          top: '34%',
-          width: '12%',
-          height: '10%',
-          borderRadius: '50%',
-          background: 'radial-gradient(ellipse, rgba(255,200,0,0.9) 0%, rgba(196,30,58,0.8) 40%, transparent 70%)',
-          filter: 'blur(4px)',
-          opacity: phase === 'glow' || phase === 'exit' ? 1 : 0,
-          transition: 'opacity 0.5s ease',
-          animation: phase === 'glow' ? 'eyePulse 0.8s ease-in-out infinite alternate 0.1s' : 'none',
-          transform: 'translateZ(30px)',
-          mixBlendMode: 'screen',
-        }} />
+          {/* Bloom glow layer behind mask */}
+          <img src={oniMask} alt="" style={{
+            position: 'absolute', inset: '-8%',
+            width: '116%',
+            opacity: isGlowing ? 0.5 : 0.15,
+            filter: 'blur(24px) saturate(2) brightness(0.8)',
+            transition: 'opacity 0.8s ease',
+            animation: isGlowing ? 'bloomBreath 1.6s ease-in-out infinite alternate' : 'none',
+            transform: 'translateZ(-10px)',
+          }} />
 
-        {/* Eye flare streaks */}
-        {(phase === 'glow' || phase === 'exit') && (
-          <>
+          {/* Secondary softer bloom */}
+          <img src={oniMask} alt="" style={{
+            position: 'absolute', inset: '-3%',
+            width: '106%',
+            opacity: isGlowing ? 0.35 : 0.08,
+            filter: 'blur(12px) saturate(3)',
+            transition: 'opacity 0.8s ease',
+            transform: 'translateZ(-5px)',
+          }} />
+
+          {/* ── Main mask image ── */}
+          <img
+            src={oniMask}
+            alt="Oni"
+            style={{
+              width: '100%',
+              display: 'block',
+              position: 'relative',
+              transform: 'translateZ(0)',
+              filter: isGlowing
+                ? 'drop-shadow(0 0 40px rgba(196,30,58,1)) drop-shadow(0 0 80px rgba(196,30,58,0.6)) drop-shadow(0 40px 60px rgba(0,0,0,0.95)) brightness(1.15) contrast(1.05)'
+                : 'drop-shadow(0 20px 50px rgba(0,0,0,0.95)) drop-shadow(0 0 20px rgba(196,30,58,0.3)) brightness(1.0)',
+              transition: 'filter 0.8s ease',
+            }}
+          />
+
+          {/* Top lighting — simulates a light from above */}
+          <div style={{
+            position: 'absolute', inset: 0,
+            background: 'linear-gradient(to bottom, rgba(255,220,180,0.08) 0%, transparent 40%, rgba(0,0,0,0.3) 100%)',
+            pointerEvents: 'none',
+            transform: 'translateZ(2px)',
+            borderRadius: '4px',
+          }} />
+
+          {/* ── Left eye glow ── */}
+          <div style={{
+            position: 'absolute',
+            left: '30%', top: '33%',
+            width: '13%', height: '11%',
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse, rgba(255,220,60,1) 0%, rgba(255,80,0,0.9) 35%, rgba(196,30,58,0.6) 60%, transparent 80%)',
+            filter: isGlowing ? 'blur(5px)' : 'blur(2px)',
+            opacity: isGlowing ? 1 : 0,
+            transition: 'opacity 0.5s ease, filter 0.5s ease',
+            animation: isGlowing ? 'eyeBlaze 0.9s ease-in-out infinite alternate' : 'none',
+            transform: 'translateZ(8px)',
+            mixBlendMode: 'screen',
+          }} />
+
+          {/* ── Right eye glow ── */}
+          <div style={{
+            position: 'absolute',
+            right: '30%', top: '33%',
+            width: '13%', height: '11%',
+            borderRadius: '50%',
+            background: 'radial-gradient(ellipse, rgba(255,220,60,1) 0%, rgba(255,80,0,0.9) 35%, rgba(196,30,58,0.6) 60%, transparent 80%)',
+            filter: isGlowing ? 'blur(5px)' : 'blur(2px)',
+            opacity: isGlowing ? 1 : 0,
+            transition: 'opacity 0.5s ease 0.1s, filter 0.5s ease',
+            animation: isGlowing ? 'eyeBlaze 0.9s ease-in-out infinite alternate 0.15s' : 'none',
+            transform: 'translateZ(8px)',
+            mixBlendMode: 'screen',
+          }} />
+
+          {/* Eye light rays */}
+          {isGlowing && <>
             <div style={{
-              position: 'absolute',
-              left: '37%',
-              top: '39%',
-              width: '2px',
-              height: '40px',
-              background: 'linear-gradient(to bottom, rgba(255,200,0,0.8), transparent)',
-              transform: 'translateZ(35px)',
-              animation: 'tearDrop 1.5s ease-in-out infinite',
+              position: 'absolute', left: '36%', top: '44%',
+              width: '1px', height: '60px',
+              background: 'linear-gradient(to bottom, rgba(255,200,0,0.7), transparent)',
+              transform: 'translateZ(10px)', animation: 'rayFade 1.2s ease-in-out infinite',
             }} />
             <div style={{
-              position: 'absolute',
-              right: '37%',
-              top: '39%',
-              width: '2px',
-              height: '40px',
-              background: 'linear-gradient(to bottom, rgba(255,200,0,0.8), transparent)',
-              transform: 'translateZ(35px)',
-              animation: 'tearDrop 1.5s ease-in-out infinite 0.3s',
+              position: 'absolute', right: '36%', top: '44%',
+              width: '1px', height: '60px',
+              background: 'linear-gradient(to bottom, rgba(255,200,0,0.7), transparent)',
+              transform: 'translateZ(10px)', animation: 'rayFade 1.2s ease-in-out infinite 0.2s',
             }} />
-          </>
-        )}
+          </>}
+        </div>
       </div>
 
       {/* Bottom text */}
       <div style={{
-        position: 'absolute',
-        bottom: '8%',
-        left: 0,
-        right: 0,
-        textAlign: 'center',
-        fontFamily: 'monospace',
-        letterSpacing: '0.4em',
-        fontSize: '11px',
-        color: 'rgba(196,30,58,0.7)',
-        textTransform: 'uppercase',
-        opacity: phase === 'enter' ? 0 : phase === 'exit' ? 0 : 1,
-        transition: 'opacity 0.8s ease',
-        animation: phase === 'glow' ? 'textFlicker 3s ease-in-out infinite' : 'none',
+        position: 'absolute', bottom: '7%', left: 0, right: 0, textAlign: 'center',
+        fontFamily: 'monospace', fontSize: '10px', letterSpacing: '0.5em',
+        color: 'rgba(196,30,58,0.6)', textTransform: 'uppercase',
+        opacity: phase === 'rise' ? 0 : phase === 'exit' ? 0 : 1,
+        transition: 'opacity 1s ease',
+        animation: isGlowing ? 'textGlitch 4s ease-in-out infinite' : 'none',
       }}>
         HELIOS · AGENTIC AI PLATFORM
       </div>
@@ -283,54 +269,55 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
       {/* Exit flash */}
       {phase === 'exit' && (
         <div style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'white',
-          animation: 'exitFlash 0.4s ease-out forwards',
+          position: 'absolute', inset: 0,
+          background: 'rgba(196,30,58,0.15)',
+          animation: 'exitFlash 1s ease-out forwards',
           pointerEvents: 'none',
         }} />
       )}
 
       <style>{`
         @keyframes maskRise {
-          0%   { opacity: 0; transform: perspective(900px) translateY(120px) scale(0.6) rotateX(20deg); }
-          60%  { opacity: 1; transform: perspective(900px) translateY(-8px) scale(1.02) rotateX(-2deg); }
-          100% { opacity: 1; transform: perspective(900px) translateY(0) scale(1) rotateX(0deg); }
+          0%   { opacity:0; transform:perspective(1000px) translateY(110vh) rotateX(35deg) scale(0.7); }
+          50%  { opacity:1; }
+          80%  { transform:perspective(1000px) translateY(-12px) rotateX(-3deg) scale(1.02); }
+          100% { opacity:1; transform:perspective(1000px) translateY(0) rotateX(0deg) scale(1); }
         }
-        @keyframes maskFloat {
-          0%, 100% { transform: perspective(900px) translateY(0px) rotateX(${tiltX}deg) rotateY(${tiltY}deg); }
-          50%       { transform: perspective(900px) translateY(-10px) rotateX(${tiltX}deg) rotateY(${tiltY}deg); }
+        @keyframes maskBreathe {
+          0%,100% { transform:perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(0); }
+          50%      { transform:perspective(1000px) rotateX(${tiltX}deg) rotateY(${tiltY}deg) translateY(-8px); }
         }
-        @keyframes maskExplode {
-          0%   { opacity: 1; transform: perspective(900px) scale(1) translateZ(0); }
-          40%  { opacity: 1; transform: perspective(900px) scale(1.15) translateZ(100px); }
-          100% { opacity: 0; transform: perspective(900px) scale(2.5) translateZ(400px); }
+        @keyframes maskExit {
+          0%   { opacity:1; transform:perspective(1000px) scale(1) translateZ(0); }
+          30%  { opacity:1; transform:perspective(1000px) scale(1.08) translateZ(60px); }
+          100% { opacity:0; transform:perspective(1000px) scale(3) translateZ(600px); }
         }
-        @keyframes eyePulse {
-          0%   { opacity: 0.7; filter: blur(3px); transform: translateZ(30px) scale(0.9); }
-          100% { opacity: 1;   filter: blur(6px); transform: translateZ(30px) scale(1.2); }
+        @keyframes eyeBlaze {
+          0%   { opacity:0.75; transform:translateZ(8px) scale(0.9); filter:blur(4px); }
+          100% { opacity:1.0;  transform:translateZ(8px) scale(1.3); filter:blur(7px); }
         }
-        @keyframes glowBreath {
-          0%   { opacity: 0.6; transform: scale(0.95); }
-          100% { opacity: 1.0; transform: scale(1.05); }
+        @keyframes bloomBreath {
+          0%   { opacity:0.35; transform:translateZ(-10px) scale(1.0); }
+          100% { opacity:0.6;  transform:translateZ(-10px) scale(1.04); }
         }
-        @keyframes vignetteBreath {
-          0%   { opacity: 0.6; }
-          100% { opacity: 1.0; }
+        @keyframes atmospherePulse {
+          0%   { opacity:0.8; }
+          100% { opacity:1.0; }
         }
-        @keyframes tearDrop {
-          0%, 100% { opacity: 0; height: 20px; }
-          50%       { opacity: 1; height: 50px; }
+        @keyframes rayFade {
+          0%,100% { opacity:0; height:20px; }
+          50%      { opacity:0.8; height:70px; }
         }
-        @keyframes textFlicker {
-          0%, 95%, 100% { opacity: 1; }
-          96%            { opacity: 0.3; }
-          97%            { opacity: 1; }
-          98%            { opacity: 0.5; }
+        @keyframes textGlitch {
+          0%,92%,100% { opacity:1; letter-spacing:0.5em; }
+          93%  { opacity:0.2; letter-spacing:0.6em; }
+          94%  { opacity:1; }
+          96%  { opacity:0.5; letter-spacing:0.45em; }
+          97%  { opacity:1; }
         }
         @keyframes exitFlash {
-          0%   { opacity: 0.9; }
-          100% { opacity: 0; }
+          0%   { opacity:1; }
+          100% { opacity:0; }
         }
       `}</style>
     </div>
