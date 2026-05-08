@@ -29,9 +29,13 @@ _FORBIDDEN_BUILTINS: frozenset[str] = frozenset({
     "vars", "delattr", "setattr", "__loader__", "__spec__",
 })
 
+# Hard limits on code size to prevent resource exhaustion
+_MAX_CODE_LINES = 100
+_MAX_CODE_BYTES = 8_192
+
 
 class _ImportGuard(ast.NodeVisitor):
-    """AST visitor that rejects imports of non-whitelisted modules."""
+    """AST visitor that rejects imports of non-whitelisted modules and dunder bypass attempts."""
 
     def __init__(self) -> None:
         self.violations: list[str] = []
@@ -49,9 +53,20 @@ class _ImportGuard(ast.NodeVisitor):
             self.violations.append(f"from {node.module} import ...")
         self.generic_visit(node)
 
+    def visit_Attribute(self, node: ast.Attribute) -> None:
+        # Block attempts to escape sandbox via dunder attribute chains
+        if node.attr.startswith("__") and node.attr.endswith("__"):
+            self.violations.append(f"dunder attribute access: .{node.attr}")
+        self.generic_visit(node)
+
 
 def _validate_code(code: str) -> list[str]:
     """Parse and AST-check code; return list of violation strings."""
+    if len(code.encode()) > _MAX_CODE_BYTES:
+        return [f"Code exceeds {_MAX_CODE_BYTES} byte limit"]
+    line_count = code.count("\n") + 1
+    if line_count > _MAX_CODE_LINES:
+        return [f"Code exceeds {_MAX_CODE_LINES} line limit ({line_count} lines)"]
     try:
         tree = ast.parse(code)
     except SyntaxError as exc:
