@@ -38,6 +38,13 @@ secrets/
 *.swp
 *.swo
 .DS_Store
+*.iml
+.project
+.classpath
+.settings/
+*.sublime-project
+*.sublime-workspace
+.nova/
 
 # Logs
 *.log
