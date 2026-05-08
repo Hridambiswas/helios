@@ -41,27 +41,72 @@ class PipelineTask(Task):
     soft_time_limit=120,
     time_limit=180,
 )
-def run_pipeline_task(self, query: str, user_id: str | None = None) -> dict:
+def run_pipeline_task(
+    self, query: str, user_id: str | None = None, query_id: str | None = None
+) -> dict:
     """
     Celery task that executes the full Helios agent pipeline.
     Retries up to 3 times on transient failures.
+    Persists result to QueryRecord when query_id is provided.
     """
+    import asyncio
+    import time
     from pipeline.run import run_pipeline
     from observability.tracing import extract_celery_context
 
     extract_celery_context(self.request.headers or {})
     logger.info("Task %s: pipeline for user=%s query=%.60s...", self.request.id, user_id, query)
 
+    t0 = time.perf_counter()
     try:
         state = run_pipeline(query, user_id=user_id)
+        elapsed_ms = (time.perf_counter() - t0) * 1000
         if state.get("error"):
             raise RuntimeError(state["error"])
+
+        if query_id:
+            async def _save():
+                from sqlalchemy import select
+                from storage.database import get_session
+                from storage.models import QueryRecord
+                async with get_session() as session:
+                    result = await session.execute(
+                        select(QueryRecord).where(QueryRecord.id == query_id)
+                    )
+                    rec = result.scalar_one_or_none()
+                    if rec:
+                        rec.answer = state.get("answer")
+                        rec.plan = state.get("plan")
+                        rec.retrieved_docs = [
+                            {"id": d["id"], "score": d.get("score", 0)}
+                            for d in state.get("retrieved_docs", [])
+                        ]
+                        rec.critic_scores = state.get("critic_scores")
+                        rec.latency_ms = round(elapsed_ms, 1)
+                        rec.status = "done"
+            asyncio.run(_save())
+
         return {
             "answer": state.get("answer"),
             "critic_passed": state.get("critic_passed"),
             "critic_scores": state.get("critic_scores"),
         }
     except Exception as exc:
+        if query_id:
+            async def _mark_failed():
+                from sqlalchemy import update
+                from storage.database import get_session
+                from storage.models import QueryRecord
+                async with get_session() as session:
+                    await session.execute(
+                        update(QueryRecord)
+                        .where(QueryRecord.id == query_id)
+                        .values(status="failed")
+                    )
+            try:
+                asyncio.run(_mark_failed())
+            except Exception:
+                pass
         logger.exception("Pipeline task %s failed: %s", self.request.id, exc)
         raise self.retry(exc=exc, countdown=10 * (self.request.retries + 1))
 
