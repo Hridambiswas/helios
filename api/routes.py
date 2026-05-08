@@ -101,6 +101,30 @@ async def me(current_user: CurrentUser):
     return current_user
 
 
+@router.get("/auth/me/stats")
+async def my_stats(current_user: CurrentUser):
+    """Return per-user query and document counts."""
+    from sqlalchemy import func
+    async with get_read_session() as session:
+        q_total = await session.scalar(
+            select(func.count(QueryRecord.id)).where(QueryRecord.user_id == current_user.id)
+        ) or 0
+        q_done = await session.scalar(
+            select(func.count(QueryRecord.id)).where(
+                QueryRecord.user_id == current_user.id,
+                QueryRecord.status == "done",
+            )
+        ) or 0
+        doc_total = await session.scalar(
+            select(func.count(Document.id)).where(Document.uploaded_by == current_user.id)
+        ) or 0
+    return {
+        "total_queries": q_total,
+        "successful_queries": q_done,
+        "total_documents": doc_total,
+    }
+
+
 # ── Query (write path) ────────────────────────────────────────────────────────
 
 @router.post(
