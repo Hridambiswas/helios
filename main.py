@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     yield  # ← app runs here
 
     await close_engine()
+    await close_read_engine()
     logger.info("Helios shut down cleanly")
 
 
