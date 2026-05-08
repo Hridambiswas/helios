@@ -2,18 +2,35 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
+import re
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_validator
 
 
 # ── Auth ──────────────────────────────────────────────────────────────────────
 
 class RegisterRequest(BaseModel):
-    username: str = Field(..., min_length=3, max_length=64)
+    username: str = Field(..., min_length=3, max_length=32)
     email: EmailStr
     password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("username")
+    @classmethod
+    def username_safe_chars(cls, v: str) -> str:
+        if not re.fullmatch(r"[a-zA-Z0-9_-]+", v):
+            raise ValueError("Username may only contain letters, digits, underscores, and hyphens")
+        return v
+
+    @field_validator("password")
+    @classmethod
+    def password_complexity(cls, v: str) -> str:
+        if not re.search(r"[A-Za-z]", v):
+            raise ValueError("Password must contain at least one letter")
+        if not re.search(r"\d", v):
+            raise ValueError("Password must contain at least one digit")
+        return v
 
 
 class LoginRequest(BaseModel):
