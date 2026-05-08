@@ -295,6 +295,47 @@ async def get_query_detail(query_id: str, current_user: CurrentUser):
     return record
 
 
+@router.get("/query/history/export")
+async def export_query_history(current_user: CurrentUser):
+    """Export the current user's full query history as a CSV download."""
+    import csv
+    import io
+    from fastapi.responses import StreamingResponse
+
+    async with get_read_session() as session:
+        result = await session.execute(
+            select(QueryRecord)
+            .where(QueryRecord.user_id == current_user.id)
+            .order_by(desc(QueryRecord.created_at))
+            .limit(10_000)
+        )
+        records = list(result.scalars().all())
+
+    buf = io.StringIO()
+    writer = csv.writer(buf)
+    writer.writerow(["id", "query", "status", "latency_ms", "critic_passed", "created_at"])
+    for r in records:
+        critic_passed = ""
+        if r.critic_scores:
+            critic_passed = str(r.critic_scores.get("overall", ""))
+        writer.writerow([
+            r.id,
+            r.query_text,
+            r.status,
+            r.latency_ms or "",
+            critic_passed,
+            r.created_at.isoformat(),
+        ])
+
+    buf.seek(0)
+    filename = f"helios_history_{current_user.username}.csv"
+    return StreamingResponse(
+        iter([buf.getvalue()]),
+        media_type="text/csv",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
 # ── Document ingest (Saga pattern) ────────────────────────────────────────────
 
 @router.post("/ingest", response_model=IngestResponse, status_code=201)
