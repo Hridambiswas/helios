@@ -64,7 +64,7 @@ class PlannerAgent(BaseAgent):
             SystemMessage(content=_SYSTEM_PROMPT.format(max_subtasks=cfg.planner_max_subtasks)),
             HumanMessage(content=query),
         ]
-        response = self._llm.invoke(messages)
+        response = self._llm.invoke(messages, timeout=30)
         raw = response.content.strip()
 
         try:
