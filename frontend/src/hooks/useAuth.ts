@@ -28,14 +28,14 @@ export function useAuth() {
   }, [fetchMe])
 
   const login = async (username: string, password: string) => {
-    const { data } = await auth.login(username, password)
+    const { data } = await auth.login(username.trim().toLowerCase(), password)
     localStorage.setItem('access_token', data.access_token)
     localStorage.setItem('refresh_token', data.refresh_token)
     await fetchMe()
   }
 
   const register = async (username: string, email: string, password: string) => {
-    const { data } = await auth.register(username, email, password)
+    const { data } = await auth.register(username.trim().toLowerCase(), email.trim().toLowerCase(), password)
     localStorage.setItem('access_token', data.access_token)
     localStorage.setItem('refresh_token', data.refresh_token)
     await fetchMe()
