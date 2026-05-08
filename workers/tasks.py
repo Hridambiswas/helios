@@ -103,6 +103,10 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
     upsert_batch(chunk_ids, embeddings, chunks, metas)
     get_index().add_batch(chunk_ids, chunks, metas)
 
+    import asyncio
+    from storage.crud import mark_document_indexed
+    asyncio.run(mark_document_indexed(doc_id))
+
     logger.info("Ingested %d chunks for doc %s", len(chunks), doc_id)
     return {"doc_id": doc_id, "chunk_count": len(chunks)}
 
