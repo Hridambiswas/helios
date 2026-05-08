@@ -64,9 +64,10 @@ def _decode_token(token: str) -> dict:
     try:
         return jwt.decode(token, cfg.jwt_secret_key, algorithms=[cfg.jwt_algorithm])
     except JWTError as exc:
+        logger.debug("JWT decode failed: %s", exc)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid token: {exc}",
+            detail="Invalid or expired token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
