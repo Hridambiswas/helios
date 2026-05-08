@@ -125,3 +125,35 @@ brute_force_blocked_counter = Counter(
     "Requests blocked by the brute-force protection middleware",
     ["path"],
 )
+
+# ── Ingest metrics ────────────────────────────────────────────────────────────
+
+ingest_latency_histogram = Histogram(
+    "helios_ingest_latency_ms",
+    "Document ingestion pipeline latency in milliseconds",
+    buckets=[500, 1000, 2500, 5000, 10000, 30000, 60000],
+)
+
+ingest_chunk_count_histogram = Histogram(
+    "helios_ingest_chunk_count",
+    "Number of chunks produced per ingested document",
+    buckets=[1, 5, 10, 25, 50, 100, 250, 500, 1000, 2000],
+)
+
+ingest_bytes_histogram = Histogram(
+    "helios_ingest_bytes",
+    "Raw document size in bytes at ingest time",
+    buckets=[1024, 4096, 16384, 65536, 262144, 1048576, 10485760],
+)
+
+# ── Guest metrics ─────────────────────────────────────────────────────────────
+
+guest_query_counter = Counter(
+    "helios_guest_queries_total",
+    "Unauthenticated (guest) queries processed",
+)
+
+guest_blocked_counter = Counter(
+    "helios_guest_blocked_total",
+    "Guest queries blocked due to exceeding the free-tier limit",
+)
