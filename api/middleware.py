@@ -10,7 +10,7 @@ from fastapi import Request, Response, status
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from storage.cache import incr
+from storage.cache import incr, ttl_seconds
 from .security import extract_client_ip
 
 logger = logging.getLogger("helios.api.middleware")
@@ -55,6 +55,14 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         rate_key = self._extract_rate_key(request)
         count = await incr("ratelimit_user", rate_key, ttl=cfg.rate_limit_window_seconds)
+        remaining = max(0, cfg.rate_limit_per_user - count)
+        reset_secs = await ttl_seconds("ratelimit_user", rate_key)
+
+        rl_headers = {
+            "X-RateLimit-Limit": str(cfg.rate_limit_per_user),
+            "X-RateLimit-Remaining": str(remaining),
+            "X-RateLimit-Reset": str(max(0, reset_secs)),
+        }
 
         if count > cfg.rate_limit_per_user:
             logger.warning(
@@ -69,10 +77,13 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                         f"requests per {cfg.rate_limit_window_seconds}s"
                     )
                 },
-                headers={"Retry-After": str(cfg.rate_limit_window_seconds)},
+                headers={"Retry-After": str(cfg.rate_limit_window_seconds), **rl_headers},
             )
 
-        return await call_next(request)
+        response = await call_next(request)
+        for header, value in rl_headers.items():
+            response.headers[header] = value
+        return response
 
     @staticmethod
     def _extract_rate_key(request: Request) -> str:
