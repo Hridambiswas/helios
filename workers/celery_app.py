@@ -95,8 +95,7 @@ def rebuild_bm25_index(sender, **kwargs):
         results = collection.get(include=["documents", "metadatas"])
         ids: list[str] = results.get("ids", [])
         documents: list[str] = results.get("documents", []) or []
-        raw_metas = results.get("metadatas") or []
-        metadatas: list[dict] = [dict(m) for m in raw_metas]
+        metadatas: list[dict] = [dict(m) for m in (results.get("metadatas") or [])]  # type: ignore[misc]
 
         if ids:
             get_index().add_batch(ids, documents, metadatas)
