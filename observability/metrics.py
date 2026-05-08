@@ -111,3 +111,17 @@ active_pipelines_gauge = Gauge(
     "helios_active_pipelines",
     "Currently executing synchronous pipeline runs",
 )
+
+# ── Security metrics ──────────────────────────────────────────────────────────
+
+auth_failure_counter = Counter(
+    "helios_auth_failures_total",
+    "Total failed authentication attempts",
+    ["reason"],   # bad_credentials / inactive_user / bad_token
+)
+
+brute_force_blocked_counter = Counter(
+    "helios_brute_force_blocked_total",
+    "Requests blocked by the brute-force protection middleware",
+    ["path"],
+)
