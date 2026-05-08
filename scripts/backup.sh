@@ -45,7 +45,9 @@ ARCHIVE="$BACKUP_DIR/helios_backup_$TIMESTAMP.tar.gz"
 echo "[backup] Archive: $ARCHIVE ($(du -sh "$ARCHIVE" | cut -f1))"
 
 # ── Prune old backups (keep last 7) ──────────────────────────────────────────
+KEEP="${BACKUP_KEEP:-7}"
 find "$BACKUP_DIR" -name "helios_backup_*.tar.gz" -type f \
-  | sort -r | tail -n +8 | xargs -r rm -v
+  | sort -r | tail -n "+$((KEEP + 1))" | xargs -r rm -v
 
 echo "[backup] Done. Stored: $ARCHIVE"
+echo "[backup] Retention: keeping last $KEEP backups"
