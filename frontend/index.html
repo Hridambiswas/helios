@@ -2,6 +2,21 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // GitHub Pages SPA: restore path stored by 404.html redirect
+      (function() {
+        var p = window.location.search.slice(1).split('&').reduce(function(p, s) {
+          var r = s.split('='); return r[0] === 'p' ? decodeURIComponent(r[1].replace(/~and~/g, '&')) : p;
+        }, null);
+        if (p !== null) {
+          window.history.replaceState(null, null,
+            window.location.pathname.split('/').slice(0, -1).join('/') + '/' + p +
+            (window.location.search.slice(1).split('&').filter(function(s) { return s.slice(0,2) !== 'p=' && s.slice(0,2) !== 'q='; }).join('&') ? '?' + window.location.search.slice(1).split('&').filter(function(s) { return s.slice(0,2) !== 'p=' && s.slice(0,2) !== 'q='; }).join('&') : '') +
+            window.location.hash
+          );
+        }
+      }());
+    </script>
     <link rel="icon" type="image/svg+xml" href="/helios-icon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Helios — Distributed Multi-Modal Agentic AI Platform" />
