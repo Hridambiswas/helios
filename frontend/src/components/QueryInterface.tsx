@@ -1,6 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader } from 'lucide-react'
+import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check } from 'lucide-react'
 import { queries, connectQueryWS, type QueryResponse } from '../api/client'
+
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false)
+  const copy = () => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
+  return (
+    <button onClick={copy} className="flex items-center gap-1 font-mono text-[10px] text-[#555] hover:text-crimson transition-colors">
+      {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+      {copied ? 'COPIED' : 'COPY'}
+    </button>
+  )
+}
 
 const GUEST_KEY = 'helios_guest_queries'
 const getGuestCount = () => parseInt(localStorage.getItem(GUEST_KEY) ?? '0', 10)
@@ -27,6 +43,13 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
 }
 
 const STEPS: PipelineStep[] = ['planning', 'retrieving', 'executing', 'evaluating', 'done']
+
+const EXAMPLE_QUERIES = [
+  'Summarize the key concepts in the indexed documents',
+  'What are the main topics covered in the knowledge base?',
+  'Explain the architecture of this system',
+  'What are the most important findings?',
+]
 
 export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRequired }: {
   initialQuery?: string
@@ -140,7 +163,7 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
 
       <div className="max-w-4xl mx-auto">
         {/* Input */}
-        <div className="card-dark border border-crimson/25 mb-6 relative group hover:border-crimson/50 transition-all">
+        <div className="card-dark border border-crimson/25 mb-3 relative group hover:border-crimson/50 transition-all">
           <div className="h-0.5 w-full bg-gradient-to-r from-crimson to-crimson-dark" />
           <div className="p-4 flex gap-3 items-start">
             <span className="font-mono text-crimson text-sm mt-0.5 shrink-0">{'>'}_</span>
@@ -161,7 +184,28 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
               {streaming ? <Loader size={16} className="animate-spin" /> : <Send size={16} />}
             </button>
           </div>
+          <div className="px-4 pb-2 flex items-center justify-between border-t border-white/5 pt-2">
+            <span className="font-mono text-[10px] text-[#333]">Enter to submit · Shift+Enter for newline</span>
+            <span className={`font-mono text-[10px] ${query.length > 3800 ? 'text-crimson' : 'text-[#333]'}`}>
+              {query.length}/4096
+            </span>
+          </div>
         </div>
+
+        {/* Example queries */}
+        {step === 'idle' && !query && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {EXAMPLE_QUERIES.map(eq => (
+              <button
+                key={eq}
+                onClick={() => setQuery(eq)}
+                className="font-mono text-[10px] text-[#444] hover:text-crimson border border-white/5 hover:border-crimson/30 px-2 py-1 transition-all"
+              >
+                {eq.length > 40 ? eq.slice(0, 40) + '…' : eq}
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Pipeline progress */}
         {step !== 'idle' && (
@@ -199,8 +243,14 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
 
         {/* Error */}
         {step === 'error' && (
-          <div className="card-dark border border-crimson/50 p-4 mb-6">
+          <div className="card-dark border border-crimson/50 p-4 mb-6 flex items-start justify-between gap-4">
             <p className="text-crimson font-mono text-sm">{errorMsg || 'Pipeline failed'}</p>
+            <button
+              onClick={() => { setStep('idle'); setTimeout(() => runQuery(query), 0) }}
+              className="shrink-0 font-mono text-[10px] text-[#555] hover:text-white border border-white/10 hover:border-white/30 px-2 py-1 transition-all uppercase"
+            >
+              Retry
+            </button>
           </div>
         )}
 
@@ -262,6 +312,12 @@ function ResultCard({ result }: { result: QueryResponse }) {
       <div className="p-6">
         {activeTab === 'answer' && (
           <div className="prose prose-invert max-w-none">
+            <div className="flex items-center justify-between mb-3">
+              <span className="font-mono text-[10px] text-[#444]">
+                {result.answer.split(/\s+/).filter(Boolean).length} words
+              </span>
+              <CopyButton text={result.answer} />
+            </div>
             <p className="text-white/90 leading-relaxed whitespace-pre-wrap text-sm">{result.answer}</p>
           </div>
         )}
@@ -330,6 +386,19 @@ function ResultCard({ result }: { result: QueryResponse }) {
             {result.critic_scores.reasoning && (
               <div className="mt-4 p-3 bg-white/3 border border-white/5">
                 <p className="text-[#888] text-xs leading-relaxed italic">{result.critic_scores.reasoning}</p>
+              </div>
+            )}
+            {result.critic_scores.suggestions && result.critic_scores.suggestions.length > 0 && (
+              <div className="mt-3">
+                <p className="font-mono text-[10px] text-[#555] uppercase tracking-wider mb-2">Suggestions</p>
+                <ul className="space-y-1">
+                  {result.critic_scores.suggestions.map((s, i) => (
+                    <li key={i} className="text-xs text-[#666] flex gap-2">
+                      <span className="text-crimson shrink-0">›</span>
+                      {s}
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </div>
