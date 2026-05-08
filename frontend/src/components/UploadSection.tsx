@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react'
-import { Upload, FileText, CheckCircle, XCircle, Loader } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Upload, FileText, CheckCircle, XCircle, Loader, Trash2 } from 'lucide-react'
 import { documents } from '../api/client'
 
 function formatBytes(bytes: number) {
@@ -9,12 +9,21 @@ function formatBytes(bytes: number) {
 }
 
 export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  type DocItem = { id: string; filename: string; chunk_count: number; size_bytes: number; created_at: string }
   const [dragging, setDragging] = useState(false)
   const [status, setStatus] = useState<'idle' | 'uploading' | 'done' | 'error'>('idle')
   const [message, setMessage] = useState('')
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [progress, setProgress] = useState(0)
+  const [docs, setDocs] = useState<DocItem[]>([])
+  const [deleting, setDeleting] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  const loadDocs = useCallback(() => {
+    documents.list(10).then(({ data }) => setDocs(data as DocItem[])).catch(() => {})
+  }, [])
+
+  useEffect(() => { loadDocs() }, [loadDocs])
 
   if (!isLoggedIn) return null
 
@@ -30,6 +39,7 @@ export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
       setProgress(100)
       setStatus('done')
       setMessage(`Ingested ${data.chunk_count} chunks from "${data.filename}"`)
+      loadDocs()
     } catch (e: unknown) {
       clearInterval(interval)
       const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
@@ -132,6 +142,46 @@ export function UploadSection({ isLoggedIn }: { isLoggedIn: boolean }) {
             </div>
           ))}
         </div>
+
+        {/* Indexed documents list */}
+        {docs.length > 0 && (
+          <div className="mt-10">
+            <h3 className="font-mono text-[10px] tracking-widest uppercase text-[#555] mb-3">
+              Indexed Documents ({docs.length})
+            </h3>
+            <div className="space-y-2">
+              {docs.map(doc => (
+                <div key={doc.id}
+                  className="flex items-center justify-between border border-white/5 px-4 py-2.5 hover:border-crimson/20 transition-all">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText size={12} className="text-[#444] shrink-0" />
+                    <span className="text-white/70 text-xs truncate">{doc.filename}</span>
+                  </div>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="font-mono text-[10px] text-[#444]">{doc.chunk_count} chunks</span>
+                    <span className="font-mono text-[10px] text-[#333]">{formatBytes(doc.size_bytes)}</span>
+                    <button
+                      onClick={async () => {
+                        setDeleting(doc.id)
+                        try {
+                          await documents.delete(doc.id)
+                          setDocs(d => d.filter(x => x.id !== doc.id))
+                        } catch { /* ignore */ }
+                        finally { setDeleting(null) }
+                      }}
+                      disabled={deleting === doc.id}
+                      className="text-[#444] hover:text-crimson transition-colors disabled:opacity-40"
+                    >
+                      {deleting === doc.id
+                        ? <Loader size={12} className="animate-spin" />
+                        : <Trash2 size={12} />}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
