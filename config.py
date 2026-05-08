@@ -71,6 +71,11 @@ class Settings(BaseSettings):
     critic_min_score: float = 0.7
 
 
+
+    # ── Circuit Breaker ───────────────────────────────────────────────────────
+    circuit_breaker_failure_threshold: int = 5
+    circuit_breaker_recovery_timeout_seconds: float = 30.0
+
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     rate_limit_per_user: int = 7
     rate_limit_window_seconds: int = 60
