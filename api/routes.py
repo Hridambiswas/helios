@@ -148,6 +148,15 @@ async def query(body: QueryRequest, current_user: OptionalUser):
             )
             session.add(record)
 
+    # Check cache for identical recent queries (TTL 5 min)
+    from storage.cache import get as cache_get, set as cache_set
+    import hashlib as _hl
+    cache_key = _hl.sha256(body.query.strip().lower().encode()).hexdigest()
+    cached = await cache_get("query_result", cache_key)
+    if cached and not current_user:
+        # Return cached result for unauthenticated duplicate queries
+        return QueryResponse(**cached)
+
     async with active_pipeline():
         state = await asyncio.to_thread(
             run_pipeline, body.query, user_id=current_user.id if current_user else None
@@ -183,17 +192,22 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         for d in state.get("retrieved_docs", [])
     ]
 
-    return QueryResponse(
+    response = QueryResponse(
         query_id=query_id, query=body.query,
         answer=state.get("answer", ""),
         plan=state.get("plan"),
-        retrieved_docs=docs,
+        retrieved_docs=docs,  # type: ignore[arg-type]
         execution_result=state.get("execution_result"),
         critic_scores=state.get("critic_scores"),
         critic_passed=state.get("critic_passed"),
         latency_ms=round(elapsed_ms, 1),
         status=status_str,
     )
+
+    if not current_user and status_str == "done":
+        await cache_set("query_result", cache_key, response.model_dump(mode="json"), ttl=300)
+
+    return response
 
 
 @router.post(
