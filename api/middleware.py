@@ -13,10 +13,6 @@ from storage.cache import incr
 
 logger = logging.getLogger("helios.api.middleware")
 
-# Rate limit: max requests per window per IP
-RATE_LIMIT_REQUESTS = 60
-RATE_LIMIT_WINDOW_SECONDS = 60
-
 _EXCLUDED = frozenset({
     "/api/v1/health", "/metrics", "/docs", "/redoc", "/openapi.json",
     "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh",
@@ -36,9 +32,42 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     """
-    Sliding-window rate limiter using Redis atomic incr.
-    Applies per client IP; health and metrics endpoints are excluded.
+    Per-user sliding-window rate limiter backed by Redis atomic INCR.
+
+    Authenticated routes key on the JWT subject (user_id) for a limit
+    of RATE_LIMIT_PER_USER requests per window.  Unauthenticated
+    requests (auth endpoints are excluded entirely) key on client IP
+    with the same limit as a safety net.
+
+    Auth, health, and doc endpoints are excluded from rate limiting.
     """
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        if request.url.path in _EXCLUDED:
+            return await call_next(request)
+
+        from config import cfg
+
+        rate_key = self._extract_rate_key(request)
+        count = await incr("ratelimit_user", rate_key, ttl=cfg.rate_limit_window_seconds)
+
+        if count > cfg.rate_limit_per_user:
+            logger.warning(
+                "Rate limit exceeded: key=%s count=%d limit=%d",
+                rate_key, count, cfg.rate_limit_per_user,
+            )
+            return JSONResponse(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                content={
+                    "detail": (
+                        f"Rate limit exceeded — max {cfg.rate_limit_per_user} "
+                        f"requests per {cfg.rate_limit_window_seconds}s"
+                    )
+                },
+                headers={"Retry-After": str(cfg.rate_limit_window_seconds)},
+            )
+
+        return await call_next(request)
 
     @staticmethod
     def _extract_rate_key(request: Request) -> str:
@@ -60,22 +89,3 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 pass
         client_ip = request.client.host if request.client else "unknown"
         return f"ip:{client_ip}"
-
-    async def dispatch(self, request: Request, call_next) -> Response:
-        if request.url.path in _EXCLUDED:
-            return await call_next(request)
-
-        client_ip = request.client.host if request.client else "unknown"
-        count = await incr("ratelimit", client_ip, ttl=RATE_LIMIT_WINDOW_SECONDS)
-
-        if count > RATE_LIMIT_REQUESTS:
-            logger.warning("Rate limit exceeded for %s (%d requests)", client_ip, count)
-            return JSONResponse(
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-                content={
-                    "detail": f"Rate limit exceeded — max {RATE_LIMIT_REQUESTS} requests per {RATE_LIMIT_WINDOW_SECONDS}s"
-                },
-                headers={"Retry-After": str(RATE_LIMIT_WINDOW_SECONDS)},
-            )
-
-        return await call_next(request)
