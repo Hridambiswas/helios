@@ -129,12 +129,15 @@ async def get_current_user_from_token_str(token: str) -> User:
 
 
 async def get_current_user(token: Annotated[str, Depends(_oauth2_scheme)]) -> User:
+    from observability.metrics import auth_failure_counter
     payload = _decode_token(token)
     if payload.get("type") != "access":
+        auth_failure_counter.labels(reason="bad_token").inc()
         raise HTTPException(status_code=401, detail="Not an access token")
 
     user = await get_user_by_id(payload["sub"])
     if not user or not user.is_active:
+        auth_failure_counter.labels(reason="inactive_user").inc()
         raise HTTPException(status_code=401, detail="User not found or inactive")
     return user
 

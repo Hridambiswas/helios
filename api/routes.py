@@ -68,8 +68,10 @@ async def register(body: RegisterRequest):
 
 @router.post("/auth/login", response_model=TokenResponse)
 async def login(form: Annotated[OAuth2PasswordRequestForm, Depends()]):
+    from observability.metrics import auth_failure_counter
     user = await get_user_by_username(form.username)
     if not user or not verify_password(form.password, user.hashed_password):
+        auth_failure_counter.labels(reason="bad_credentials").inc()
         raise HTTPException(401, "Invalid credentials")
     return await issue_tokens(user)
 
