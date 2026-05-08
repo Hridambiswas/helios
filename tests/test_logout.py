@@ -46,7 +46,7 @@ class TestLogout:
         mock_session.execute = AsyncMock()
 
         with (
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
             patch("storage.database.get_session", return_value=mock_session),
         ):
             resp = client.post(
@@ -79,7 +79,7 @@ class TestLogout:
         expected_hash = hashlib.sha256(refresh_token.encode()).hexdigest()
 
         with (
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
             patch("storage.database.get_session", return_value=mock_session),
         ):
             resp = client.post(
