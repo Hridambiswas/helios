@@ -101,3 +101,13 @@ bulkhead_rejected_counter = Counter(
     "Requests rejected by bulkhead isolation",
     ["agent"],
 )
+
+backpressure_shed_counter = Counter(
+    "helios_backpressure_shed_total",
+    "Requests shed due to backpressure (queue depth or active pipelines)",
+)
+
+active_pipelines_gauge = Gauge(
+    "helios_active_pipelines",
+    "Currently executing synchronous pipeline runs",
+)
