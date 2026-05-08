@@ -49,27 +49,27 @@ _critic = CriticAgent()
 
 def node_planner(state: HeliosState) -> HeliosState:
     with span("helios.planner", {"query": state.get("query", "")[:80]}):
-        return _planner.run(state)  # type: ignore[arg-type, return-value]
+        return _planner.run(state)  # type: ignore
 
 
 def node_retriever(state: HeliosState) -> HeliosState:
     with span("helios.retriever"):
-        return _retriever.run(state)  # type: ignore[arg-type, return-value]
+        return _retriever.run(state)  # type: ignore
 
 
 def node_executor(state: HeliosState) -> HeliosState:
     with span("helios.executor"):
-        return _executor.run(state)  # type: ignore[arg-type, return-value]
+        return _executor.run(state)  # type: ignore
 
 
 def node_synthesizer(state: HeliosState) -> HeliosState:
     with span("helios.synthesizer"):
-        return _synthesizer.run(state)  # type: ignore[arg-type, return-value]
+        return _synthesizer.run(state)  # type: ignore
 
 
 def node_critic(state: HeliosState) -> HeliosState:
     with span("helios.critic"):
-        return _critic.run(state)  # type: ignore[arg-type, return-value]
+        return _critic.run(state)  # type: ignore
 
 
 # ── Conditional routing ───────────────────────────────────────────────────────
@@ -110,13 +110,13 @@ def route_after_critic(state: HeliosState) -> str:
 def _build_graph() -> StateGraph:
     # type: ignore comments below suppress LangGraph stub false-positives;
     # TypedDict state schemas work correctly at runtime.
-    g = StateGraph(HeliosState)  # type: ignore[arg-type]
+    g = StateGraph(HeliosState)  # type: ignore
 
-    g.add_node("planner",     node_planner)      # type: ignore[arg-type]
-    g.add_node("retriever",   node_retriever)    # type: ignore[arg-type]
-    g.add_node("executor",    node_executor)     # type: ignore[arg-type]
-    g.add_node("synthesizer", node_synthesizer)  # type: ignore[arg-type]
-    g.add_node("critic",      node_critic)       # type: ignore[arg-type]
+    g.add_node("planner",     node_planner)      # type: ignore
+    g.add_node("retriever",   node_retriever)    # type: ignore
+    g.add_node("executor",    node_executor)     # type: ignore
+    g.add_node("synthesizer", node_synthesizer)  # type: ignore
+    g.add_node("critic",      node_critic)       # type: ignore
 
     g.set_entry_point("planner")
 
@@ -146,7 +146,7 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
     Execute the full Helios agent pipeline for a query.
     Returns the final state dict including answer and critic_scores.
     """
-    initial_state: HeliosState = {
+    initial_state: HeliosState = {  # type: ignore[typeddict-item]
         "query": query,
         "user_id": user_id,
         "plan": None,
