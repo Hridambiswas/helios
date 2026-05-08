@@ -14,10 +14,18 @@ from rank_bm25 import BM25Okapi
 logger = logging.getLogger("helios.retrieval.bm25_search")
 
 _TOKENIZE_RE = re.compile(r"\b\w+\b")
+_STOPWORDS = frozenset({
+    "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
+    "of", "with", "by", "from", "is", "are", "was", "were", "be", "been",
+    "being", "have", "has", "had", "do", "does", "did", "will", "would",
+    "could", "should", "may", "might", "shall", "can", "this", "that",
+    "these", "those", "i", "you", "he", "she", "it", "we", "they",
+})
 
 
 def _tokenize(text: str) -> list[str]:
-    return _TOKENIZE_RE.findall(text.lower())
+    tokens = _TOKENIZE_RE.findall(text.lower())
+    return [t for t in tokens if t not in _STOPWORDS and len(t) > 1]
 
 
 @dataclass
