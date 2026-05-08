@@ -157,3 +157,24 @@ guest_blocked_counter = Counter(
     "helios_guest_blocked_total",
     "Guest queries blocked due to exceeding the free-tier limit",
 )
+
+# ── Storage metrics ───────────────────────────────────────────────────────────
+
+db_query_latency_histogram = Histogram(
+    "helios_db_query_latency_ms",
+    "SQLAlchemy query latency in milliseconds",
+    ["operation"],   # select / insert / update / delete
+    buckets=[1, 5, 10, 25, 50, 100, 250, 500, 1000],
+)
+
+cache_hit_counter = Counter(
+    "helios_cache_hits_total",
+    "Redis cache hits",
+    ["key_prefix"],
+)
+
+cache_miss_counter = Counter(
+    "helios_cache_misses_total",
+    "Redis cache misses",
+    ["key_prefix"],
+)
