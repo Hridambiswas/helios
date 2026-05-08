@@ -41,6 +41,7 @@ class BaseAgent(ABC):
             elapsed_ms = (time.perf_counter() - t0) * 1000
             agent_latency_histogram.labels(agent=self.name).observe(elapsed_ms)
             self.logger.info("%s finished in %.1f ms", self.name, elapsed_ms)
+            self.logger.debug("%s state keys after run: %s", self.name, list(result.keys()))
             return result
 
         except BulkheadRejected as exc:
