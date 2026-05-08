@@ -80,8 +80,9 @@ class Settings(BaseSettings):
     ingest_chunk_overlap: int = 50
     ingest_max_chunks: int = 2000            # hard cap per document
 
-
-
+    # ── Sentry ────────────────────────────────────────────────────────────────
+    sentry_dsn: str = ""                     # Set in production for error tracking
+    sentry_traces_sample_rate: float = 0.1
 
 
 
