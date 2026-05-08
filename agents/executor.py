@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import ast
+import builtins
 import io
 import logging
 import textwrap
@@ -72,7 +73,7 @@ def _run_with_timeout(code: str, timeout: int) -> tuple[str, str, Exception | No
 
     _safe_globals = {
         "__builtins__": {
-            k: v for k, v in __builtins__.items()  # type: ignore[union-attr]
+            k: v for k, v in vars(builtins).items()
             if k not in _FORBIDDEN_BUILTINS
         },
     }
