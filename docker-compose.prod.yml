@@ -8,22 +8,44 @@ services:
     depends_on:
       - api
     restart: unless-stopped
+    mem_limit: 64m
 
   api:
-    ports: []  # not exposed directly — nginx handles it
+    ports: []
+    mem_limit: 300m
+    restart: unless-stopped
 
   worker:
-    command: celery -A workers.celery_app worker --loglevel=info --concurrency=2
+    command: celery -A workers.celery_app worker --loglevel=info --concurrency=1
+    mem_limit: 250m
+    restart: unless-stopped
 
-  # Remove dev-only services from prod exposure
+  beat:
+    mem_limit: 100m
+    restart: unless-stopped
+
+  postgres:
+    mem_limit: 128m
+    restart: unless-stopped
+
+  redis:
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    mem_limit: 80m
+    restart: unless-stopped
+
   minio:
-    ports: []  # internal only
+    ports: []
+    mem_limit: 128m
+    restart: unless-stopped
 
   chroma:
-    ports: []  # internal only
-
-  otel-collector:
     ports: []
+    mem_limit: 200m
+    restart: unless-stopped
+
+  # Disable heavy observability services on free tier
+  otel-collector:
+    profiles: ["observability"]
 
   prometheus:
-    ports: []
+    profiles: ["observability"]
