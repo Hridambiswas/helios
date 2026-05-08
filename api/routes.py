@@ -295,9 +295,14 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     text = content.decode("utf-8", errors="replace")
     raw_chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 20]
     chunks: list[str] = []
-    for chunk in raw_chunks:
-        for i in range(0, len(chunk), 500):
-            chunks.append(chunk[i: i + 500])
+    chunk_size, overlap = 500, 50
+    for para in raw_chunks:
+        start = 0
+        while start < len(para):
+            chunks.append(para[start: start + chunk_size])
+            if start + chunk_size >= len(para):
+                break
+            start += chunk_size - overlap
 
     from langchain_community.embeddings import HuggingFaceEmbeddings
     import retrieval.bm25_search as bm25
