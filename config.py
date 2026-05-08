@@ -103,6 +103,8 @@ class Settings(BaseSettings):
     max_upload_bytes: int = 52_428_800  # 50 MB
     trusted_proxy_count: int = 0
     allowed_upload_extensions: list[str] = [".txt", ".md", ".pdf", ".csv", ".json", ".rst"]
+    ws_max_message_bytes: int = 65_536      # 64 KB per WebSocket message
+    ws_max_connections_per_user: int = 3    # concurrent WS sessions per user
 
     @property
     def is_production(self) -> bool:
