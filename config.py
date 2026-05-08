@@ -72,6 +72,12 @@ class Settings(BaseSettings):
 
 
 
+
+    # ── Bulkhead ──────────────────────────────────────────────────────────────
+    bulkhead_executor_limit: int = 3
+    bulkhead_retriever_limit: int = 8
+    bulkhead_default_limit: int = 10
+
     # ── Circuit Breaker ───────────────────────────────────────────────────────
     circuit_breaker_failure_threshold: int = 5
     circuit_breaker_recovery_timeout_seconds: float = 30.0
