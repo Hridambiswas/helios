@@ -16,8 +16,10 @@ from observability.tracing import setup_tracing
 from api.routes import router
 from api.websocket import ws_router
 from api.middleware import RequestIDMiddleware, RateLimitMiddleware
+from gateway.router import GatewayMiddleware
 from storage.database import create_tables, close_engine
 from storage.object_store import ensure_bucket
+from storage.read_replica import close_read_engine
 
 logger = logging.getLogger("helios.main")
 
