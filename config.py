@@ -69,8 +69,14 @@ class Settings(BaseSettings):
     retriever_dense_weight: float = 0.6
     retriever_clip_weight: float = 0.3
     retriever_bm25_weight: float = 0.1
+    retriever_rrf_k: int = 60                # RRF rank offset (higher = smoother)
     executor_timeout_seconds: int = 15
     critic_min_score: float = 0.7
+
+    # ── Ingest Tuning ─────────────────────────────────────────────────────────
+    ingest_chunk_size: int = 500
+    ingest_chunk_overlap: int = 50
+    ingest_max_chunks: int = 2000            # hard cap per document
 
 
 
