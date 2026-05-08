@@ -136,9 +136,14 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
 
     raw_chunks = [c.strip() for c in text.split("\n\n") if len(c.strip()) > 20]
     chunks: list[str] = []
-    for chunk in raw_chunks:
-        for i in range(0, len(chunk), 500):
-            chunks.append(chunk[i: i + 500])
+    chunk_size, overlap = 500, 50
+    for para in raw_chunks:
+        start = 0
+        while start < len(para):
+            chunks.append(para[start: start + chunk_size])
+            if start + chunk_size >= len(para):
+                break
+            start += chunk_size - overlap
 
     embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
