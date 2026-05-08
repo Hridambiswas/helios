@@ -11,16 +11,25 @@ services:
     mem_limit: 64m
 
   api:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     ports: []
     mem_limit: 300m
     restart: unless-stopped
 
   worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     command: celery -A workers.celery_app worker --loglevel=info --concurrency=1
     mem_limit: 250m
     restart: unless-stopped
 
   beat:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
     mem_limit: 100m
     restart: unless-stopped
 
