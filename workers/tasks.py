@@ -54,6 +54,8 @@ def run_pipeline_task(
     from pipeline.run import run_pipeline
     from observability.tracing import extract_celery_context
 
+    from celery.exceptions import SoftTimeLimitExceeded
+
     extract_celery_context(self.request.headers or {})
     logger.info("Task %s: pipeline start user=%s query=%.80s", self.request.id, user_id, query)
 
@@ -90,7 +92,30 @@ def run_pipeline_task(
             "answer": state.get("answer"),
             "critic_passed": state.get("critic_passed"),
             "critic_scores": state.get("critic_scores"),
+            "latency_ms": round(elapsed_ms, 1),
         }
+    except SoftTimeLimitExceeded:
+        elapsed_ms = (time.perf_counter() - t0) * 1000
+        logger.warning(
+            "Task %s hit soft time limit after %.0f ms — marking failed",
+            self.request.id, elapsed_ms,
+        )
+        if query_id:
+            async def _mark_timeout():
+                from sqlalchemy import update
+                from storage.database import get_session
+                from storage.models import QueryRecord
+                async with get_session() as session:
+                    await session.execute(
+                        update(QueryRecord)
+                        .where(QueryRecord.id == query_id)
+                        .values(status="timeout")
+                    )
+            try:
+                asyncio.run(_mark_timeout())
+            except Exception:
+                pass
+        raise
     except Exception as exc:
         if query_id:
             async def _mark_failed():
