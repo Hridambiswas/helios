@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import logging
+import re
 import uuid
 
 from fastapi import Request, Response, status
@@ -10,8 +11,11 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from storage.cache import incr
+from .security import extract_client_ip
 
 logger = logging.getLogger("helios.api.middleware")
+
+_REQUEST_ID_RE = re.compile(r"[^a-zA-Z0-9\-]")
 
 _EXCLUDED = frozenset({
     "/api/v1/health", "/metrics", "/docs", "/redoc", "/openapi.json",
@@ -23,7 +27,8 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
     """Attach a unique X-Request-ID to every request and response."""
 
     async def dispatch(self, request: Request, call_next) -> Response:
-        request_id = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        raw = request.headers.get("X-Request-ID") or str(uuid.uuid4())
+        request_id = _REQUEST_ID_RE.sub("", raw)[:64] or str(uuid.uuid4())
         request.state.request_id = request_id
         response = await call_next(request)
         response.headers["X-Request-ID"] = request_id
@@ -71,10 +76,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
     @staticmethod
     def _extract_rate_key(request: Request) -> str:
-        """
-        Return user:{user_id} if a valid Bearer token is present,
-        otherwise ip:{client_ip} as a fallback.
-        """
+        """Return user:{user_id} if a valid Bearer token is present, else ip:{client_ip}."""
         auth = request.headers.get("Authorization", "")
         if auth.startswith("Bearer "):
             token = auth[7:]
@@ -87,5 +89,4 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 return f"user:{payload['sub']}"
             except Exception:
                 pass
-        client_ip = request.client.host if request.client else "unknown"
-        return f"ip:{client_ip}"
+        return f"ip:{extract_client_ip(request)}"
