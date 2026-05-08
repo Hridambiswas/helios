@@ -40,6 +40,7 @@ def get_engine() -> AsyncEngine:
             max_overflow=20,
             pool_pre_ping=True,        # detect stale connections
             pool_recycle=3600,         # recycle after 1h
+            pool_timeout=30,           # raise after 30s if no connection available
             echo=cfg.is_development,
         )
     return _engine
