@@ -12,7 +12,15 @@ export function Navbar({ user, onAuthClick, onLogout }: {
   const [apiStatus, setApiStatus] = useState<'ok' | 'degraded' | 'down' | null>(null)
 
   useEffect(() => {
-    api.get('/health').then(({ data }) => setApiStatus(data.status)).catch(() => setApiStatus('down'))
+    api.get('/health')
+      .then(({ data }) => setApiStatus(data.status))
+      .catch(() => setApiStatus('down'))
+    const interval = setInterval(() => {
+      api.get('/health')
+        .then(({ data }) => setApiStatus(data.status))
+        .catch(() => setApiStatus('down'))
+    }, 60_000)
+    return () => clearInterval(interval)
   }, [])
 
   const navLinks = [
