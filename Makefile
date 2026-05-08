@@ -1,6 +1,7 @@
 .PHONY: up down build logs restart status test test-cov lint fmt typecheck \
         migrate migrate-gen migrate-down dev worker beat \
-        eval bench ingest ssl-setup frontend-dev frontend-build
+        eval bench ingest ssl-setup frontend-dev frontend-build \
+        backup shell-api shell-db prod-restart
 
 ## ── Docker (local dev) ────────────────────────────────────────────────────────
 
@@ -101,6 +102,24 @@ bench:
 
 ingest:
 	python scripts/ingest_demo.py --dir ./docs
+
+## ── Backup ───────────────────────────────────────────────────────────────────
+
+backup:
+	bash scripts/backup.sh ./backups
+
+## ── Shell helpers ────────────────────────────────────────────────────────────
+
+shell-api:
+	docker compose exec api /bin/bash
+
+shell-db:
+	docker compose exec postgres psql -U helios -d helios
+
+## ── Production helpers ───────────────────────────────────────────────────────
+
+prod-restart:
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml restart api worker
 
 ## ── Help ─────────────────────────────────────────────────────────────────────
 
