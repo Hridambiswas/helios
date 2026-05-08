@@ -295,10 +295,10 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
         for i in range(0, len(chunk), 500):
             chunks.append(chunk[i: i + 500])
 
-    from langchain_openai import OpenAIEmbeddings
+    from langchain_community.embeddings import HuggingFaceEmbeddings
     import retrieval.bm25_search as bm25
 
-    embedder = OpenAIEmbeddings(model=cfg.openai_embedding_model, api_key=cfg.openai_api_key)
+    embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
     embeddings = embedder.embed_documents(chunks)
     metas = [{"doc_id": doc_id, "filename": safe_name, "chunk_idx": i} for i in range(len(chunks))]

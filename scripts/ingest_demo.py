@@ -13,7 +13,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from config import cfg
 from retrieval.vector_store import upsert_batch
 from retrieval.bm25_search import get_index
@@ -30,7 +30,7 @@ def chunk_text(text: str, size: int = 500) -> list[str]:
     return chunks
 
 
-def ingest_file(path: Path, embedder: OpenAIEmbeddings) -> int:
+def ingest_file(path: Path, embedder: HuggingFaceEmbeddings) -> int:
     text = path.read_text(encoding="utf-8", errors="replace")
     chunks = chunk_text(text)
     if not chunks:
@@ -65,7 +65,7 @@ def main():
     files = [f for ext in args.ext for f in src.rglob(f"*{ext}")]
     print(f"Found {len(files)} files in {src}")
 
-    embedder = OpenAIEmbeddings(model=cfg.openai_embedding_model, api_key=cfg.openai_api_key)
+    embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
     total = sum(ingest_file(f, embedder) for f in files)
     print(f"\nDone — {total} total chunks indexed")
 

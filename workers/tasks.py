@@ -127,7 +127,7 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
     from storage.object_store import download
     from retrieval.vector_store import upsert_batch
     from retrieval.bm25_search import get_index
-    from langchain_openai import OpenAIEmbeddings
+    from langchain_community.embeddings import HuggingFaceEmbeddings
     from config import cfg
 
     logger.info("Ingesting doc %s from MinIO key %s", doc_id, minio_key)
@@ -140,7 +140,7 @@ def ingest_document_task(doc_id: str, minio_key: str, filename: str) -> dict:
         for i in range(0, len(chunk), 500):
             chunks.append(chunk[i: i + 500])
 
-    embedder = OpenAIEmbeddings(model=cfg.openai_embedding_model, api_key=cfg.openai_api_key)
+    embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
     embeddings = embedder.embed_documents(chunks)
     metas = [{"doc_id": doc_id, "filename": filename, "chunk_idx": i} for i in range(len(chunks))]

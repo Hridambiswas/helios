@@ -17,9 +17,9 @@ class Settings(BaseSettings):
     )
 
     # ── LLM ───────────────────────────────────────────────────────────────────
-    openai_api_key: SecretStr = SecretStr("sk-placeholder")
-    openai_model: str = "gpt-4o"
-    openai_embedding_model: str = "text-embedding-3-small"
+    groq_api_key: SecretStr = SecretStr("placeholder")
+    groq_model: str = "llama-3.3-70b-versatile"
+    embedding_model: str = "all-MiniLM-L6-v2"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     jwt_secret_key: str = "change-me-in-production"

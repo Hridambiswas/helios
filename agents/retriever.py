@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain_openai import OpenAIEmbeddings
+from langchain_community.embeddings import HuggingFaceEmbeddings
 
 from config import cfg
 from agents.base import BaseAgent
@@ -40,10 +40,7 @@ class RetrieverAgent(BaseAgent):
 
     def __init__(self) -> None:
         super().__init__()
-        self._embedder = OpenAIEmbeddings(
-            model=cfg.openai_embedding_model,
-            api_key=cfg.openai_api_key,
-        )
+        self._embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
         plan: dict = state.get("plan", {})

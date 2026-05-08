@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
@@ -59,10 +59,10 @@ class SynthesizerAgent(BaseAgent):
 
     def __init__(self) -> None:
         super().__init__()
-        self._llm = ChatOpenAI(
-            model=cfg.openai_model,
+        self._llm = ChatGroq(
+            model=cfg.groq_model,
             temperature=0.2,
-            api_key=cfg.openai_api_key,
+            api_key=cfg.groq_api_key,
         )
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
