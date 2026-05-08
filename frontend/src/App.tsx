@@ -7,6 +7,8 @@ import { UploadSection } from './components/UploadSection'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { AuthModal } from './components/AuthModal'
+import { SplashScreen } from './components/SplashScreen'
+import { ParticleField } from './components/ParticleField'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import type { QueryResponse } from './api/client'
@@ -18,6 +20,12 @@ export default function App() {
   const [pendingQuery, setPendingQuery] = useState<string | undefined>()
   const [pendingGuestQuery, setPendingGuestQuery] = useState<string | undefined>()
   const [historyRefresh, setHistoryRefresh] = useState(0)
+  const [splashDone, setSplashDone] = useState(() => sessionStorage.getItem('helios_splash') === '1')
+
+  const handleSplashComplete = () => {
+    sessionStorage.setItem('helios_splash', '1')
+    setSplashDone(true)
+  }
 
   // Pre-fill query from ?q= URL parameter so users can share deep links
   useEffect(() => {
@@ -69,6 +77,12 @@ export default function App() {
 
   return (
     <>
+      {/* Oni mask splash intro — only first visit per session */}
+      {!splashDone && <SplashScreen onComplete={handleSplashComplete} />}
+
+      {/* Floating ember particles */}
+      <ParticleField />
+
       {/* Scanline effect */}
       <div className="scanline" />
 
