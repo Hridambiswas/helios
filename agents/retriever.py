@@ -56,8 +56,8 @@ def _deduplicate(hits: list[dict]) -> list[dict]:
 
 class RetrieverAgent(BaseAgent):
     """
-    Hybrid retriever: OpenAI dense embedding + CLIP + BM25 sparse.
-    Scores weighted by cfg.retriever_clip_weight / bm25_weight, then merged.
+    Hybrid retriever: HuggingFace dense embedding + CLIP + BM25 sparse.
+    Results merged via Reciprocal Rank Fusion (RRF).
     """
 
     name = "retriever"
