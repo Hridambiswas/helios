@@ -92,11 +92,11 @@ services:
     volumes:
       - chroma_data:/chroma/.chroma/index
     healthcheck:
-      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8000"]
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/api/v1/heartbeat"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 10s
+      start_period: 15s
     restart: unless-stopped
 
   # ── OpenTelemetry Collector ──────────────────────────────────────────────────
