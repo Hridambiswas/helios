@@ -2,6 +2,7 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
+import asyncio
 import logging
 import pathlib
 import re
@@ -122,7 +123,7 @@ async def query(body: QueryRequest, current_user: CurrentUser):
         session.add(record)
 
     async with active_pipeline():
-        state = run_pipeline(body.query, user_id=current_user.id)
+        state = await asyncio.to_thread(run_pipeline, body.query, user_id=current_user.id)
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
     status_str = "done" if not state.get("error") else "failed"
