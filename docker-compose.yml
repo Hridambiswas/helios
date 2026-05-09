@@ -100,7 +100,7 @@ services:
     volumes:
       - chroma_data:/chroma/.chroma/index
     healthcheck:
-      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/8000"]
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/localhost/8000"]
       interval: 10s
       timeout: 5s
       retries: 5
