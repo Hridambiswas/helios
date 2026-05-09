@@ -35,7 +35,7 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Deploy to Vercel
-        run: cd frontend && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN || secrets.VERCEL_TOKEN_TWO }} --yes
+        run: cd frontend && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN_TWO || secrets.VERCEL_TOKEN }} --yes
         env:
           # Fallbacks keep deploys working even if org/project secrets are not configured.
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || 'team_ofA6Jc0CdsYFcOUH8TBhkG2y' }}
