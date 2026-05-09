@@ -13,7 +13,7 @@ from agents.base import BaseAgent
 
 logger = logging.getLogger("helios.agents.synthesizer")
 
-_SYSTEM_PROMPT = """\
+_SYSTEM_PROMPT_RAG = """\
 You are the Synthesizer agent in Helios — a grounded answer writer.
 
 Your job: produce a final, comprehensive answer by weaving together:
@@ -28,6 +28,20 @@ Writing rules:
     rather than guessing or padding with generic statements.
   - Prefer clear, concise prose. Use bullet points or code blocks only when
     they genuinely improve clarity.
+  - Do not repeat the query verbatim at the start of your answer.
+  - Match the depth of the answer to the complexity of the query.
+"""
+
+_SYSTEM_PROMPT_DIRECT = """\
+You are the Synthesizer agent in Helios — a helpful, direct answer writer.
+
+Your job: answer the user's query directly from your own knowledge.
+No documents were retrieved because none are needed for this query.
+
+Writing rules:
+  - Answer clearly and concisely from your general knowledge.
+  - Do NOT mention documents, context, or retrieval — they are irrelevant here.
+  - If code was executed, integrate its output naturally.
   - Do not repeat the query verbatim at the start of your answer.
   - Match the depth of the answer to the complexity of the query.
 """
@@ -73,22 +87,32 @@ class SynthesizerAgent(BaseAgent):
         query: str = state["query"]
         docs: list[dict] = state.get("retrieved_docs", [])
         exec_result: dict | None = state.get("execution_result")
+        requires_retrieval: bool = state.get("plan", {}).get("requires_retrieval", True)
 
-        context_block = _format_docs(docs)
         exec_block = _format_execution(exec_result)
+
+        # Use RAG prompt only when documents were actually retrieved
+        if docs:
+            system_prompt = _SYSTEM_PROMPT_RAG
+            context_section = f"--- Retrieved Context ---\n{_format_docs(docs)}\n"
+        elif requires_retrieval:
+            # Retrieval was attempted but returned nothing
+            system_prompt = _SYSTEM_PROMPT_RAG
+            context_section = "--- Retrieved Context ---\nNo relevant documents found in the knowledge base.\n"
+        else:
+            # No retrieval needed — answer directly
+            system_prompt = _SYSTEM_PROMPT_DIRECT
+            context_section = ""
 
         user_msg = f"""User query: {query}
 
---- Retrieved Context ---
-{context_block}
-
---- Code Execution Result ---
+{context_section}--- Code Execution Result ---
 {exec_block if exec_block else "N/A"}
 
 Now produce the final answer:"""
 
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=system_prompt),
             HumanMessage(content=user_msg),
         ]
         response = self._llm.invoke(messages, timeout=45)
