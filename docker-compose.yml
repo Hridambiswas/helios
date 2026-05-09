@@ -100,7 +100,7 @@ services:
     volumes:
       - chroma_data:/chroma/.chroma/index
     healthcheck:
-      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v2/heartbeat')"]
+      test: ["CMD-SHELL", "echo > /dev/tcp/localhost/8000"]
       interval: 10s
       timeout: 5s
       retries: 5
