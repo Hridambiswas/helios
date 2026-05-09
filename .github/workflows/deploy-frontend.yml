@@ -37,5 +37,6 @@ jobs:
       - name: Deploy to Vercel
         run: cd frontend && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }} --yes
         env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+          # Fallbacks keep deploys working even if org/project secrets are not configured.
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || 'team_ofA6Jc0CdsYFcOUH8TBhkG2y' }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || 'prj_gsuByrxhtebWuprPEuORW5VmsaBT' }}
