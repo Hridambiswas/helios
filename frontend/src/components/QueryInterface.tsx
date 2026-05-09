@@ -21,6 +21,14 @@ function CopyButton({ text }: { text: string }) {
 const GUEST_KEY = 'helios_guest_queries'
 const getGuestCount = () => parseInt(localStorage.getItem(GUEST_KEY) ?? '0', 10)
 const incGuestCount = () => localStorage.setItem(GUEST_KEY, String(getGuestCount() + 1))
+// -1 means unlimited guest queries. Set VITE_GUEST_QUERY_LIMIT to a non-negative integer to enforce a cap.
+const GUEST_QUERY_LIMIT = (() => {
+  const raw = import.meta.env.VITE_GUEST_QUERY_LIMIT
+  if (raw === undefined || raw === null || raw === '') return -1
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? Math.max(-1, Math.floor(parsed)) : -1
+})()
+const hasReachedGuestLimit = () => GUEST_QUERY_LIMIT >= 0 && getGuestCount() >= GUEST_QUERY_LIMIT
 
 type PipelineStep = 'idle' | 'planning' | 'retrieving' | 'executing' | 'evaluating' | 'done' | 'error'
 
@@ -76,7 +84,7 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
   const runQuery = async (q: string) => {
     if (!q.trim() || step !== 'idle') return
 
-    if (!isLoggedIn && getGuestCount() >= 1) {
+    if (!isLoggedIn && hasReachedGuestLimit()) {
       onAuthRequired?.(q)
       return
     }
@@ -128,7 +136,7 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
         const { data } = await queries.run(q)
         setResult(data)
         setStep('done')
-        if (!isLoggedIn) incGuestCount()
+        if (!isLoggedIn && GUEST_QUERY_LIMIT >= 0) incGuestCount()
         onNewResult?.(data)
       } catch (e: unknown) {
         const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail

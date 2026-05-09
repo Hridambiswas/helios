@@ -192,11 +192,11 @@ export function Hero({ onQuerySubmit, onAuthClick, isLoggedIn }: {
           </div>
           {!isLoggedIn && (
             <p className="text-xs text-[#555] mt-2 font-mono text-center">
-              1 free query —{' '}
+              Guest mode enabled —{' '}
               <button onClick={onAuthClick} className="text-crimson hover:text-crimson-light transition-colors">
                 sign in
               </button>
-              {' '}to unlock unlimited
+              {' '}for history and uploads
             </p>
           )}
         </div>
