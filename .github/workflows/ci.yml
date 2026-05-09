@@ -83,6 +83,8 @@ jobs:
           timeout 120 bash -c 'until curl -sf http://localhost:8001/api/v2/heartbeat; do sleep 3; done'
       - name: Install dependencies
         run: pip install -r requirements.txt "pytest==8.3.3" "pytest-cov==5.0.0" "pytest-asyncio==0.24.0"
+      - name: Run migrations
+        run: alembic upgrade head
       - name: Run tests
         run: pytest tests/ -v --tb=short --cov=. --cov-report=html
       - name: Upload coverage

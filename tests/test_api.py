@@ -63,7 +63,7 @@ class TestAuthEndpoints:
             )),
         ):
             resp = client.post("/api/v1/auth/register", json={
-                "username": "hridam", "email": "h@test.com", "password": "password123"
+                "username": "hridam", "email": "h@test.com", "password": "Password123"
             })
             assert resp.status_code == 201
 
@@ -71,6 +71,6 @@ class TestAuthEndpoints:
         mock_user = MagicMock()
         with patch("api.routes.get_user_by_username", new_callable=AsyncMock, return_value=mock_user):
             resp = client.post("/api/v1/auth/register", json={
-                "username": "hridam", "email": "h@test.com", "password": "password123"
+                "username": "hridam", "email": "h@test.com", "password": "Password123"
             })
             assert resp.status_code == 400

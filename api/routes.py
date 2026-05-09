@@ -17,8 +17,9 @@ from sqlalchemy import select, desc
 from api.auth import (
     CurrentUser, OptionalUser, get_user_by_username, create_user,
     verify_password, issue_tokens, refresh_access_token,
-    validate_password_strength,
+    validate_password_strength, get_user_by_id,
 )
+from celery.result import AsyncResult
 from api.schemas import (
     RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
     UserResponse, QueryRequest, QueryResponse, IngestResponse,
@@ -238,7 +239,6 @@ async def query_async(body: QueryRequest, current_user: CurrentUser):
 @router.get("/query/task/{task_id}", response_model=TaskStatusResponse)
 async def get_task_status(task_id: str, current_user: CurrentUser):
     """Poll the Celery task state for an async pipeline request."""
-    from celery.result import AsyncResult
     from workers.celery_app import app as celery_app
 
     result = AsyncResult(task_id, app=celery_app)
