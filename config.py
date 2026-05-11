@@ -113,7 +113,7 @@ class Settings(BaseSettings):
     # ── Rate Limiting ─────────────────────────────────────────────────────────
     rate_limit_per_user: int = 60
     rate_limit_window_seconds: int = 60
-    guest_query_limit: int = 1
+    guest_query_limit: int = 5
 
     # ── OAuth (GitHub social login) ───────────────────────────────────────────
     github_client_id: str = ""
