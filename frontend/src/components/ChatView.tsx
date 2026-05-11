@@ -46,7 +46,7 @@ function PipelineIndicator({ step }: { step: string }) {
                      'border-white/5 text-[#333]'
           }`}>
             {active ? <Loader size={9} className="animate-spin" /> : STEP_ICON[s]}
-            <span className="hidden sm:inline">{STEP_LABEL[s]}</span>
+            <span className="step-label hidden sm:inline">{STEP_LABEL[s]}</span>
           </div>
         )
       })}
