@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Loader, Copy, Check, Zap, Search, Code, Shield, CheckCircle, XCircle, ChevronRight, Globe } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { queries, connectQueryWS, type QueryResponse } from '../api/client'
+import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../hooks/useConversations'
 
 const PIPELINE_STEPS = ['planning', 'retrieving', 'executing', 'evaluating', 'done'] as const
@@ -200,10 +200,24 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversation?.messages.length])
 
+  // Build history array from existing conversation messages (exclude the current pending ones)
+  const buildHistory = (msgs: typeof conversation.messages, beforeId: string): HistoryMessage[] => {
+    const turns: HistoryMessage[] = []
+    for (const m of msgs) {
+      if (m.id === beforeId) break
+      if (m.role === 'user' || (m.role === 'assistant' && m.content)) {
+        turns.push({ role: m.role, content: m.content })
+      }
+    }
+    return turns.slice(-12) // last 6 exchanges
+  }
+
   // Core API call — given a question and an already-created placeholder message ID
   const fireQuery = (q: string, cid: string, assistantMsgId: string) => {
     setBusyMsgId(assistantMsgId)
     const token = localStorage.getItem('access_token')
+    const msgs = conversation?.messages ?? []
+    const history = buildHistory(msgs, assistantMsgId)
 
     if (token) {
       wsRef.current?.close()
@@ -214,7 +228,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
             onUpdateMessage(cid, assistantMsgId, { step: event })
           } else if (event === 'done') {
             onUpdateMessage(cid, assistantMsgId, { step: 'done' })
-            queries.run(q).then(({ data: r }) => {
+            queries.run(q, history).then(({ data: r }) => {
               onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
               setBusyMsgId(null)
             }).catch(() => setBusyMsgId(null))
@@ -227,9 +241,9 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
         () => setBusyMsgId(null)
       )
       wsRef.current = ws
-      ws.onopen = () => ws.send(JSON.stringify({ query: q }))
+      ws.onopen = () => sendWSQuery(ws, q, history)
     } else {
-      queries.run(q).then(({ data: r }) => {
+      queries.run(q, history).then(({ data: r }) => {
         onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
         setBusyMsgId(null)
       }).catch((e: unknown) => {
