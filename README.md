@@ -504,10 +504,23 @@ Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local develop
 
 ```bash
 pip install -r requirements.txt
+
+# Full suite (no live services required — all external deps are mocked)
 pytest tests/ -v
+
+# By category
+pytest tests/test_pipeline.py -v           # end-to-end pipeline
+pytest tests/test_security.py -v           # brute-force, JWT, upload hardening
+pytest tests/test_rate_limit_headers.py -v # rate-limit headers on all rated routes
+pytest tests/test_logout.py -v             # token revocation
+pytest tests/test_async_query.py -v        # WebSocket streaming + Celery path
+
+# With coverage
+pytest tests/ --cov=. --cov-report=term-missing
 ```
 
-No live services required — all external dependencies are mocked.
+All LLM calls, Redis, ChromaDB, MinIO, and Postgres connections are replaced with
+`unittest.mock` mocks, so the suite runs offline with no credentials.
 
 ---
 
