@@ -20,6 +20,7 @@ from observability.tracing import span
 
 _PIPELINE_TIMEOUT_SECONDS = 120
 _PIPELINE_VERSION = "1.0.0"
+_MAX_RETRIES = 1  # one re-synthesis attempt when critic fails
 
 logger = logging.getLogger("helios.pipeline.run")
 
@@ -131,10 +132,11 @@ def route_after_retriever(state: HeliosState) -> str:
 
 def route_after_critic(state: HeliosState) -> str:
     """
-    Route after critic evaluation.
-    Currently always ends — retry loops would require LangGraph persistence.
-    Critic pass/fail is recorded in state for callers to inspect.
+    If critic failed and we haven't hit the retry cap, re-run the synthesizer
+    with the critic's suggestions injected as extra guidance.
     """
+    if not state.get("critic_passed") and (state.get("retry_count", 0) < _MAX_RETRIES):
+        return "synthesizer"
     return END
 
 
