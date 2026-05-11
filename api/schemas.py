@@ -65,9 +65,15 @@ class UserResponse(BaseModel):
 
 # ── Query ─────────────────────────────────────────────────────────────────────
 
+class HistoryMessage(BaseModel):
+    role: str   # "user" | "assistant"
+    content: str = Field(..., max_length=4096)
+
+
 class QueryRequest(BaseModel):
     query: str = Field(..., min_length=1, max_length=4096)
     stream: bool = False    # if True, use WebSocket instead
+    history: list[HistoryMessage] = Field(default_factory=list, max_length=20)
 
     @field_validator("query")
     @classmethod
