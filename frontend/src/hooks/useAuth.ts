@@ -3,13 +3,22 @@ import { auth } from '../api/client'
 
 export type User = { id: string; username: string; email: string; is_active: boolean }
 
+function _isTokenExpired(token: string): boolean {
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]))
+    return payload.exp * 1000 < Date.now()
+  } catch {
+    return true
+  }
+}
+
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchMe = useCallback(async () => {
     const token = localStorage.getItem('access_token')
-    if (!token) { setLoading(false); return }
+    if (!token || _isTokenExpired(token)) { setLoading(false); return }
     try {
       const { data } = await auth.me()
       setUser(data)
