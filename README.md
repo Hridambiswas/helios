@@ -153,10 +153,12 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 ### 1. Clone and configure
 
 ```bash
-git clone https://github.com/hridambiswas/helios.git
+git clone https://github.com/Hridambiswas/helios.git
 cd helios
 cp .env.example .env
-# Fill in OPENAI_API_KEY and JWT_SECRET_KEY at minimum
+# Fill in GROQ_API_KEY and JWT_SECRET_KEY at minimum
+# Optional: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET for GitHub OAuth
+# Optional: SUPABASE_DATABASE_URL to use Supabase instead of local Postgres
 ```
 
 ### 2. Run with Docker Compose
@@ -182,14 +184,14 @@ Services started:
 ### 3. Register and query
 
 ```bash
-# Register
+# Register (password must be 8+ chars, include upper, lower, digit)
 curl -X POST http://localhost:8000/api/v1/auth/register \
   -H 'Content-Type: application/json' \
-  -d '{"username":"alice","email":"alice@example.com","password":"secret"}'
+  -d '{"username":"alice","email":"alice@example.com","password":"Secret123"}'
 
 # Get token
 TOKEN=$(curl -s -X POST http://localhost:8000/api/v1/auth/login \
-  -d 'username=alice&password=secret' | jq -r .access_token)
+  -d 'username=alice&password=Secret123' | jq -r .access_token)
 
 # Run a query
 curl -X POST http://localhost:8000/api/v1/query \
@@ -197,6 +199,8 @@ curl -X POST http://localhost:8000/api/v1/query \
   -H 'Content-Type: application/json' \
   -d '{"query": "Explain transformer attention in one paragraph"}'
 ```
+
+Or use the live UI at [frontend-omega-blush-87.vercel.app](https://frontend-omega-blush-87.vercel.app) — type a question, the chat view opens automatically.
 
 ### 4. Ingest a document
 
