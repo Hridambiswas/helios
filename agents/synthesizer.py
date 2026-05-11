@@ -4,6 +4,7 @@
 from __future__ import annotations
 import logging
 import re
+from collections.abc import Callable
 from typing import Any
 
 from langchain_groq import ChatGroq
@@ -143,8 +144,20 @@ Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section conta
             *history_msgs,
             HumanMessage(content=user_msg),
         ]
-        response = self._llm.invoke(messages, timeout=45)
-        raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
+
+        token_callback: Callable[[str], None] | None = state.get("_token_callback")
+
+        if token_callback:
+            chunks = []
+            for chunk in self._llm.stream(messages):
+                token = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+                if token:
+                    chunks.append(token)
+                    token_callback(token)
+            raw = "".join(chunks).strip()
+        else:
+            response = self._llm.invoke(messages, timeout=45)
+            raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
 
         answer, follow_ups = _parse_follow_ups(raw)
 
