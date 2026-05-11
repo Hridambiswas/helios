@@ -24,7 +24,7 @@ need to go from zero to a merged pull request.
 | Python | 3.11+ |
 | Docker & Docker Compose | v2+ |
 | Make | any |
-| OpenAI API key | required for LLM agents |
+| Groq API key | required for LLM agents (free tier available at console.groq.com) |
 
 ---
 
@@ -43,7 +43,7 @@ pip install -r requirements.txt
 
 # 4. Copy and fill in environment variables
 cp .env.example .env
-# Edit .env — at minimum set OPENAI_API_KEY
+# Edit .env — at minimum set GROQ_API_KEY
 
 # 5. Start all backing services (Postgres, Redis, ChromaDB, MinIO)
 docker compose up -d postgres redis chroma minio
@@ -91,8 +91,8 @@ helios/
 ├── agents/          # Five LangGraph agents (planner, retriever, executor, synthesizer, critic)
 ├── api/             # FastAPI routes, WebSocket, auth middleware, schemas
 ├── eval/            # Offline evaluation harness + LLM-as-judge scorers
+├── frontend/        # React + Vite chat UI (deployed to Vercel)
 ├── graphs/          # Visualisation scripts for performance graphs (run standalone)
-├── k8s/             # Kubernetes manifests (Deployment, Service, ConfigMap)
 ├── observability/   # OpenTelemetry tracing, Prometheus metrics, structured logging
 ├── pipeline/        # LangGraph StateGraph assembly + Redis checkpointing
 ├── retrieval/       # Hybrid retrieval: dense vectors, CLIP, BM25
