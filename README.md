@@ -111,12 +111,14 @@ Helios uses three complementary retrieval signals fused with configurable weight
 
 ```
 query
-  ├── OpenAI text-embedding-3-small  ──weight 0.6──▶  ChromaDB (cosine)
-  ├── CLIP openai/clip-vit-base-patch32 ──weight 0.3──▶  ChromaDB (cosine)
+  ├── BAAI/bge-small-en-v1.5 (HuggingFace, local)  ──weight 0.6──▶  ChromaDB (cosine)
+  ├── CLIP openai/clip-vit-base-patch32 (HuggingFace) ──weight 0.3──▶  ChromaDB (cosine)
   └── BM25Okapi (rank_bm25)  ──weight 0.1──▶  in-memory inverted index
-                                              (thread-safe, dedup on batch add)
-                    └──── weighted sum ───▶ top-K deduplicated docs
+                                               (thread-safe, dedup on batch add)
+                    └──── weighted RRF sum ──▶ top-K deduplicated docs
 ```
+
+No external embedding API is required — both dense and CLIP models run locally via HuggingFace `transformers`.
 
 Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `RETRIEVER_BM25_WEIGHT`.
 
