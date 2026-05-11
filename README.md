@@ -89,7 +89,7 @@ python graphs/critic_score_distribution.py # Groundedness, faithfulness, complet
 |---|---|
 | `agent_latency.py` | Grouped bar chart of p50/p95/p99 latency for each of the 5 pipeline agents |
 | `retrieval_score_fusion.py` | Stacked bar + pie of retrieval signal weights across query categories |
-| `critic_score_distribution.py` | Histograms of critic scores with gate threshold and block-rate annotation |
+| `critic_score_distribution.py` | Histograms of critic scores with `CRITIC_MIN_SCORE=0.5` gate threshold and block-rate annotation |
 
 ---
 
