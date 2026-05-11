@@ -417,12 +417,17 @@ helios/
 │   ├── test_api.py        # Health + auth route tests (mocked)
 │   ├── test_pipeline.py   # LangGraph integration smoke tests
 │   └── test_storage.py    # Cache + object store unit tests
-├── k8s/                   # Kubernetes Deployment, Service, Ingress, ConfigMap
+├── frontend/              # React + Vite + TypeScript (deployed on Vercel)
+│   ├── src/components/    # ChatSidebar, ChatView, AuthModal, Hero, etc.
+│   ├── src/hooks/         # useAuth, useConversations, useToast, useDebounce
+│   └── src/api/           # Axios client wrappers
 ├── graphs/                # Standalone visualisation scripts (matplotlib)
+├── .github/workflows/     # CI (lint + typecheck + tests), deploy-backend, deploy-frontend
 ├── config.py              # Pydantic BaseSettings with lru_cache
 ├── main.py                # FastAPI app factory + lifespan hooks
 ├── Dockerfile
 ├── docker-compose.yml
+├── docker-compose.prod.yml
 ├── pyrightconfig.json
 ├── pytest.ini
 ├── prometheus.yml
