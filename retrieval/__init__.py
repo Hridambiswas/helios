@@ -11,3 +11,6 @@ __all__ = [
     "upsert_batch",
     "vector_ping",
 ]
+
+# Web search is handled by RetrieverAgent; not exported from retrieval package
+# to keep the separation between vector/BM25 retrieval and web retrieval.
