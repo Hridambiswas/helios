@@ -225,13 +225,19 @@ python scripts/ingest_demo.py --dir ./docs --ext .txt .md .pdf
 The frontend is a TypeScript React app deployed on Vercel.
 
 **Chat interface features:**
-- ChatGPT-style layout: collapsible sidebar (conversation history) + main chat area
-- Conversations persisted in `localStorage` (up to 50 sessions)
+- ChatGPT-style layout: collapsible sidebar + main chat area
+- **Multi-turn memory** — conversation history is sent with every query; Helios remembers context across turns
+- **Per-token streaming** — answers appear word-by-word with an inline blinking cursor; `Writing` step indicator during synthesis
+- **Server-side persistence** — logged-in users' conversations sync to Supabase; accessible across devices
+- Conversations fall back to `localStorage` when signed out (up to 50 sessions)
+- **Retry indicator** — "Improving answer…" label shown when critic triggers a re-synthesis
+- **Mobile-optimised** — bottom navigation bar, auto-collapsing sidebar, safe-area input padding
+- **5 free queries** for guest users before sign-in is required
 - Submitting a query from the landing page opens the chat view automatically
 - User messages on the right, Helios responses on the left with live pipeline step indicators
-- Follow-up question chips after each response
-- Copy button, latency display, source count on each answer
+- Follow-up question chips, copy button, latency, source count on each answer
 - GitHub OAuth — one-click sign in via "Continue with GitHub"
+- Upload panel with **chunk preview** and **test-retrieval search** per indexed document
 
 ```bash
 cd frontend
