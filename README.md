@@ -101,8 +101,8 @@ python graphs/critic_score_distribution.py # Groundedness, faithfulness, complet
 | **Planner** | Groq `llama-3.3-70b-versatile` (T=0) | Query decomposition | Produces typed `subtasks[]`, `requires_retrieval`, `requires_code` JSON; caps at `PLANNER_MAX_SUBTASKS` |
 | **Retriever** | `BAAI/bge-small-en-v1.5` + CLIP `ViT-B/32` + BM25Okapi | Hybrid document retrieval | Weighted score fusion (dense 0.6 + CLIP 0.3 + BM25 0.1); deduplicates by `doc_id`; emits Prometheus histograms |
 | **Executor** | CPython 3.11 | Sandboxed code runner | AST import whitelist guard; forbidden builtins stripped; daemon thread with configurable timeout; stdout capped at 8 KB |
-| **Synthesizer** | Groq `llama-3.3-70b-versatile` (T=0.2) | Grounded answer generation | Cites local docs as [D1], web sources as [W1]; uses emojis naturally for readability; generates follow-up questions |
-| **Critic** | Groq `llama-3.3-70b-versatile` (T=0) | LLM-as-judge QA | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; blocks response if overall < `CRITIC_MIN_SCORE` (0.5) |
+| **Synthesizer** | Groq `llama-3.3-70b-versatile` (T=0.4) | Grounded answer generation | Cites local docs as [D1], web sources as [W1]; uses emojis naturally; uses `conversation_history` for multi-turn context; per-token streaming via `llm.stream()`; generates follow-up questions; injects critic suggestions on retry |
+| **Critic** | Groq `llama-3.3-70b-versatile` (T=0) | LLM-as-judge QA + retry trigger | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; if overall < `CRITIC_MIN_SCORE` (0.5) routes back to synthesizer with suggestions (max 1 retry) |
 
 ---
 
