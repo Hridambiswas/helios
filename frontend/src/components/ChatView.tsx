@@ -99,11 +99,9 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
           </div>
         )}
 
-        {/* Blinking cursor while streaming */}
-        {isStreaming && !msg.content && !msg.error && (
-          <div className="mt-2 flex items-center gap-1">
-            <div className="w-1.5 h-4 bg-crimson/60 animate-pulse" />
-          </div>
+        {/* Blinking cursor — shows while waiting for first token OR appended after streamed text */}
+        {isStreaming && !msg.error && (
+          <span className={`inline-block w-1.5 h-4 bg-crimson/60 animate-pulse align-middle ${msg.content ? 'ml-0.5' : 'mt-2'}`} />
         )}
 
         {/* Metadata row */}
