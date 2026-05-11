@@ -2,6 +2,7 @@
 
 **Distributed Multi-Agent RAG Platform**
 
+[![CI](https://github.com/hridambiswas/helios/actions/workflows/ci.yml/badge.svg)](https://github.com/hridambiswas/helios/actions/workflows/ci.yml)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2-orange.svg)](https://langchain-ai.github.io/langgraph/)
@@ -528,4 +529,8 @@ All LLM calls, Redis, ChromaDB, MinIO, and Postgres connections are replaced wit
 
 **Hridam Biswas**  
 B.Tech Computer Science, KIIT University  
-[hridambiswas2005@gmail.com](mailto:hridambiswas2005@gmail.com)
+[hridambiswas2005@gmail.com](mailto:hridambiswas2005@gmail.com) · [GitHub](https://github.com/hridambiswas) · [LinkedIn](https://linkedin.com/in/hridambiswas)
+
+---
+
+*Helios is open-source under the MIT License. Contributions, bug reports, and feature requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).*
