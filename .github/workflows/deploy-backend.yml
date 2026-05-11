@@ -28,9 +28,15 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            # Inject Supabase DB URL into .env (idempotent — only adds if missing)
+            # Inject secrets into .env (idempotent — only adds if missing)
             if ! grep -q "SUPABASE_DATABASE_URL" /home/ubuntu/helios/.env 2>/dev/null; then
               echo "SUPABASE_DATABASE_URL=${{ secrets.SUPABASE_DATABASE_URL }}" >> /home/ubuntu/helios/.env
+            fi
+            if ! grep -q "GITHUB_CLIENT_ID" /home/ubuntu/helios/.env 2>/dev/null; then
+              echo "GITHUB_CLIENT_ID=${{ secrets.GH_OAUTH_CLIENT_ID }}" >> /home/ubuntu/helios/.env
+            fi
+            if ! grep -q "GITHUB_CLIENT_SECRET" /home/ubuntu/helios/.env 2>/dev/null; then
+              echo "GITHUB_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}" >> /home/ubuntu/helios/.env
             fi
             # Free disk space before build — stale layers accumulate and fill the volume
             docker system prune -a -f
