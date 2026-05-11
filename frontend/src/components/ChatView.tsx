@@ -146,7 +146,7 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
 function UserBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div className="flex justify-end">
-      <div className="max-w-xl bg-white/6 border border-white/10 px-4 py-2.5 text-white/90 text-sm leading-relaxed font-sans whitespace-pre-wrap">
+      <div className="user-bubble w-full sm:max-w-xl bg-white/6 border border-white/10 px-4 py-2.5 text-white/90 text-sm leading-relaxed font-sans whitespace-pre-wrap break-words">
         {msg.content}
       </div>
     </div>
@@ -339,7 +339,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-white/8 bg-[#0d0d0d] px-4 py-3">
+      <div className="border-t border-white/8 bg-[#0d0d0d] px-4 py-3 chat-input-bar">
         <div className="max-w-3xl mx-auto relative">
           <div className="flex items-end gap-2 bg-white/4 border border-white/10 hover:border-crimson/30 focus-within:border-crimson/50 transition-all px-4 py-3">
             <textarea
