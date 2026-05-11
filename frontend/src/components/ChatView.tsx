@@ -366,7 +366,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
           </div>
           <p className="font-mono text-[9px] text-[#333] mt-1.5 text-center">
             Enter to send · Shift+Enter for newline
-            {!isLoggedIn && ' · Sign in for full access'}
+            {!isLoggedIn && ' · 5 free queries · Sign in for unlimited'}
           </p>
         </div>
       </div>
