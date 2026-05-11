@@ -91,3 +91,25 @@ backups/
 
 # Ruff cache
 .ruff_cache/
+
+# mypy
+.mypy_cache/
+*.pyi
+
+# fastembed model cache (large binary files)
+.fastembed_cache/
+
+# Jupyter
+.ipynb_checkpoints/
+*.ipynb
+
+# macOS metadata
+.DS_Store
+**/.DS_Store
+
+# Coverage
+coverage.xml
+*.lcov
+
+# Alembic auto-generated (keep only human-edited)
+storage/migrations/versions/__pycache__/
