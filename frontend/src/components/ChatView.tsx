@@ -221,17 +221,33 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
 
     if (token) {
       wsRef.current?.close()
+      let accumulated = ''
       const ws = connectQueryWS(
         token,
         (event, data) => {
           if (['planning', 'retrieving', 'executing', 'evaluating'].includes(event)) {
             onUpdateMessage(cid, assistantMsgId, { step: event })
+          } else if (event === 'token') {
+            const t = (data as { token?: string })?.token ?? ''
+            accumulated += t
+            onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'executing' })
           } else if (event === 'done') {
-            onUpdateMessage(cid, assistantMsgId, { step: 'done' })
-            queries.run(q, history).then(({ data: r }) => {
-              onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
-              setBusyMsgId(null)
-            }).catch(() => setBusyMsgId(null))
+            // Final answer from REST (includes metadata). Use it if we got no stream tokens.
+            if (!accumulated) {
+              queries.run(q, history).then(({ data: r }) => {
+                onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
+                setBusyMsgId(null)
+              }).catch(() => setBusyMsgId(null))
+            } else {
+              // Fetch metadata only (follow-ups, critic scores, latency) without re-rendering answer
+              queries.run(q, history).then(({ data: r }) => {
+                onUpdateMessage(cid, assistantMsgId, { result: r, step: 'done' })
+                setBusyMsgId(null)
+              }).catch(() => {
+                onUpdateMessage(cid, assistantMsgId, { step: 'done' })
+                setBusyMsgId(null)
+              })
+            }
           } else if (event === 'error') {
             const d = data as { message?: string }
             onUpdateMessage(cid, assistantMsgId, { error: d.message ?? 'Pipeline error', step: 'error' })
