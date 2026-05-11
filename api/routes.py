@@ -25,9 +25,11 @@ from api.schemas import (
     RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
     UserResponse, QueryRequest, QueryResponse, IngestResponse,
     QueryHistoryItem, HealthResponse, TaskStatusResponse, WebSource,
+    ConversationOut, ConversationDetailOut, CreateConversationRequest,
+    AppendMessageRequest, ConversationMessageOut,
 )
 from storage.database import get_session, ping as db_ping
-from storage.models import QueryRecord, Document, RefreshToken
+from storage.models import QueryRecord, Document, RefreshToken, Conversation, ConversationMessage
 from storage.read_replica import get_read_session
 from storage.cache import ping as redis_ping
 from storage.object_store import ping as minio_ping, upload, ensure_bucket, delete as minio_delete
@@ -551,6 +553,93 @@ async def delete_document(doc_id: str, current_user: CurrentUser):
     async with get_session() as session:
         await session.execute(sa_delete(Document).where(Document.id == doc_id))
     logger.info("Deleted document %s (%s)", doc_id, doc.filename)
+
+
+# ── Conversations ─────────────────────────────────────────────────────────────
+
+@router.get("/conversations", response_model=list[ConversationOut])
+async def list_conversations(
+    current_user: CurrentUser,
+    limit: int = Query(50, ge=1, le=200),
+    offset: int = Query(0, ge=0),
+):
+    from sqlalchemy import func as sa_func
+    async with get_read_session() as session:
+        result = await session.execute(
+            select(Conversation)
+            .where(Conversation.user_id == current_user.id)
+            .order_by(desc(Conversation.updated_at))
+            .limit(limit).offset(offset)
+        )
+        convs = list(result.scalars().all())
+    out = []
+    for c in convs:
+        out.append(ConversationOut(
+            id=c.id, title=c.title,
+            created_at=c.created_at, updated_at=c.updated_at,
+            message_count=len(c.messages),
+        ))
+    return out
+
+
+@router.post("/conversations", response_model=ConversationOut, status_code=201)
+async def create_conversation(body: CreateConversationRequest, current_user: CurrentUser):
+    conv = Conversation(user_id=current_user.id, title=body.title)
+    async with get_session() as session:
+        session.add(conv)
+        await session.flush()
+        conv_id, title, created_at, updated_at = conv.id, conv.title, conv.created_at, conv.updated_at
+    return ConversationOut(id=conv_id, title=title, created_at=created_at, updated_at=updated_at)
+
+
+@router.get("/conversations/{conv_id}", response_model=ConversationDetailOut)
+async def get_conversation(conv_id: str, current_user: CurrentUser):
+    async with get_read_session() as session:
+        result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+        conv = result.scalar_one_or_none()
+    if not conv or conv.user_id != current_user.id:
+        raise HTTPException(404, "Conversation not found")
+    msgs = [ConversationMessageOut(id=m.id, role=m.role, content=m.content, created_at=m.created_at)
+            for m in conv.messages]
+    return ConversationDetailOut(
+        id=conv.id, title=conv.title,
+        created_at=conv.created_at, updated_at=conv.updated_at,
+        message_count=len(msgs), messages=msgs,
+    )
+
+
+@router.post("/conversations/{conv_id}/messages", response_model=ConversationMessageOut, status_code=201)
+async def append_message(conv_id: str, body: AppendMessageRequest, current_user: CurrentUser):
+    async with get_read_session() as session:
+        result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+        conv = result.scalar_one_or_none()
+    if not conv or conv.user_id != current_user.id:
+        raise HTTPException(404, "Conversation not found")
+    msg = ConversationMessage(conversation_id=conv_id, role=body.role, content=body.content)
+    async with get_session() as session:
+        session.add(msg)
+        # Update conversation title from first user message
+        if body.role == "user" and conv.title == "New Chat":
+            result2 = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+            c = result2.scalar_one_or_none()
+            if c:
+                c.title = body.content[:55]
+        await session.flush()
+        msg_id, created_at = msg.id, msg.created_at
+    return ConversationMessageOut(id=msg_id, role=body.role, content=body.content, created_at=created_at)
+
+
+@router.delete("/conversations/{conv_id}", status_code=204)
+async def delete_conversation(conv_id: str, current_user: CurrentUser):
+    from sqlalchemy import delete as sa_delete
+    async with get_read_session() as session:
+        result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+        conv = result.scalar_one_or_none()
+    if not conv or conv.user_id != current_user.id:
+        raise HTTPException(404, "Conversation not found")
+    async with get_session() as session:
+        await session.execute(sa_delete(Conversation).where(Conversation.id == conv_id))
+    logger.info("Deleted conversation %s for user %s", conv_id, current_user.id)
 
 
 # ── Stats ────────────────────────────────────────────────────────────────────
