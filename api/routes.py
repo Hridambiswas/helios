@@ -27,6 +27,7 @@ from api.schemas import (
     QueryHistoryItem, HealthResponse, TaskStatusResponse, WebSource,
     ConversationOut, ConversationDetailOut, CreateConversationRequest,
     AppendMessageRequest, ConversationMessageOut,
+    DocumentChunksResponse, ChunkPreview, TestRetrievalResponse, TestRetrievalResult,
 )
 from storage.database import get_session, ping as db_ping
 from storage.models import QueryRecord, Document, RefreshToken, Conversation, ConversationMessage
@@ -525,6 +526,59 @@ async def get_document(doc_id: str, current_user: CurrentUser):
         "content_type": doc.content_type, "minio_key": doc.minio_key,
         "created_at": doc.created_at.isoformat(),
     }
+
+
+@router.get("/documents/{doc_id}/chunks", response_model=DocumentChunksResponse)
+async def get_document_chunks(
+    doc_id: str,
+    current_user: CurrentUser,
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
+):
+    """Return a preview of the stored text chunks for a document."""
+    async with get_read_session() as session:
+        result = await session.execute(select(Document).where(Document.id == doc_id))
+        doc = result.scalar_one_or_none()
+    if not doc or doc.uploaded_by != current_user.id:
+        raise HTTPException(404, "Document not found")
+
+    from retrieval.vector_store import get_chunks_for_doc
+    raw_chunks = await asyncio.to_thread(get_chunks_for_doc, doc_id, limit=limit, offset=offset)
+    chunks = [
+        ChunkPreview(chunk_index=i + offset, text=c["text"][:500], char_count=len(c["text"]))
+        for i, c in enumerate(raw_chunks)
+    ]
+    return DocumentChunksResponse(
+        document_id=doc_id, filename=doc.filename,
+        total_chunks=doc.chunk_count, chunks=chunks,
+    )
+
+
+@router.post("/documents/{doc_id}/search", response_model=TestRetrievalResponse)
+async def test_document_retrieval(
+    doc_id: str,
+    body: QueryRequest,
+    current_user: CurrentUser,
+):
+    """Run a test retrieval query scoped to a single document."""
+    async with get_read_session() as session:
+        result = await session.execute(select(Document).where(Document.id == doc_id))
+        doc = result.scalar_one_or_none()
+    if not doc or doc.uploaded_by != current_user.id:
+        raise HTTPException(404, "Document not found")
+
+    from retrieval.vector_store import query_by_doc
+    raw_results = await asyncio.to_thread(query_by_doc, body.query, doc_id, top_k=5)
+    results = [
+        TestRetrievalResult(
+            chunk_index=int(r.get("metadata", {}).get("chunk_idx", 0)),
+            text=r["document"][:500],
+            score=round(r.get("score", 0.0), 4),
+            source=r.get("source", "dense"),
+        )
+        for r in raw_results
+    ]
+    return TestRetrievalResponse(query=body.query, results=results)
 
 
 @router.delete("/documents/{doc_id}", status_code=204)
