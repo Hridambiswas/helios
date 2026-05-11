@@ -94,6 +94,21 @@ export const queries = {
   get: (id: string) => api.get<HistoryItem>(`/query/${id}`),
 }
 
+export type ServerConversation = {
+  id: string; title: string; created_at: string; updated_at: string; message_count: number
+}
+export type ServerMessage = { id: string; role: string; content: string; created_at: string }
+export type ServerConversationDetail = ServerConversation & { messages: ServerMessage[] }
+
+export const conversations = {
+  list: (limit = 50) => api.get<ServerConversation[]>(`/conversations?limit=${limit}`),
+  create: (title = 'New Chat') => api.post<ServerConversation>('/conversations', { title }),
+  get: (id: string) => api.get<ServerConversationDetail>(`/conversations/${id}`),
+  delete: (id: string) => api.delete(`/conversations/${id}`),
+  addMessage: (convId: string, role: string, content: string) =>
+    api.post<ServerMessage>(`/conversations/${convId}/messages`, { role, content }),
+}
+
 export const documents = {
   upload: (file: File) => {
     const fd = new FormData()
