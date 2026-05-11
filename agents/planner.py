@@ -32,6 +32,7 @@ Rules:
 4. Set requires_code=true only when numerical computation or data manipulation
    is explicitly requested.
 5. Output ONLY valid JSON — no markdown fences, no prose before or after.
+6. For web/general knowledge questions set requires_retrieval=true so web search can run.
 
 Output schema (strict):
 {{
