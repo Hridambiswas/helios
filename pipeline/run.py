@@ -217,3 +217,8 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
             pipeline_requests_counter.labels(status="failed").inc()
             logger.exception("Pipeline crashed: %s", exc)
             return {**initial_state, "error": str(exc)}
+
+
+def get_pipeline_version() -> str:
+    """Return the current pipeline version string."""
+    return _PIPELINE_VERSION
