@@ -3,8 +3,19 @@
 
 from __future__ import annotations
 import pytest
+from datetime import datetime, timezone
 from fastapi.testclient import TestClient
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
+
+
+def _mock_user():
+    u = MagicMock()
+    u.id = "u1"
+    u.is_active = True
+    u.username = "testuser"
+    u.email = "t@t.com"
+    u.created_at = datetime.now(timezone.utc)
+    return u
 
 
 @pytest.fixture()
@@ -60,7 +71,7 @@ class TestRateLimitHeaders:
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=3),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=30),
             patch("api.auth.get_user_by_id", new_callable=AsyncMock,
-                  return_value=type("U", (), {"id": "u1", "is_active": True})()),
+                  return_value=_mock_user()),
         ):
             resp = client.get(
                 "/api/v1/auth/me",
@@ -83,7 +94,7 @@ class TestRateLimitHeaders:
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=5),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=20),
             patch("api.auth.get_user_by_id", new_callable=AsyncMock,
-                  return_value=type("U", (), {"id": "u1", "is_active": True})()),
+                  return_value=_mock_user()),
         ):
             resp = client.get(
                 "/api/v1/auth/me",
@@ -104,7 +115,7 @@ class TestRateLimitHeaders:
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=42),
             patch("api.auth.get_user_by_id", new_callable=AsyncMock,
-                  return_value=type("U", (), {"id": "u1", "is_active": True})()),
+                  return_value=_mock_user()),
         ):
             resp = client.get(
                 "/api/v1/auth/me",
