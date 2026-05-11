@@ -328,9 +328,9 @@ python scripts/run_eval.py --ids 1 3 7 --no-json --no-csv
 |---|---|---|
 | **Keyword coverage** | `hits / expected_keywords` | ≥ 0.75 |
 | **Hallucination penalty** | −50% if any forbidden keyword present | 0 hits |
-| **Groundedness** | Critic LLM score ∈ [0,1] | ≥ 0.7 |
-| **Faithfulness** | Critic LLM score ∈ [0,1] | ≥ 0.7 |
-| **Completeness** | Critic LLM score ∈ [0,1] | ≥ 0.6 |
+| **Groundedness** | Critic LLM score ∈ [0,1] | ≥ 0.5 |
+| **Faithfulness** | Critic LLM score ∈ [0,1] | ≥ 0.5 |
+| **Completeness** | Critic LLM score ∈ [0,1] | ≥ 0.5 |
 | **Combined** | 0.4×keyword + 0.6×avg(critic dims) | ≥ 0.65 |
 | **ECE** | Expected Calibration Error (10-bin) | < 0.10 |
 
