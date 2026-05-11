@@ -1,4 +1,4 @@
-# agents/retriever.py — Helios Hybrid Retriever Agent (Dense + BM25)
+# agents/retriever.py — Helios Hybrid Retriever Agent (Dense + BM25 + Web)
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
@@ -20,12 +20,6 @@ def _reciprocal_rank_fusion(
     ranked_lists: list[list[dict]],
     k: int = 60,
 ) -> list[dict]:
-    """
-    Combine multiple ranked result lists using Reciprocal Rank Fusion (RRF).
-
-    RRF score = Σ 1/(k + rank_i) across all lists.
-    Outperforms simple score addition when list scales differ.
-    """
     rrf_scores: dict[str, float] = {}
     hit_by_id: dict[str, dict] = {}
 
@@ -44,7 +38,6 @@ def _reciprocal_rank_fusion(
 
 
 def _deduplicate(hits: list[dict]) -> list[dict]:
-    """Deduplicate by doc id, keep highest score. Used for single-list cleanup."""
     seen: dict[str, dict] = {}
     for hit in hits:
         doc_id = hit["id"]
@@ -53,11 +46,30 @@ def _deduplicate(hits: list[dict]) -> list[dict]:
     return sorted(seen.values(), key=lambda h: h["score"], reverse=True)
 
 
+def _web_search(query: str, max_results: int = 4) -> list[dict]:
+    """Search the web via DuckDuckGo. Returns [{title, url, snippet}]."""
+    try:
+        from duckduckgo_search import DDGS
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=max_results))
+        return [
+            {
+                "title": r.get("title", ""),
+                "url": r.get("href", ""),
+                "snippet": r.get("body", ""),
+            }
+            for r in results
+            if r.get("href")
+        ]
+    except Exception as exc:
+        logger.warning("Web search failed: %s", exc)
+        return []
+
+
 class RetrieverAgent(BaseAgent):
     """
-    Hybrid retriever: HuggingFace dense embedding + BM25 sparse.
-    Results merged via Reciprocal Rank Fusion (RRF).
-    CLIP is omitted — it requires ~600 MB RAM and is only useful for image queries.
+    Hybrid retriever: FastEmbed dense + BM25 sparse merged via RRF.
+    Always supplements with DuckDuckGo web search for up-to-date context.
     """
 
     name = "retriever"
@@ -72,11 +84,11 @@ class RetrieverAgent(BaseAgent):
 
         if not plan.get("requires_retrieval", True):
             self.logger.info("Retrieval skipped — plan says not required")
-            return {**state, "retrieved_docs": []}
+            return {**state, "retrieved_docs": [], "web_sources": []}
 
         top_k = cfg.retriever_top_k
 
-        # ── Dense path: OpenAI embedding → ChromaDB ───────────────────────
+        # ── Dense path ────────────────────────────────────────────────────────
         dense_hits: list[dict] = []
         try:
             embedding = self._embedder.embed_query(query)
@@ -90,7 +102,7 @@ class RetrieverAgent(BaseAgent):
         except Exception as exc:
             self.logger.warning("Dense retrieval failed: %s", exc)
 
-        # ── Sparse path: BM25 ─────────────────────────────────────────────
+        # ── Sparse path: BM25 ─────────────────────────────────────────────────
         sparse_hits: list[dict] = []
         try:
             sparse_hits = bm25.search(query, top_k=top_k)
@@ -108,8 +120,11 @@ class RetrieverAgent(BaseAgent):
         )[:top_k]
         retrieval_docs_histogram.labels(source="merged").observe(len(merged))
 
+        # ── Web search — always runs to provide up-to-date context ────────────
+        web_sources = _web_search(query, max_results=4)
         self.logger.info(
-            "Retrieved %d docs (dense=%d  bm25=%d → merged=%d)",
-            len(merged), len(dense_hits), len(sparse_hits), len(merged),
+            "Retrieved %d local docs (dense=%d bm25=%d merged=%d) + %d web results",
+            len(merged), len(dense_hits), len(sparse_hits), len(merged), len(web_sources),
         )
-        return {**state, "retrieved_docs": merged}
+
+        return {**state, "retrieved_docs": merged, "web_sources": web_sources}

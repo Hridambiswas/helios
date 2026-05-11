@@ -97,6 +97,12 @@ class RetrievedDoc(BaseModel):
     source: str     # dense / clip / bm25
 
 
+class WebSource(BaseModel):
+    title: str
+    url: str
+    snippet: str
+
+
 class ExecutionResult(BaseModel):
     stdout: str
     stderr: str
@@ -122,9 +128,11 @@ class QueryResponse(BaseModel):
     answer: str
     plan: PlanResponse | None
     retrieved_docs: list[RetrievedDoc]
+    web_sources: list[WebSource] = []
     execution_result: ExecutionResult | None
     critic_scores: CriticScores | None
     critic_passed: bool | None
+    follow_up_questions: list[str] = []
     latency_ms: float
     status: str
 

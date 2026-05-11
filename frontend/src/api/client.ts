@@ -39,15 +39,23 @@ api.interceptors.response.use(
   }
 )
 
+export type WebSource = {
+  title: string
+  url: string
+  snippet: string
+}
+
 export type QueryResponse = {
   query_id: string
   query: string
   answer: string
   plan: { query_type: string; subtasks: { id: number; type: string; description: string }[] } | null
   retrieved_docs: { id: string; document: string; metadata: Record<string, unknown>; score: number; source: string }[]
+  web_sources: WebSource[]
   execution_result: { stdout: string; stderr: string; success: boolean } | null
   critic_scores: { groundedness: number; faithfulness: number; completeness: number; overall: number; pass: boolean; reasoning: string; suggestions?: string[] } | null
   critic_passed: boolean | null
+  follow_up_questions: string[]
   latency_ms: number
   status: string
 }

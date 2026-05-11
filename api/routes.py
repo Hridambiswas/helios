@@ -23,7 +23,7 @@ from celery.result import AsyncResult
 from api.schemas import (
     RegisterRequest, TokenResponse, RefreshRequest, LogoutRequest,
     UserResponse, QueryRequest, QueryResponse, IngestResponse,
-    QueryHistoryItem, HealthResponse, TaskStatusResponse,
+    QueryHistoryItem, HealthResponse, TaskStatusResponse, WebSource,
 )
 from storage.database import get_session, ping as db_ping
 from storage.models import QueryRecord, Document, RefreshToken
@@ -197,14 +197,26 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         for d in state.get("retrieved_docs", [])
     ]
 
+    web_sources = [
+        WebSource(
+            title=w.get("title", ""),
+            url=w.get("url", ""),
+            snippet=w.get("snippet", ""),
+        )
+        for w in state.get("web_sources", [])
+        if w.get("url")
+    ]
+
     response = QueryResponse(
         query_id=query_id, query=body.query,
         answer=state.get("answer", ""),
         plan=state.get("plan"),
         retrieved_docs=docs,  # type: ignore[arg-type]
+        web_sources=web_sources,
         execution_result=state.get("execution_result"),
         critic_scores=state.get("critic_scores"),
         critic_passed=state.get("critic_passed"),
+        follow_up_questions=state.get("follow_up_questions", []),
         latency_ms=round(elapsed_ms, 1),
         status=status_str,
     )

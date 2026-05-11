@@ -31,15 +31,17 @@ class HeliosState(TypedDict, total=False):
     user_id: Optional[str]
     plan: Optional[dict]
     retrieved_docs: list
+    web_sources: list            # DuckDuckGo results: [{title, url, snippet}]
     code_to_run: Optional[str]
     execution_result: Optional[dict]
     answer: Optional[str]
     cited_doc_ids: list
+    follow_up_questions: list    # 2 suggested follow-up questions from synthesizer
     critic_scores: Optional[dict]
     critic_passed: Optional[bool]
     error: Optional[str]
     failed_agent: Optional[str]
-    pipeline_start_ms: Optional[float]   # wall-clock start for per-node latency budgeting
+    pipeline_start_ms: Optional[float]
     pipeline_version: Optional[str]
 
 
@@ -179,8 +181,11 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
         "user_id": user_id,
         "plan": None,
         "retrieved_docs": [],
+        "web_sources": [],
         "execution_result": None,
         "answer": None,
+        "cited_doc_ids": [],
+        "follow_up_questions": [],
         "critic_scores": None,
         "critic_passed": None,
         "error": None,

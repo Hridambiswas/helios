@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import logging
+import re
 from typing import Any
 
 from langchain_groq import ChatGroq
@@ -13,49 +14,51 @@ from agents.base import BaseAgent
 
 logger = logging.getLogger("helios.agents.synthesizer")
 
-_SYSTEM_PROMPT_RAG = """\
-You are the Synthesizer agent in Helios — a grounded answer writer.
+_FOLLOW_UP_SEPARATOR = "<<<FOLLOW_UPS>>>"
 
-Your job: produce a final, comprehensive answer by weaving together:
-  1. Retrieved document chunks (the primary source of truth)
-  2. Code execution output (if present)
+_SYSTEM_PROMPT = """\
+You are Helios, a smart and conversational AI assistant. You have access to both
+a local knowledge base and live web search results to give the most accurate,
+up-to-date answers.
 
-Writing rules:
-  - Ground every factual claim in the retrieved context. Never hallucinate.
-  - Cite sources inline using [doc_id] notation immediately after each claim.
-  - If code was executed, integrate its output naturally — don't just dump stdout.
-  - If the context is insufficient to fully answer the query, say so clearly
-    rather than guessing or padding with generic statements.
-  - Prefer clear, concise prose. Use bullet points or code blocks only when
-    they genuinely improve clarity.
-  - Do not repeat the query verbatim at the start of your answer.
-  - Match the depth of the answer to the complexity of the query.
-"""
+Answer naturally and helpfully — like you're explaining something to a curious friend.
+Be warm, clear, and direct. Never sound robotic.
 
-_SYSTEM_PROMPT_DIRECT = """\
-You are the Synthesizer agent in Helios — a helpful, direct answer writer.
+Citation rules:
+- Cite local documents inline as [D1], [D2], etc.
+- Cite web sources inline as [W1], [W2], etc.
+- If neither local docs nor web results are available, answer from your own knowledge.
 
-Your job: answer the user's query directly from your own knowledge.
-No documents were retrieved because none are needed for this query.
+At the very end of your response, add this section — always, no exceptions:
 
-Writing rules:
-  - Answer clearly and concisely from your general knowledge.
-  - Do NOT mention documents, context, or retrieval — they are irrelevant here.
-  - If code was executed, integrate its output naturally.
-  - Do not repeat the query verbatim at the start of your answer.
-  - Match the depth of the answer to the complexity of the query.
+<<<FOLLOW_UPS>>>
+1. [a specific follow-up question the user would naturally want to ask next]
+2. [another specific follow-up question that deepens understanding]
+
+The follow-up questions must be relevant to what you just answered.
+Do not repeat the original query. Do not add any text after the two questions.
 """
 
 
-def _format_docs(docs: list[dict]) -> str:
+def _format_local_docs(docs: list[dict]) -> str:
     if not docs:
-        return "No documents retrieved."
-    lines = []
-    for d in docs:
-        doc_id = d.get("id", "?")
-        score = d.get("score", 0.0)
-        snippet = d.get("document", "")[:500]
-        lines.append(f"[{doc_id}] (score={score:.3f})\n{snippet}")
+        return ""
+    lines = ["**Local Knowledge Base:**"]
+    for i, d in enumerate(docs[:5], 1):
+        snippet = d.get("document", "")[:400].strip()
+        lines.append(f"[D{i}] {snippet}")
+    return "\n\n".join(lines)
+
+
+def _format_web_sources(web: list[dict]) -> str:
+    if not web:
+        return ""
+    lines = ["**Web Search Results:**"]
+    for i, w in enumerate(web, 1):
+        title = w.get("title", "")
+        url = w.get("url", "")
+        snippet = w.get("snippet", "")[:400].strip()
+        lines.append(f"[W{i}] {title}\nURL: {url}\n{snippet}")
     return "\n\n".join(lines)
 
 
@@ -67,74 +70,86 @@ def _format_execution(result: dict | None) -> str:
     return f"Code failed: {result.get('error', 'unknown error')}"
 
 
-class SynthesizerAgent(BaseAgent):
-    """
-    Combines retrieved docs and execution results into a grounded final answer.
-    Injects document citations using [doc_id] notation.
-    """
+def _parse_follow_ups(text: str) -> tuple[str, list[str]]:
+    """Split answer from follow-up questions. Returns (clean_answer, [q1, q2])."""
+    if _FOLLOW_UP_SEPARATOR not in text:
+        return text.strip(), []
+    parts = text.split(_FOLLOW_UP_SEPARATOR, 1)
+    answer = parts[0].strip()
+    follow_up_block = parts[1].strip()
+    questions = []
+    for line in follow_up_block.splitlines():
+        line = line.strip()
+        m = re.match(r"^[12][.)]\s*(.+)", line)
+        if m:
+            questions.append(m.group(1).strip())
+    return answer, questions[:2]
 
+
+class SynthesizerAgent(BaseAgent):
     name = "synthesizer"
 
     def __init__(self) -> None:
         super().__init__()
         self._llm = ChatGroq(
             model=cfg.groq_model,
-            temperature=0.2,
+            temperature=0.4,
             api_key=cfg.groq_api_key,
         )
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
         query: str = state["query"]
         docs: list[dict] = state.get("retrieved_docs", [])
+        web: list[dict] = state.get("web_sources", [])
         exec_result: dict | None = state.get("execution_result")
-        requires_retrieval: bool = state.get("plan", {}).get("requires_retrieval", True)
 
+        local_block = _format_local_docs(docs)
+        web_block = _format_web_sources(web)
         exec_block = _format_execution(exec_result)
 
-        # Use RAG prompt only when documents were actually retrieved
-        if docs:
-            system_prompt = _SYSTEM_PROMPT_RAG
-            context_section = f"--- Retrieved Context ---\n{_format_docs(docs)}\n"
-        elif requires_retrieval:
-            # Retrieval was attempted but returned nothing
-            system_prompt = _SYSTEM_PROMPT_RAG
-            context_section = "--- Retrieved Context ---\nNo relevant documents found in the knowledge base.\n"
-        else:
-            # No retrieval needed — answer directly
-            system_prompt = _SYSTEM_PROMPT_DIRECT
-            context_section = ""
+        context_parts = [p for p in [local_block, web_block] if p]
+        context_section = "\n\n".join(context_parts) if context_parts else "No external context available — answer from your knowledge."
 
-        user_msg = f"""User query: {query}
+        user_msg = f"""User question: {query}
 
-{context_section}--- Code Execution Result ---
-{exec_block if exec_block else "N/A"}
+--- Context ---
+{context_section}
 
-Now produce the final answer:"""
+{('--- Code Execution Result ---\n' + exec_block) if exec_block else ''}
+
+Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section containing exactly 2 follow-up questions."""
 
         messages = [
-            SystemMessage(content=system_prompt),
+            SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
         response = self._llm.invoke(messages, timeout=45)
-        answer = (response.content if isinstance(response.content, str) else str(response.content)).strip()
+        raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
 
-        # Extract cited doc IDs from the answer
-        import re
-        cited_ids = list(set(re.findall(r"\[([^\]]+)\]", answer)))
+        answer, follow_ups = _parse_follow_ups(raw)
+
+        # Build source citation block at end of answer
+        cited_doc_ids = list(set(re.findall(r"\[D(\d+)\]", answer)))
+        cited_web_ids = list(set(re.findall(r"\[W(\d+)\]", answer)))
+
+        if cited_web_ids and web:
+            citation_lines = ["\n\n---\n**Sources:**"]
+            for wid in sorted(cited_web_ids, key=int):
+                idx = int(wid) - 1
+                if 0 <= idx < len(web):
+                    w = web[idx]
+                    citation_lines.append(f"- [W{wid}] [{w['title']}]({w['url']})")
+            answer += "\n".join(citation_lines)
 
         self.logger.info(
-            "Synthesized answer: %d chars, cited_docs=%s", len(answer), cited_ids
+            "Synthesized: %d chars, local_docs_cited=%s web_cited=%s follow_ups=%d",
+            len(answer), cited_doc_ids, cited_web_ids, len(follow_ups),
         )
 
-        # Append citation list at end of answer for traceability
-        if cited_ids and docs:
-            doc_map = {d["id"]: d for d in docs}
-            citation_block = "\n\n---\n**Sources:**"
-            for cid in cited_ids:
-                if cid in doc_map:
-                    meta = doc_map[cid].get("metadata", {})
-                    fname = meta.get("filename", cid)
-                    citation_block += f"\n- [{cid}] {fname}"
-            answer += citation_block
-
-        return {**state, "answer": answer, "cited_doc_ids": cited_ids}
+        return {
+            **state,
+            "answer": answer,
+            "cited_doc_ids": cited_doc_ids,
+            "follow_up_questions": follow_ups,
+            "web_sources": web,
+        }

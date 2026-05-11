@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check, Share2 } from 'lucide-react'
+import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check, Share2, Globe, MessageSquare } from 'lucide-react'
+import ReactMarkdown from 'react-markdown'
 import { queries, connectQueryWS, type QueryResponse } from '../api/client'
 
 function CopyButton({ text }: { text: string }) {
@@ -264,7 +265,34 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
 
         {/* Result */}
         {result && step === 'done' && (
-          <ResultCard result={result} />
+          <>
+            <ResultCard result={result} />
+            {result.follow_up_questions && result.follow_up_questions.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <MessageSquare size={11} className="text-crimson" />
+                  <span className="font-mono text-[10px] text-[#444] uppercase tracking-wider">You might also ask</span>
+                </div>
+                <div className="flex flex-col gap-2">
+                  {result.follow_up_questions.map((q, i) => (
+                    <button
+                      key={i}
+                      onClick={() => {
+                        setQuery(q)
+                        setStep('idle')
+                        setResult(null)
+                        setTimeout(() => runQuery(q), 0)
+                      }}
+                      className="text-left font-mono text-xs text-[#888] hover:text-white border border-white/5 hover:border-crimson/30 px-3 py-2.5 transition-all flex items-center gap-2 group"
+                    >
+                      <span className="text-crimson shrink-0 group-hover:translate-x-0.5 transition-transform">›</span>
+                      {q}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
@@ -292,9 +320,10 @@ function ShareButton({ query }: { query: string }) {
 function ResultCard({ result }: { result: QueryResponse }) {
   const [activeTab, setActiveTab] = useState<'answer' | 'docs' | 'plan' | 'eval'>('answer')
 
+  const totalSources = result.retrieved_docs.length + (result.web_sources?.length ?? 0)
   const tabs = [
     { id: 'answer', label: 'ANSWER' },
-    { id: 'docs', label: `SOURCES (${result.retrieved_docs.length})` },
+    { id: 'docs', label: `SOURCES (${totalSources})` },
     { id: 'plan', label: 'PLAN' },
     { id: 'eval', label: 'EVALUATION' },
   ] as const
@@ -345,26 +374,84 @@ function ResultCard({ result }: { result: QueryResponse }) {
               </span>
               <CopyButton text={result.answer} />
             </div>
-            <p className="text-white/90 leading-relaxed whitespace-pre-wrap text-sm">{result.answer}</p>
+            <div className="text-white/90 text-sm leading-relaxed markdown-answer">
+              <ReactMarkdown
+                components={{
+                  a: ({ href, children }) => (
+                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-crimson hover:underline">{children}</a>
+                  ),
+                  code: ({ children }) => (
+                    <code className="bg-white/10 px-1 py-0.5 rounded text-xs font-mono text-crimson/90">{children}</code>
+                  ),
+                  pre: ({ children }) => (
+                    <pre className="bg-white/5 border border-white/10 p-3 rounded text-xs overflow-x-auto my-3">{children}</pre>
+                  ),
+                  strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
+                  ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
+                  ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
+                  li: ({ children }) => <li className="text-white/80">{children}</li>,
+                  h1: ({ children }) => <h1 className="text-white text-lg font-semibold mt-4 mb-2">{children}</h1>,
+                  h2: ({ children }) => <h2 className="text-white text-base font-semibold mt-3 mb-1">{children}</h2>,
+                  h3: ({ children }) => <h3 className="text-white/90 font-medium mt-2 mb-1">{children}</h3>,
+                  p: ({ children }) => <p className="mb-2">{children}</p>,
+                  hr: () => <hr className="border-white/10 my-3" />,
+                }}
+              >
+                {result.answer}
+              </ReactMarkdown>
+            </div>
           </div>
         )}
 
         {activeTab === 'docs' && (
           <div className="space-y-3">
-            {result.retrieved_docs.length === 0 ? (
-              <p className="text-[#555] font-mono text-sm">No documents retrieved.</p>
-            ) : result.retrieved_docs.map((doc, i) => (
-              <div key={doc.id} className="border border-white/5 p-3 hover:border-crimson/20 transition-colors">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="font-mono text-[10px] text-crimson">[{i + 1}] {doc.id.slice(0, 32)}...</span>
-                  <div className="flex gap-3 text-[10px] font-mono text-[#555]">
-                    <span className="text-[#888]">{(doc.score * 100).toFixed(0)}% match</span>
-                    <span className="text-crimson/60 uppercase">{doc.source}</span>
-                  </div>
+            {/* Web sources */}
+            {result.web_sources && result.web_sources.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mb-2">
+                  <Globe size={11} className="text-crimson" />
+                  <span className="font-mono text-[10px] text-crimson uppercase tracking-wider">Web Sources</span>
                 </div>
-                <p className="text-[#888] text-xs leading-relaxed line-clamp-3">{doc.document}</p>
-              </div>
-            ))}
+                {result.web_sources.map((w, i) => (
+                  <div key={i} className="border border-crimson/15 p-3 hover:border-crimson/30 transition-colors">
+                    <div className="flex items-start justify-between gap-2 mb-1">
+                      <a href={w.url} target="_blank" rel="noopener noreferrer"
+                        className="font-mono text-[10px] text-crimson hover:underline line-clamp-1 flex-1">
+                        [W{i + 1}] {w.title || w.url}
+                      </a>
+                    </div>
+                    <p className="text-[#777] text-xs leading-relaxed line-clamp-2">{w.snippet}</p>
+                    <span className="font-mono text-[9px] text-[#444] mt-1 block truncate">{w.url}</span>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* Local docs */}
+            {result.retrieved_docs.length > 0 && (
+              <>
+                <div className="flex items-center gap-2 mt-4 mb-2">
+                  <Search size={11} className="text-[#555]" />
+                  <span className="font-mono text-[10px] text-[#555] uppercase tracking-wider">Knowledge Base</span>
+                </div>
+                {result.retrieved_docs.map((doc, i) => (
+                  <div key={doc.id} className="border border-white/5 p-3 hover:border-crimson/20 transition-colors">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-mono text-[10px] text-[#666]">[D{i + 1}] {doc.id.slice(0, 32)}…</span>
+                      <div className="flex gap-3 text-[10px] font-mono text-[#555]">
+                        <span className="text-[#888]">{(doc.score * 100).toFixed(0)}% match</span>
+                        <span className="text-crimson/60 uppercase">{doc.source}</span>
+                      </div>
+                    </div>
+                    <p className="text-[#888] text-xs leading-relaxed line-clamp-3">{doc.document}</p>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {result.retrieved_docs.length === 0 && (!result.web_sources || result.web_sources.length === 0) && (
+              <p className="text-[#555] font-mono text-sm">No sources available.</p>
+            )}
           </div>
         )}
 
