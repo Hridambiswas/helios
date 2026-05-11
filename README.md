@@ -14,6 +14,18 @@
 
 Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
 
+### What's new in v1.1
+
+| # | Feature | Summary |
+|---|---------|---------|
+| 1 | **Multi-turn memory** | Conversation history sent with every query; Planner and Synthesizer use prior turns for context |
+| 2 | **Per-token streaming** | Groq `llm.stream()` feeds tokens through an asyncio queue to WebSocket; answers appear word-by-word |
+| 3 | **Server-side conversations** | Conversations and messages persist in Supabase; cross-device history for logged-in users |
+| 4 | **Critic retry loop** | Failed critic score triggers one re-synthesis pass with improvement suggestions injected |
+| 5 | **Guest query limit ×5** | Raised from 1 to 5 free queries before sign-in is required |
+| 6 | **Mobile layout** | Bottom nav bar, safe-area input, auto-collapsing sidebar, full-width bubbles on xs |
+| 7 | **Chunk feedback** | Upload panel shows chunk previews and a test-retrieval search box per document |
+
 ---
 
 ## Architecture
