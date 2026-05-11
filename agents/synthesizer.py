@@ -129,13 +129,27 @@ class SynthesizerAgent(BaseAgent):
         context_section = "\n\n".join(context_parts) if context_parts else "No external context available — answer from your knowledge."
 
         exec_section = ("--- Code Execution Result ---\n" + exec_block) if exec_block else ""
+
+        # On retry, inject the critic's specific improvement suggestions
+        retry_count: int = state.get("retry_count", 0)
+        critic_scores: dict | None = state.get("critic_scores")
+        retry_guidance = ""
+        if retry_count > 0 and critic_scores:
+            suggestions = critic_scores.get("suggestions", [])
+            if suggestions:
+                retry_guidance = (
+                    "\n\nIMPORTANT — your previous answer was flagged for improvement. "
+                    "Please fix these specific issues:\n"
+                    + "\n".join(f"- {s}" for s in suggestions)
+                )
+
         user_msg = f"""User question: {query}
 
 --- Context ---
 {context_section}
 
 {exec_section}
-
+{retry_guidance}
 Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section containing exactly 2 follow-up questions."""
 
         history_msgs = _format_history(history)
@@ -185,4 +199,5 @@ Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section conta
             "cited_doc_ids": cited_doc_ids,
             "follow_up_questions": follow_ups,
             "web_sources": web,
+            "retry_count": retry_count + 1,
         }
