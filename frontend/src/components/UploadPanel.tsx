@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { Upload, FileText, CheckCircle, XCircle, Loader, Trash2, X } from 'lucide-react'
-import { documents } from '../api/client'
+import { Upload, FileText, CheckCircle, XCircle, Loader, Trash2, X, Search, ChevronDown, ChevronUp } from 'lucide-react'
+import { documents, type ChunkPreview, type TestRetrievalResult } from '../api/client'
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`
@@ -24,12 +24,35 @@ export function UploadPanel({ isLoggedIn, onAuthClick, onClose }: Props) {
   const [progress, setProgress] = useState(0)
   const [docs, setDocs] = useState<DocItem[]>([])
   const [deleting, setDeleting] = useState<string | null>(null)
+  const [expandedDoc, setExpandedDoc] = useState<string | null>(null)
+  const [chunks, setChunks] = useState<Record<string, ChunkPreview[]>>({})
+  const [searchQuery, setSearchQuery] = useState('')
+  const [searchResults, setSearchResults] = useState<Record<string, TestRetrievalResult[]>>({})
+  const [searching, setSearching] = useState<string | null>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
   const loadDocs = useCallback(() => {
     if (!isLoggedIn) return
     documents.list(10).then(({ data }) => setDocs(data as DocItem[])).catch(() => {})
   }, [isLoggedIn])
+
+  const toggleExpand = (docId: string) => {
+    if (expandedDoc === docId) { setExpandedDoc(null); return }
+    setExpandedDoc(docId)
+    if (!chunks[docId]) {
+      documents.chunks(docId, 10).then(({ data }) => {
+        setChunks(prev => ({ ...prev, [docId]: data.chunks }))
+      }).catch(() => {})
+    }
+  }
+
+  const runSearch = (docId: string) => {
+    if (!searchQuery.trim()) return
+    setSearching(docId)
+    documents.testSearch(docId, searchQuery).then(({ data }) => {
+      setSearchResults(prev => ({ ...prev, [docId]: data.results }))
+    }).catch(() => {}).finally(() => setSearching(null))
+  }
 
   useEffect(() => { loadDocs() }, [loadDocs])
 
@@ -164,41 +187,93 @@ export function UploadPanel({ isLoggedIn, onAuthClick, onClose }: Props) {
               )}
             </div>
 
-            {/* Indexed docs list */}
+            {/* Indexed docs list with chunk preview + test retrieval */}
             {docs.length > 0 && (
               <div className="mt-3">
                 <p className="font-mono text-[9px] text-[#444] uppercase tracking-widest mb-1.5">
                   Indexed ({docs.length})
                 </p>
-                <div className="space-y-1 max-h-32 overflow-y-auto">
+                <div className="space-y-1 max-h-64 overflow-y-auto">
                   {docs.map(doc => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between border border-white/5 px-2.5 py-1.5 hover:border-white/10 transition-all"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText size={10} className="text-[#444] shrink-0" />
-                        <span className="text-white/60 text-[11px] truncate">{doc.filename}</span>
-                      </div>
-                      <div className="flex items-center gap-3 shrink-0 ml-2">
-                        <span className="font-mono text-[9px] text-[#333]">{doc.chunk_count} chunks</span>
+                    <div key={doc.id} className="border border-white/5 hover:border-white/10 transition-all">
+                      {/* Doc header row */}
+                      <div className="flex items-center justify-between px-2.5 py-1.5">
+                        <button
+                          onClick={() => toggleExpand(doc.id)}
+                          className="flex items-center gap-2 min-w-0 text-left flex-1"
+                        >
+                          <FileText size={10} className="text-[#444] shrink-0" />
+                          <span className="text-white/60 text-[11px] truncate">{doc.filename}</span>
+                          <span className="font-mono text-[9px] text-[#333] shrink-0">{doc.chunk_count} chunks</span>
+                          {expandedDoc === doc.id
+                            ? <ChevronUp size={9} className="text-[#444] shrink-0" />
+                            : <ChevronDown size={9} className="text-[#444] shrink-0" />}
+                        </button>
                         <button
                           onClick={async () => {
                             setDeleting(doc.id)
-                            try {
-                              await documents.delete(doc.id)
-                              setDocs(d => d.filter(x => x.id !== doc.id))
-                            } catch { /* ignore */ }
-                            finally { setDeleting(null) }
+                            try { await documents.delete(doc.id); setDocs(d => d.filter(x => x.id !== doc.id)) }
+                            catch { /* ignore */ } finally { setDeleting(null) }
                           }}
                           disabled={deleting === doc.id}
-                          className="text-[#333] hover:text-crimson transition-colors disabled:opacity-40"
+                          className="text-[#333] hover:text-crimson transition-colors disabled:opacity-40 ml-2 shrink-0"
                         >
-                          {deleting === doc.id
-                            ? <Loader size={10} className="animate-spin" />
-                            : <Trash2 size={10} />}
+                          {deleting === doc.id ? <Loader size={10} className="animate-spin" /> : <Trash2 size={10} />}
                         </button>
                       </div>
+
+                      {/* Expanded: chunk preview + test search */}
+                      {expandedDoc === doc.id && (
+                        <div className="border-t border-white/5 px-2.5 py-2 space-y-2">
+                          {/* Test retrieval search box */}
+                          <div className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={searchQuery}
+                              onChange={e => setSearchQuery(e.target.value)}
+                              onKeyDown={e => e.key === 'Enter' && runSearch(doc.id)}
+                              placeholder="Test a query…"
+                              className="flex-1 bg-white/4 border border-white/10 px-2 py-1 text-white text-[11px] font-mono placeholder-[#444] outline-none focus:border-crimson/40 transition-colors"
+                            />
+                            <button
+                              onClick={() => runSearch(doc.id)}
+                              disabled={searching === doc.id}
+                              className="px-2 py-1 bg-crimson/15 border border-crimson/30 hover:bg-crimson/25 text-crimson transition-colors disabled:opacity-40"
+                            >
+                              {searching === doc.id ? <Loader size={10} className="animate-spin" /> : <Search size={10} />}
+                            </button>
+                          </div>
+
+                          {/* Search results */}
+                          {searchResults[doc.id]?.length > 0 && (
+                            <div className="space-y-1">
+                              <p className="font-mono text-[8px] text-[#444] uppercase tracking-widest">Top matches</p>
+                              {searchResults[doc.id].map((r, i) => (
+                                <div key={i} className="border border-white/5 px-2 py-1.5">
+                                  <div className="flex items-center justify-between mb-1">
+                                    <span className="font-mono text-[8px] text-crimson/70">chunk {r.chunk_index}</span>
+                                    <span className="font-mono text-[8px] text-green-500/60">{(r.score * 100).toFixed(0)}%</span>
+                                  </div>
+                                  <p className="text-white/50 text-[10px] leading-relaxed line-clamp-2">{r.text}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Chunk previews */}
+                          {chunks[doc.id]?.length > 0 && !searchResults[doc.id]?.length && (
+                            <div className="space-y-1">
+                              <p className="font-mono text-[8px] text-[#444] uppercase tracking-widest">Chunks</p>
+                              {chunks[doc.id].slice(0, 5).map(c => (
+                                <div key={c.chunk_index} className="border border-white/5 px-2 py-1.5">
+                                  <span className="font-mono text-[8px] text-[#444] mr-1.5">[{c.chunk_index}]</span>
+                                  <span className="text-white/40 text-[10px] leading-relaxed">{c.text.slice(0, 120)}…</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
