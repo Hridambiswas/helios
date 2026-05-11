@@ -468,10 +468,14 @@ All agents and the pipeline entry point are instrumented with OTLP spans. Celery
 
 ## Security
 
-- **Rate limiting**: 60 requests / 60 seconds per IP via Redis atomic `INCR`. Returns `429` with `Retry-After` header. Exempt: `/health`, `/metrics`, `/docs`.
+- **Rate limiting**: 60 requests / 60 seconds per user via Redis atomic `INCR`. Returns `429` with `Retry-After` and `X-RateLimit-*` headers. Exempt: `/health`, `/metrics`, `/docs`.
+- **Brute-force protection**: Login and register endpoints are additionally guarded by `AuthBruteForceMiddleware` — blocks an IP after 5 attempts in 5 minutes.
 - **Sandboxed execution**: User-submitted code passes AST validation before running. Only whitelisted top-level modules are importable (`math`, `numpy`, `pandas`, `scipy`, etc.). Forbidden builtins (`open`, `exec`, `eval`, `__import__`, …) are stripped from `__builtins__`. Execution runs in a daemon thread with a hard timeout.
-- **JWT rotation**: Refresh tokens are stored hashed (bcrypt) in Postgres. Each refresh call atomically revokes the previous token and issues a new one.
+- **JWT rotation**: Refresh tokens are stored as SHA-256 hashes in Supabase Postgres. Each refresh call atomically revokes the previous token and issues a new one.
+- **GitHub OAuth**: Authorization-code flow with HMAC-signed `state` parameter for CSRF protection. Accounts linked by `oauth_id` first, email as fallback.
 - **Non-root container**: The `Dockerfile` creates and switches to a `helios` user — no process runs as root inside the image.
+- **Password policy**: Registration enforces minimum 8 characters, at least one uppercase, one lowercase, one digit.
+- **Upload hardening**: Extension allowlist (`.txt .md .pdf .csv .json .rst`), 50 MB size cap, path traversal sanitization.
 
 ---
 
