@@ -54,10 +54,12 @@ const STEP_ICONS: Record<string, React.ReactNode> = {
 const STEPS: PipelineStep[] = ['planning', 'retrieving', 'executing', 'evaluating', 'done']
 
 const EXAMPLE_QUERIES = [
-  'Summarize the key concepts in the indexed documents',
-  'What are the main topics covered in the knowledge base?',
-  'Explain the architecture of this system',
-  'What are the most important findings?',
+  'Difference between LLM and PyTorch?',
+  'Give me a roadmap to become an AI Engineer',
+  'Who is the current CEO of Microsoft?',
+  'Explain transformer attention mechanism',
+  'How does RAG work?',
+  'Best practices for fine-tuning LLMs',
 ]
 
 export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRequired }: {
