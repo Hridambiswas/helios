@@ -4,6 +4,7 @@ import { QueryInterface } from './components/QueryInterface'
 import { PipelineSection } from './components/PipelineSection'
 import { HistorySection } from './components/HistorySection'
 import { UploadSection } from './components/UploadSection'
+import { UploadPanel } from './components/UploadPanel'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { ChatSidebar } from './components/ChatSidebar'
@@ -173,9 +174,11 @@ export default function App() {
 
             {/* Upload panel */}
             {showUpload && (
-              <div className="border-b border-white/8 overflow-y-auto max-h-64">
-                <UploadSection isLoggedIn={!!user} />
-              </div>
+              <UploadPanel
+                isLoggedIn={!!user}
+                onAuthClick={() => setShowAuth(true)}
+                onClose={() => setShowUpload(false)}
+              />
             )}
 
             {/* Chat area */}
