@@ -2,7 +2,7 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-from sqlalchemy import select, desc, update
+from sqlalchemy import select, desc, update, delete
 
 from storage.database import get_session
 from storage.models import QueryRecord, Document
@@ -67,3 +67,18 @@ async def mark_document_indexed(doc_id: str) -> None:
             .where(Document.id == doc_id)
             .values(indexed=True)
         )
+
+
+async def delete_user_data(user_id: str) -> tuple[int, int]:
+    """Delete all QueryRecords and Documents owned by user_id.
+
+    Returns (queries_deleted, documents_deleted) for audit logging.
+    """
+    async with get_session() as session:
+        q_result = await session.execute(
+            delete(QueryRecord).where(QueryRecord.user_id == user_id)
+        )
+        d_result = await session.execute(
+            delete(Document).where(Document.uploaded_by == user_id)
+        )
+        return q_result.rowcount, d_result.rowcount
