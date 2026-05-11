@@ -30,7 +30,7 @@ export default function App() {
     addUserMessage,
     addAssistantPlaceholder,
     updateMessage,
-  } = useConversations()
+  } = useConversations(!!user)
 
   const [chatMode, setChatMode] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
