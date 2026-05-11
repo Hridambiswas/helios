@@ -67,7 +67,12 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
       <div className="flex-1 min-w-0">
         {/* Streaming pipeline indicator */}
         {isStreaming && msg.step && msg.step !== 'done' && (
-          <PipelineIndicator step={msg.step} />
+          <>
+            <PipelineIndicator step={msg.step} />
+            {msg.step === 'planning' && msg.content === '' && (
+              <p className="font-mono text-[9px] text-crimson/60 mt-1 animate-pulse">Improving answer…</p>
+            )}
+          </>
         )}
 
         {/* Error */}
@@ -247,6 +252,9 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
                 setBusyMsgId(null)
               })
             }
+          } else if (event === 'retrying') {
+            accumulated = ''
+            onUpdateMessage(cid, assistantMsgId, { content: '', step: 'planning' })
           } else if (event === 'error') {
             const d = data as { message?: string }
             onUpdateMessage(cid, assistantMsgId, { error: d.message ?? 'Pipeline error', step: 'error' })
