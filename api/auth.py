@@ -208,3 +208,9 @@ async def refresh_access_token(refresh_token: str) -> TokenResponse:
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
     return await issue_tokens(user)
+
+
+async def get_user_by_email(email: str) -> "User | None":
+    async with get_session() as session:
+        result = await session.execute(select(User).where(User.email == email))
+        return result.scalar_one_or_none()
