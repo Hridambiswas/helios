@@ -74,3 +74,59 @@ class TestAuthEndpoints:
                 "username": "hridam", "email": "h@test.com", "password": "Password123"
             })
             assert resp.status_code == 400
+
+
+class TestConversationRoutes:
+    """Tests for GET/POST /conversations endpoints."""
+
+    def _mock_user(self):
+        return MagicMock(id="user-1", username="hridam", is_active=True)
+
+    def _mock_conv(self, conv_id="conv-1", title="Test Chat"):
+        c = MagicMock()
+        c.id = conv_id
+        c.title = title
+        c.created_at = None
+        c.updated_at = None
+        c.message_count = 0
+        return c
+
+    def test_list_conversations_requires_auth(self, client):
+        resp = client.get("/api/v1/conversations")
+        assert resp.status_code == 401
+
+    def test_list_conversations_returns_list(self, client):
+        conv = self._mock_conv()
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.list_conversations", new_callable=AsyncMock, return_value=[conv]),
+        ):
+            resp = client.get("/api/v1/conversations", headers={"Authorization": "Bearer tok"})
+            assert resp.status_code == 200
+            assert isinstance(resp.json(), list)
+
+    def test_create_conversation_returns_201(self, client):
+        conv = self._mock_conv(title="My Chat")
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.create_conversation", new_callable=AsyncMock, return_value=conv),
+        ):
+            resp = client.post(
+                "/api/v1/conversations",
+                json={"title": "My Chat"},
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 201
+
+    def test_create_conversation_default_title(self, client):
+        conv = self._mock_conv(title="New Chat")
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.create_conversation", new_callable=AsyncMock, return_value=conv),
+        ):
+            resp = client.post(
+                "/api/v1/conversations",
+                json={},
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 201
