@@ -26,34 +26,17 @@ oauth_router = APIRouter(prefix="/api/v1/auth", tags=["oauth"])
 
 # ── Provider definitions ──────────────────────────────────────────────────────
 
-_PROVIDERS: dict[str, dict] = {
-    "google": {
-        "auth_url":     "https://accounts.google.com/o/oauth2/v2/auth",
-        "token_url":    "https://oauth2.googleapis.com/token",
-        "userinfo_url": "https://www.googleapis.com/oauth2/v3/userinfo",
-        "scope":        "openid email profile",
-    },
-    "github": {
-        "auth_url":     "https://github.com/login/oauth/authorize",
-        "token_url":    "https://github.com/login/oauth/access_token",
-        "userinfo_url": "https://api.github.com/user",
-        "emails_url":   "https://api.github.com/user/emails",
-        "scope":        "read:user user:email",
-    },
+_GITHUB = {
+    "auth_url":     "https://github.com/login/oauth/authorize",
+    "token_url":    "https://github.com/login/oauth/access_token",
+    "userinfo_url": "https://api.github.com/user",
+    "emails_url":   "https://api.github.com/user/emails",
+    "scope":        "read:user user:email",
 }
 
 
-def _client_id(provider: str) -> str:
-    return cfg.google_client_id if provider == "google" else cfg.github_client_id
-
-
-def _client_secret(provider: str) -> str:
-    s = cfg.google_client_secret if provider == "google" else cfg.github_client_secret
-    return s.get_secret_value()
-
-
-def _callback_uri(provider: str) -> str:
-    return f"{cfg.oauth_backend_url}/api/v1/auth/{provider}/callback"
+def _callback_uri() -> str:
+    return f"{cfg.oauth_backend_url}/api/v1/auth/github/callback"
 
 
 # ── CSRF state helpers ────────────────────────────────────────────────────────
@@ -145,52 +128,34 @@ async def _get_or_create_oauth_user(
 
 # ── Generic OAuth helpers ─────────────────────────────────────────────────────
 
-async def _exchange_code(provider: str, code: str) -> str:
-    """Exchange authorization code for an access token."""
-    p = _PROVIDERS[provider]
-    payload = {
-        "client_id":     _client_id(provider),
-        "client_secret": _client_secret(provider),
-        "code":          code,
-        "redirect_uri":  _callback_uri(provider),
-    }
-    if provider == "google":
-        payload["grant_type"] = "authorization_code"
-
+async def _exchange_code(code: str) -> str:
+    """Exchange GitHub authorization code for an access token."""
     async with httpx.AsyncClient(timeout=10) as client:
         resp = await client.post(
-            p["token_url"],
-            data=payload,
+            _GITHUB["token_url"],
+            data={
+                "client_id":     cfg.github_client_id,
+                "client_secret": cfg.github_client_secret.get_secret_value(),
+                "code":          code,
+                "redirect_uri":  _callback_uri(),
+            },
             headers={"Accept": "application/json"},
         )
     resp.raise_for_status()
-    data = resp.json()
-    token = data.get("access_token")
+    token = resp.json().get("access_token")
     if not token:
-        raise HTTPException(502, "OAuth provider did not return an access token")
+        raise HTTPException(502, "GitHub did not return an access token")
     return token
-
-
-async def _fetch_google_user(access_token: str) -> tuple[str, str, str]:
-    """Return (oauth_id, email, display_name)."""
-    async with httpx.AsyncClient(timeout=10) as client:
-        resp = await client.get(
-            _PROVIDERS["google"]["userinfo_url"],
-            headers={"Authorization": f"Bearer {access_token}"},
-        )
-    resp.raise_for_status()
-    data = resp.json()
-    return str(data["sub"]), data["email"], data.get("name", "")
 
 
 async def _fetch_github_user(access_token: str) -> tuple[str, str, str]:
     """Return (oauth_id, email, display_name)."""
     headers = {"Authorization": f"Bearer {access_token}", "Accept": "application/json"}
     async with httpx.AsyncClient(timeout=10) as client:
-        profile = (await client.get(_PROVIDERS["github"]["userinfo_url"], headers=headers)).json()
+        profile = (await client.get(_GITHUB["userinfo_url"], headers=headers)).json()
         email = profile.get("email") or ""
         if not email:
-            emails_resp = await client.get(_PROVIDERS["github"]["emails_url"], headers=headers)
+            emails_resp = await client.get(_GITHUB["emails_url"], headers=headers)
             for e in emails_resp.json():
                 if e.get("primary") and e.get("verified"):
                     email = e["email"]
@@ -202,36 +167,32 @@ async def _fetch_github_user(access_token: str) -> tuple[str, str, str]:
 
 # ── Routes ────────────────────────────────────────────────────────────────────
 
-def _oauth_start(provider: str) -> RedirectResponse:
-    if not _client_id(provider):
-        raise HTTPException(501, f"{provider.title()} OAuth is not configured on this server")
-    p = _PROVIDERS[provider]
+@oauth_router.get("/github")
+async def github_start():
+    if not cfg.github_client_id:
+        raise HTTPException(501, "GitHub OAuth is not configured on this server")
     params = {
-        "client_id":     _client_id(provider),
-        "redirect_uri":  _callback_uri(provider),
-        "scope":         p["scope"],
-        "state":         _make_state(provider),
+        "client_id":     cfg.github_client_id,
+        "redirect_uri":  _callback_uri(),
+        "scope":         _GITHUB["scope"],
+        "state":         _make_state("github"),
         "response_type": "code",
     }
-    if provider == "google":
-        params["access_type"] = "online"
-    return RedirectResponse(f"{p['auth_url']}?{urlencode(params)}", status_code=302)
+    return RedirectResponse(f"{_GITHUB['auth_url']}?{urlencode(params)}", status_code=302)
 
 
-async def _oauth_callback(provider: str, code: str | None, state: str | None) -> RedirectResponse:
+@oauth_router.get("/github/callback")
+async def github_callback(code: str | None = None, state: str | None = None):
     error_url = f"{cfg.oauth_frontend_url}?oauth_error=true"
     if not code or not state:
         return RedirectResponse(error_url, status_code=302)
-    if not _verify_state(state, provider):
-        logger.warning("OAuth CSRF state mismatch for provider=%s", provider)
+    if not _verify_state(state, "github"):
+        logger.warning("GitHub OAuth CSRF state mismatch")
         return RedirectResponse(error_url, status_code=302)
     try:
-        access_token = await _exchange_code(provider, code)
-        if provider == "google":
-            oauth_id, email, name = await _fetch_google_user(access_token)
-        else:
-            oauth_id, email, name = await _fetch_github_user(access_token)
-        user = await _get_or_create_oauth_user(provider, oauth_id, email, name)
+        access_token = await _exchange_code(code)
+        oauth_id, email, name = await _fetch_github_user(access_token)
+        user = await _get_or_create_oauth_user("github", oauth_id, email, name)
         tokens = await issue_tokens(user)
         redirect = (
             f"{cfg.oauth_frontend_url}"
@@ -242,25 +203,5 @@ async def _oauth_callback(provider: str, code: str | None, state: str | None) ->
     except HTTPException:
         raise
     except Exception as exc:
-        logger.exception("OAuth callback failed for provider=%s: %s", provider, exc)
+        logger.exception("GitHub OAuth callback failed: %s", exc)
         return RedirectResponse(error_url, status_code=302)
-
-
-@oauth_router.get("/google")
-async def google_start():
-    return _oauth_start("google")
-
-
-@oauth_router.get("/google/callback")
-async def google_callback(code: str | None = None, state: str | None = None):
-    return await _oauth_callback("google", code, state)
-
-
-@oauth_router.get("/github")
-async def github_start():
-    return _oauth_start("github")
-
-
-@oauth_router.get("/github/callback")
-async def github_callback(code: str | None = None, state: str | None = None):
-    return await _oauth_callback("github", code, state)

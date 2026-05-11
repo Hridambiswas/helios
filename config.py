@@ -115,9 +115,7 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
     guest_query_limit: int = 1
 
-    # ── OAuth (Google & GitHub social login) ─────────────────────────────────
-    google_client_id: str = ""
-    google_client_secret: SecretStr = SecretStr("")
+    # ── OAuth (GitHub social login) ───────────────────────────────────────────
     github_client_id: str = ""
     github_client_secret: SecretStr = SecretStr("")
     # Where to redirect after successful OAuth. Should be the frontend origin.
