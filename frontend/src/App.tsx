@@ -5,6 +5,7 @@ import { PipelineSection } from './components/PipelineSection'
 import { HistorySection } from './components/HistorySection'
 import { UploadSection } from './components/UploadSection'
 import { UploadPanel } from './components/UploadPanel'
+import { MobileBottomNav } from './components/MobileBottomNav'
 import { Navbar } from './components/Navbar'
 import { Footer } from './components/Footer'
 import { ChatSidebar } from './components/ChatSidebar'
@@ -129,7 +130,7 @@ export default function App() {
 
       {/* ── CHAT MODE ── */}
       {chatMode ? (
-        <div className="flex h-screen overflow-hidden bg-ink">
+        <div className="flex h-screen overflow-hidden bg-ink pb-14 sm:pb-0">
           {/* Sidebar */}
           <ChatSidebar
             conversations={conversations}
@@ -246,6 +247,17 @@ export default function App() {
           <ScrollToTop />
         </>
       )}
+
+      {/* Mobile bottom nav (shown in both modes) */}
+      <MobileBottomNav
+        chatMode={chatMode}
+        onHome={() => setChatMode(false)}
+        onChat={() => openChat()}
+        onUpload={() => { if (!chatMode) { setChatMode(true) }; setTimeout(() => setShowUpload(true), 50) }}
+        user={user}
+        onAuthClick={() => setShowAuth(true)}
+        onLogout={() => { logout(); addToast('Signed out', 'info') }}
+      />
 
       {/* Auth modal (shared between both modes) */}
       {showAuth && (
