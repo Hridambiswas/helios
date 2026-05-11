@@ -546,6 +546,44 @@ Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local develop
 
 ---
 
+## Critic retry loop
+
+When the Critic agent scores an answer below the passing threshold, the pipeline automatically re-runs the Synthesizer once with the critic's improvement suggestions injected as explicit fix instructions.
+
+### Flow
+
+```
+Planner → Retriever → Executor → Synthesizer
+                                       │
+                                   Critic
+                                       │
+                          critic_passed?
+                          ├── Yes  → done
+                          └── No (retry_count < 1) → Synthesizer (retry)
+                                                          │
+                                                       Critic
+                                                          │
+                                                       → done (regardless of score)
+```
+
+The retry is capped at `_MAX_RETRIES = 1` so a failing critic never creates an infinite loop. The synthesizer receives the critic's `suggestions` list on its second pass and prepends them as fix instructions before regenerating the answer.
+
+### WebSocket events
+
+The WebSocket client sees an additional `retrying` event between the first and second synthesis passes:
+
+```json
+{ "event": "retrying", "data": { "attempt": 2 } }
+```
+
+The frontend displays "Improving answer…" in the pipeline step indicator during the retry.
+
+### Tuning
+
+To change the retry cap, edit `_MAX_RETRIES` at the top of `pipeline/run.py`. Setting it to `0` disables the retry loop entirely; `2` allows two re-synthesis passes.
+
+---
+
 ## Document chunk feedback
 
 The Upload panel now lets you inspect exactly how an ingested document was chunked and test retrieval quality against it before using it in a conversation.
