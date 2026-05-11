@@ -117,7 +117,8 @@ async def ws_query(websocket: WebSocket):
             await _send(websocket, "planning", {"query": query})
 
             loop = asyncio.get_running_loop()
-            token_queue: asyncio.Queue[str | None] = asyncio.Queue()
+            # Queue carries str tokens, None sentinel, or dict control frames
+            token_queue: asyncio.Queue[str | dict | None] = asyncio.Queue()
 
             import threading
             _first_token_lock = threading.Lock()
@@ -127,19 +128,26 @@ async def ws_query(websocket: WebSocket):
                 with _first_token_lock:
                     if not _first_token_fired[0]:
                         _first_token_fired[0] = True
-                        loop.call_soon_threadsafe(
-                            lambda: asyncio.ensure_future(_send(websocket, "synthesizing", {}))
-                        )
+                        # Put synthesizing signal in queue BEFORE the first token
+                        # so the client sees the event in the correct order
+                        loop.call_soon_threadsafe(token_queue.put_nowait, {"event": "synthesizing"})
                 loop.call_soon_threadsafe(token_queue.put_nowait, token)
 
             state: dict = {}
 
             async def _drain_tokens() -> None:
                 while True:
-                    tok = await token_queue.get()
-                    if tok is None:
+                    item = await token_queue.get()
+                    if item is None:
                         break
-                    await _send(websocket, "token", {"token": tok})
+                    if isinstance(item, dict):
+                        event = item.get("event", "")
+                        if event == "synthesizing":
+                            await _send(websocket, "synthesizing", {})
+                        elif event == "retrying":
+                            await _send(websocket, "retrying", {"attempt": item.get("attempt", 1)})
+                    else:
+                        await _send(websocket, "token", {"token": item})
 
             def _run() -> dict:
                 result = run_pipeline(
@@ -149,11 +157,9 @@ async def ws_query(websocket: WebSocket):
                 )
                 if result.get("retry_count", 0) > 1:
                     loop.call_soon_threadsafe(
-                        lambda: asyncio.ensure_future(
-                            _send(websocket, "retrying", {"attempt": result.get("retry_count", 1)})
-                        )
+                        token_queue.put_nowait, {"event": "retrying", "attempt": result.get("retry_count", 1)}
                     )
-                loop.call_soon_threadsafe(token_queue.put_nowait, None)  # sentinel
+                loop.call_soon_threadsafe(token_queue.put_nowait, None)  # end sentinel
                 return result
 
             try:

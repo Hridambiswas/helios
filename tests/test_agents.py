@@ -158,7 +158,7 @@ class TestConversationMemory:
         mock_response = MagicMock()
         mock_response.content = "Answer text\n<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2"
 
-        with patch.object(agent, '_llm') as mock_llm:
+        with patch.object(agent, '_llm', create=True) as mock_llm:
             mock_llm.invoke.return_value = mock_response
             state = {
                 "query": "tell me more",
@@ -188,7 +188,7 @@ class TestConversationMemory:
         mock_response = MagicMock()
         mock_response.content = "Answer\n<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2"
 
-        with patch.object(agent, '_llm') as mock_llm:
+        with patch.object(agent, '_llm', create=True) as mock_llm:
             mock_llm.invoke.return_value = mock_response
             state = {"query": "hello", "retrieved_docs": [], "web_sources": [],
                      "execution_result": None, "conversation_history": []}
@@ -211,7 +211,7 @@ class TestConversationMemory:
             "requires_retrieval": True, "requires_code": False,
         })
 
-        with patch.object(agent, '_llm') as mock_llm:
+        with patch.object(agent, '_llm', create=True) as mock_llm:
             mock_llm.invoke.return_value = mock_response
             state = {
                 "query": "tell me more",
@@ -239,7 +239,7 @@ class TestSynthesizerStreaming:
 
         tokens_received: list[str] = []
 
-        with patch.object(agent, '_llm') as mock_llm:
+        with patch.object(agent, '_llm', create=True) as mock_llm:
             mock_llm.stream.return_value = iter(chunks)
             state = {
                 "query": "hi",
@@ -261,7 +261,7 @@ class TestSynthesizerStreaming:
         mock_resp = MagicMock()
         mock_resp.content = "Answer\n<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2"
 
-        with patch.object(agent, '_llm') as mock_llm:
+        with patch.object(agent, '_llm', create=True) as mock_llm:
             mock_llm.invoke.return_value = mock_resp
             state = {"query": "hi", "retrieved_docs": [], "web_sources": [],
                      "execution_result": None, "conversation_history": []}

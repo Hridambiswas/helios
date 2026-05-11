@@ -167,7 +167,10 @@ def _build_graph() -> StateGraph:
     })
     g.add_edge("executor",    "synthesizer")
     g.add_edge("synthesizer", "critic")
-    g.add_conditional_edges("critic", route_after_critic, {END: END})
+    g.add_conditional_edges("critic", route_after_critic, {
+        "synthesizer": "synthesizer",
+        END: END,
+    })
 
     return g
 
