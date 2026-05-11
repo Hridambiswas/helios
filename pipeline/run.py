@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import threading
 import time
+from collections.abc import Callable
 from typing import Any, TypedDict, Optional
 
 from langgraph.graph import StateGraph, END
@@ -177,6 +178,7 @@ def run_pipeline(
     query: str,
     user_id: str | None = None,
     conversation_history: list | None = None,
+    token_callback: Callable[[str], None] | None = None,
     **extra,
 ) -> dict[str, Any]:
     """
@@ -187,6 +189,7 @@ def run_pipeline(
         "query": query,
         "user_id": user_id,
         "conversation_history": conversation_history or [],
+        "_token_callback": token_callback,
         "plan": None,
         "retrieved_docs": [],
         "web_sources": [],
