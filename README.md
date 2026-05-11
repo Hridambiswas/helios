@@ -53,13 +53,15 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
                               │                      ┌─────────▼──────────┐   │
                               │                      │    Synthesizer     │   │
                               │                      │  Llama 3.3 70B     │   │
-                              │                      │  (T=0.2, emojis)   │   │
+                              │                      │  streams tokens    │   │
+                              │                      │  + history context │   │
                               │                      └─────────┬──────────┘   │
                               │                                │               │
                               │                      ┌─────────▼──────┐       │
                               │                      │     Critic     │       │
                               │                      │  Llama 3.3 70B │       │
-                              │                      │  (min score 0.5│       │
+                              │                      │  min score 0.5 │       │
+                              │                      │  → retry once  │       │
                               │                      └────────────────┘       │
                               └────────────────────────────────────────────────┘
                                              │
@@ -70,8 +72,9 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
 │ PostgreSQL       │           │ (rate-limit,       │          │ (cosine vectors) │
 │ (users, queries, │           │  Celery broker,    │          │                  │
 │  documents,      │           │  checkpoints)      │          │ MinIO            │
-│  refresh tokens) │           └────────────────────┘          │ (raw doc files)  │
-└──────────────────┘                                            └──────────────────┘
+│  conversations,  │           └────────────────────┘          │ (raw doc files)  │
+│  refresh tokens) │                                            └──────────────────┘
+└──────────────────┘
 ```
 
 ---
