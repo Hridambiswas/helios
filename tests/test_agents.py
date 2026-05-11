@@ -221,3 +221,51 @@ class TestConversationMemory:
 
         called_content = mock_llm.invoke.call_args[0][0][1].content
         assert "Helios" in called_content
+
+
+# ── Per-token streaming tests ─────────────────────────────────────────────────
+
+class TestSynthesizerStreaming:
+
+    def test_token_callback_called_for_each_chunk(self):
+        from unittest.mock import MagicMock, patch
+        from agents.synthesizer import SynthesizerAgent
+
+        agent = SynthesizerAgent.__new__(SynthesizerAgent)
+        agent.logger = MagicMock()
+
+        chunks = [MagicMock(content="Hello"), MagicMock(content=" world"),
+                  MagicMock(content="<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2")]
+
+        tokens_received: list[str] = []
+
+        with patch.object(agent, '_llm') as mock_llm:
+            mock_llm.stream.return_value = iter(chunks)
+            state = {
+                "query": "hi",
+                "retrieved_docs": [], "web_sources": [],
+                "execution_result": None, "conversation_history": [],
+                "_token_callback": tokens_received.append,
+            }
+            result = agent._run(state)
+
+        assert tokens_received == ["Hello", " world", "<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2"]
+        assert result["answer"] == "Hello world"
+
+    def test_no_callback_uses_invoke(self):
+        from unittest.mock import MagicMock, patch
+        from agents.synthesizer import SynthesizerAgent
+
+        agent = SynthesizerAgent.__new__(SynthesizerAgent)
+        agent.logger = MagicMock()
+        mock_resp = MagicMock()
+        mock_resp.content = "Answer\n<<<FOLLOW_UPS>>>\n1. Q1\n2. Q2"
+
+        with patch.object(agent, '_llm') as mock_llm:
+            mock_llm.invoke.return_value = mock_resp
+            state = {"query": "hi", "retrieved_docs": [], "web_sources": [],
+                     "execution_result": None, "conversation_history": []}
+            agent._run(state)
+
+        mock_llm.invoke.assert_called_once()
+        mock_llm.stream.assert_not_called()
