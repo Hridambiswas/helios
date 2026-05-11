@@ -19,7 +19,7 @@ from observability.metrics import pipeline_latency_histogram, pipeline_requests_
 from observability.tracing import span
 
 _PIPELINE_TIMEOUT_SECONDS = 120
-_PIPELINE_VERSION = "1.0.0"
+_PIPELINE_VERSION = "1.1.0"
 _MAX_RETRIES = 1  # one re-synthesis attempt when critic fails
 
 logger = logging.getLogger("helios.pipeline.run")

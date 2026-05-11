@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Helios",
         description="Distributed Multi-Modal Agentic GenAI Platform",
-        version="1.0.0",
+        version="1.1.0",
         docs_url="/docs" if cfg.is_development else None,
         redoc_url="/redoc" if cfg.is_development else None,
         openapi_url="/openapi.json" if cfg.is_development else None,
