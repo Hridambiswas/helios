@@ -18,13 +18,19 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
 ## Architecture
 
 ```
+  React + Vite (Vercel)
+  ├── Chat UI (sidebar + conversation history)
+  ├── REST/WebSocket → FastAPI :8000 (EC2)
+  └── GitHub OAuth → /api/v1/auth/github
+
                               ┌────────────────────────────────────────────────┐
-                              │                  FastAPI  :8000                │
+                              │              FastAPI  :8000  (EC2)             │
                               │                                                 │
   Client ──REST──────────────▶│  POST /api/v1/query     (sync)                 │
   Client ──REST──────────────▶│  POST /api/v1/query/async (Celery)             │
   Client ──WebSocket─────────▶│  WS   /ws/query         (streaming events)     │
   Client ──REST──────────────▶│  POST /api/v1/ingest    (doc upload)           │
+  Client ──GET───────────────▶│  GET  /api/v1/auth/github (OAuth redirect)     │
                               └──────────────┬─────────────────────────────────┘
                                              │
                                      run_pipeline()
@@ -32,36 +38,39 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
                               ┌──────────────▼─────────────────────────────────┐
                               │         LangGraph  StateGraph                  │
                               │                                                 │
-                              │   ┌──────────┐    ┌───────────┐               │
-                              │   │ Planner  │───▶│ Retriever │               │
-                              │   │ (GPT-4o) │    │ (hybrid)  │               │
-                              │   └──────────┘    └─────┬─────┘               │
-                              │         │               │                      │
-                              │         │         ┌─────▼──────┐              │
-                              │         └────────▶│  Executor  │              │
-                              │                   │ (sandbox)  │              │
-                              │                   └─────┬──────┘              │
-                              │                         │                      │
-                              │                   ┌─────▼──────────┐          │
-                              │                   │  Synthesizer   │          │
-                              │                   │  (GPT-4o 0.2)  │          │
-                              │                   └─────┬──────────┘          │
-                              │                         │                      │
-                              │                   ┌─────▼──────┐              │
-                              │                   │   Critic   │              │
-                              │                   │ (LLM judge)│              │
-                              │                   └────────────┘              │
+                              │  ┌─────────────┐   ┌────────────────────┐     │
+                              │  │   Planner   │──▶│     Retriever      │     │
+                              │  │ Llama 3.3   │   │ BAAI/bge + CLIP    │     │
+                              │  │   70B (T=0) │   │ + BM25 → fused K   │     │
+                              │  └─────────────┘   └──────────┬─────────┘     │
+                              │        │                       │               │
+                              │        │             ┌─────────▼──────┐       │
+                              │        └────────────▶│    Executor    │       │
+                              │                      │  (AST sandbox) │       │
+                              │                      └─────────┬──────┘       │
+                              │                                │               │
+                              │                      ┌─────────▼──────────┐   │
+                              │                      │    Synthesizer     │   │
+                              │                      │  Llama 3.3 70B     │   │
+                              │                      │  (T=0.2, emojis)   │   │
+                              │                      └─────────┬──────────┘   │
+                              │                                │               │
+                              │                      ┌─────────▼──────┐       │
+                              │                      │     Critic     │       │
+                              │                      │  Llama 3.3 70B │       │
+                              │                      │  (min score 0.5│       │
+                              │                      └────────────────┘       │
                               └────────────────────────────────────────────────┘
                                              │
-               ┌─────────────────────────────┼────────────────────────────────┐
-               │                             │                                │
-      ┌────────▼──────┐          ┌───────────▼───────┐           ┌───────────▼───────┐
-      │  PostgreSQL   │          │  Redis  (cache,   │           │  ChromaDB         │
-      │  (users,      │          │  rate-limit,      │           │  (cosine vectors) │
-      │   queries,    │          │  Celery broker,   │           │                   │
-      │   documents)  │          │  checkpoints)     │           │  MinIO            │
-      └───────────────┘          └───────────────────┘           │  (raw doc files)  │
-                                                                  └───────────────────┘
+        ┌────────────────────────────────────┼──────────────────────────────┐
+        │                                    │                              │
+┌───────▼──────────┐           ┌─────────────▼──────┐          ┌───────────▼──────┐
+│ Supabase         │           │ Redis 7            │          │ ChromaDB         │
+│ PostgreSQL       │           │ (rate-limit,       │          │ (cosine vectors) │
+│ (users, queries, │           │  Celery broker,    │          │                  │
+│  documents,      │           │  checkpoints)      │          │ MinIO            │
+│  refresh tokens) │           └────────────────────┘          │ (raw doc files)  │
+└──────────────────┘                                            └──────────────────┘
 ```
 
 ---
