@@ -546,6 +546,35 @@ Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local develop
 
 ---
 
+## Mobile layout
+
+The frontend is fully usable on iOS and Android browsers from v1.1.
+
+### What changed
+
+| Concern | Implementation |
+|---------|----------------|
+| Safe-area input bar | `padding-bottom: max(0.75rem, env(safe-area-inset-bottom))` on `.chat-input-bar` |
+| Bottom navigation | `MobileBottomNav` fixed bar with Home / Chat / Upload / Sign-in tabs, `sm:hidden` |
+| Sidebar | Auto-collapses at `window.innerWidth < 640` on mount; re-opens on desktop resize |
+| User bubble | `w-full` on `xs`, `sm:max-w-xl` on larger breakpoints |
+| Step labels | Hidden on `xs` via `.step-label { display: none }` to reduce pipeline-step noise |
+| Viewport | `viewport-fit=cover` in `index.html` meta tag for edge-to-edge display on notched devices |
+
+### Testing on device
+
+Use Chrome DevTools device emulation or run a LAN preview from the Vite dev server:
+
+```bash
+cd frontend
+npm run dev -- --host
+# then open http://<your-lan-ip>:5173 on your phone
+```
+
+The Vercel deployment automatically serves over HTTPS, so PWA features and safe-area insets work on live devices too.
+
+---
+
 ## Running tests
 
 ```bash
