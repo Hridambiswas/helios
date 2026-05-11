@@ -136,6 +136,40 @@ High-priority areas right now:
 
 ---
 
+## Working on v1.1 features
+
+The features below were added in v1.1. If you are patching or extending any of them, here is where the key logic lives.
+
+### Multi-turn memory
+- **Schema**: `QueryRequest.history` in `api/schemas.py` — validates and caps at 20 items.
+- **Pipeline**: `HeliosState.conversation_history` threaded through `pipeline/run.py → run_pipeline()`.
+- **Planner**: `agents/planner.py` prepends the last user message as a context note.
+- **Synthesizer**: `agents/synthesizer.py` calls `_format_history()` and prepends `HumanMessage`/`AIMessage` objects before the current query.
+- **Frontend**: `buildHistory()` in `frontend/src/components/ChatView.tsx` builds the last 12 messages (6 turns) from the local conversation store.
+
+### Per-token streaming
+- **Synthesizer**: `agents/synthesizer.py` uses `llm.stream()` when `_token_callback` is present in state; each chunk fires the callback.
+- **WebSocket**: `api/websocket.py` — `asyncio.Queue` bridges the thread-pool executor to the async event loop; `_drain_tokens()` coroutine forwards `token` events; `_first_token` flag triggers a `synthesizing` event.
+- **Frontend**: `ChatView.tsx` accumulates `token` events into `accumulated` state and renders a blinking cursor during streaming.
+
+### Critic retry loop
+- **Routing**: `route_after_critic()` in `pipeline/run.py` returns `"synthesizer"` when `not critic_passed and retry_count < _MAX_RETRIES`.
+- **Synthesizer**: On retry, injects critic `suggestions` as fix instructions at the top of the user message.
+- **WebSocket**: Emits a `retrying` event when `retry_count > 1`; frontend shows "Improving answer…".
+
+### Server-side conversations
+- **Models**: `Conversation` and `ConversationMessage` in `storage/models.py`.
+- **Migration**: `storage/migrations/versions/0005_conversations.py`.
+- **Routes**: five new endpoints in `api/routes.py` — list, create, get, append message, delete.
+- **Frontend hook**: `frontend/src/hooks/useConversations.ts` — login sync, lazy message load, server-persist on assistant turn.
+
+### Document chunk feedback
+- **Vector store**: `retrieval/vector_store.py` — `get_chunks_for_doc()` and `query_by_doc()`.
+- **Routes**: `GET /documents/{id}/chunks` and `POST /documents/{id}/search` in `api/routes.py`.
+- **Frontend**: expandable doc cards in `frontend/src/components/UploadPanel.tsx`.
+
+---
+
 ## Pull request process
 
 1. **Open an issue first** for any non-trivial change so we can align on approach
