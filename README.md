@@ -408,11 +408,11 @@ helios/
 ├── agents/
 │   ├── __init__.py        # Exports all agent classes
 │   ├── base.py            # Timing + Prometheus instrumentation mixin
-│   ├── planner.py         # GPT-4o query decomposition
+│   ├── planner.py         # Groq query decomposition; context-aware via conversation history
 │   ├── retriever.py       # Hybrid dense+CLIP+BM25 retrieval
 │   ├── executor.py        # AST-guarded sandboxed Python runner
-│   ├── synthesizer.py     # Grounded answer synthesis with citations
-│   └── critic.py          # LLM-as-judge scoring
+│   ├── synthesizer.py     # Grounded answer synthesis; per-token streaming; retry guidance
+│   └── critic.py          # LLM-as-judge scoring; triggers retry on fail
 ├── api/
 │   ├── __init__.py        # Exports routers and auth helpers
 │   ├── auth.py            # bcrypt + JWT + refresh token rotation
