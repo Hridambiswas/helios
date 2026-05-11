@@ -17,8 +17,8 @@ def client():
         patch("observability.logging_config.setup_logging"),
         patch("storage.database.close_engine", new_callable=AsyncMock),
         patch("storage.read_replica.close_read_engine", new_callable=AsyncMock),
-        patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
-        patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=45),
+        patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
+        patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=45),
     ):
         from main import app
         return TestClient(app)
@@ -37,7 +37,8 @@ def _health_resp(client, **kwargs):
 class TestRateLimitHeaders:
 
     def test_x_ratelimit_limit_present(self, client):
-        resp = _health_resp(client)
+        # /health is excluded from rate limiting — hit a rated endpoint instead
+        resp = client.get("/api/v1/auth/me")  # no auth → 401, but middleware still adds headers
         assert "X-RateLimit-Limit" in resp.headers
 
     def test_x_ratelimit_limit_matches_config(self, client):
@@ -56,8 +57,8 @@ class TestRateLimitHeaders:
             cfg.jwt_secret_key, algorithm=cfg.jwt_algorithm,
         )
         with (
-            patch("storage.cache.incr", new_callable=AsyncMock, return_value=3),
-            patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=30),
+            patch("api.middleware.incr", new_callable=AsyncMock, return_value=3),
+            patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=30),
             patch("api.routes.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
@@ -79,8 +80,8 @@ class TestRateLimitHeaders:
             cfg.jwt_secret_key, algorithm=cfg.jwt_algorithm,
         )
         with (
-            patch("storage.cache.incr", new_callable=AsyncMock, return_value=5),
-            patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=20),
+            patch("api.middleware.incr", new_callable=AsyncMock, return_value=5),
+            patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=20),
             patch("api.routes.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
@@ -100,8 +101,8 @@ class TestRateLimitHeaders:
             cfg.jwt_secret_key, algorithm=cfg.jwt_algorithm,
         )
         with (
-            patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
-            patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=42),
+            patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
+            patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=42),
             patch("api.routes.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
@@ -113,8 +114,8 @@ class TestRateLimitHeaders:
         assert resp.headers["X-RateLimit-Reset"] == "42"
 
     def test_rate_limit_headers_on_429_response(self, client):
-        with patch("storage.cache.incr", new_callable=AsyncMock, return_value=99):
-            with patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=55):
+        with patch("api.middleware.incr", new_callable=AsyncMock, return_value=99):
+            with patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=55):
                 resp = client.get("/api/v1/auth/me",
                                   headers={"Authorization": "Bearer invalid.token.here"})
         if resp.status_code == 429:

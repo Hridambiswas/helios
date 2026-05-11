@@ -151,6 +151,10 @@ class Settings(BaseSettings):
     def is_production(self, value: bool) -> None:
         object.__setattr__(self, "app_env", "production" if value else "development")
 
+    @is_production.deleter
+    def is_production(self) -> None:
+        object.__setattr__(self, "app_env", "development")
+
     @property
     def is_development(self) -> bool:
         return self.app_env == "development"

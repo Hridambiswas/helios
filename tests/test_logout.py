@@ -17,8 +17,8 @@ def client():
         patch("observability.logging_config.setup_logging"),
         patch("storage.database.close_engine", new_callable=AsyncMock),
         patch("storage.read_replica.close_read_engine", new_callable=AsyncMock),
-        patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
-        patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=60),
+        patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
+        patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=60),
     ):
         from main import app
         return TestClient(app)
@@ -46,7 +46,7 @@ class TestLogout:
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("storage.database.get_session", return_value=mock_session),
+            patch("api.routes.get_session", return_value=mock_session),
         ):
             resp = client.post(
                 "/api/v1/auth/logout",
@@ -78,7 +78,7 @@ class TestLogout:
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("storage.database.get_session", return_value=mock_session),
+            patch("api.routes.get_session", return_value=mock_session),
         ):
             resp = client.post(
                 "/api/v1/auth/logout",
