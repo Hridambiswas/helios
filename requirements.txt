@@ -23,7 +23,7 @@ chromadb>=0.5.0
 # fastembed uses ONNX runtime — no PyTorch needed, image ~1.5 GB smaller
 fastembed>=0.3.6
 rank-bm25>=0.2.2              # BM25
-duckduckgo-search>=6.0.0      # web search fallback
+duckduckgo-search>=6.0.0      # web search — no API key required, free tier
 
 # ── Task queue ────────────────────────────────────────────────────────────────
 celery[redis]>=5.4.0
