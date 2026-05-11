@@ -388,10 +388,10 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
                 break
             start += chunk_size - overlap
 
-    from langchain_community.embeddings import HuggingFaceEmbeddings
+    from langchain_community.embeddings import FastEmbedEmbeddings
     import retrieval.bm25_search as bm25
 
-    embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
+    embedder = FastEmbedEmbeddings(model_name=cfg.embedding_model)
     chunk_ids = [f"{doc_id}::chunk::{i}" for i in range(len(chunks))]
     embeddings = embedder.embed_documents(chunks)
     metas = [{"doc_id": doc_id, "filename": safe_name, "chunk_idx": i} for i in range(len(chunks))]

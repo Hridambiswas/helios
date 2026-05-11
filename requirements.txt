@@ -14,14 +14,13 @@ langchain>=0.3.0
 langchain-groq>=0.2.0
 langchain-community>=0.3.0
 langgraph>=0.2.0
-sentence-transformers>=3.0.0
 
 # ── Vector store ──────────────────────────────────────────────────────────────
 chromadb>=0.5.0
 
 # ── Retrieval ─────────────────────────────────────────────────────────────────
-# torch and torchvision are installed CPU-only in Dockerfile.prod before this file
-transformers>=4.49.0
+# fastembed uses ONNX runtime — no PyTorch needed, image ~1.5 GB smaller
+fastembed>=0.3.6
 rank-bm25>=0.2.2              # BM25
 
 # ── Task queue ────────────────────────────────────────────────────────────────

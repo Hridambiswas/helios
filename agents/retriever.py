@@ -5,7 +5,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.embeddings import FastEmbedEmbeddings
 
 from config import cfg
 from agents.base import BaseAgent
@@ -64,7 +64,7 @@ class RetrieverAgent(BaseAgent):
 
     def __init__(self) -> None:
         super().__init__()
-        self._embedder = HuggingFaceEmbeddings(model_name=cfg.embedding_model)
+        self._embedder = FastEmbedEmbeddings(model_name=cfg.embedding_model)
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
         plan: dict = state.get("plan", {})

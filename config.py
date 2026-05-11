@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     # ── LLM ───────────────────────────────────────────────────────────────────
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "llama-3.3-70b-versatile"
-    embedding_model: str = "all-MiniLM-L6-v2"
+    embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     # Must be set to a strong random value in production:
