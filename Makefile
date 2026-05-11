@@ -1,139 +1,42 @@
-.PHONY: up down build logs restart status test test-cov lint fmt typecheck \
-        migrate migrate-gen migrate-down dev worker beat \
-        eval bench ingest ssl-setup frontend-dev frontend-build \
-        backup shell-api shell-db prod-restart deploy
+.PHONY: dev build up down logs test lint format clean
 
-## ── Docker (local dev) ────────────────────────────────────────────────────────
+# ── Development ───────────────────────────────────────────────────────────────
 
-up:
-	docker compose up --build -d
-
-down:
-	docker compose down -v
+dev:
+	docker compose up --build
 
 build:
-	docker compose build
+	docker compose -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
 
-logs:
-	docker compose logs -f api worker
-
-restart:
-	docker compose restart api worker
-
-status:
-	docker compose ps
-
-## ── Docker (production) ──────────────────────────────────────────────────────
-
-prod-up:
+up:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
-prod-build:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache api worker beat
+down:
+	docker compose down
 
-prod-logs:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml logs -f api worker
+logs:
+	docker compose logs -f api
 
-prod-down:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-
-## ── Tests ────────────────────────────────────────────────────────────────────
+# ── Quality ───────────────────────────────────────────────────────────────────
 
 test:
-	pytest tests/ -v --tb=short
-
-test-cov:
-	pytest tests/ -v --tb=short --cov=. --cov-report=term-missing
-
-test-fast:
-	pytest tests/ -v --tb=short -x -q
-
-## ── Lint / Format / Type ────────────────────────────────────────────────────
+	docker compose exec api pytest tests/ -v
 
 lint:
 	ruff check .
 
-lint-fix:
-	ruff check . --fix
-
-fmt:
+format:
 	ruff format .
 
-typecheck:
-	pyright --pythonversion 3.11 agents/ api/ pipeline/ retrieval/ workers/
+# ── Maintenance ───────────────────────────────────────────────────────────────
 
-## ── Database ─────────────────────────────────────────────────────────────────
+clean:
+	docker system prune -f
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -name "*.pyc" -delete
 
 migrate:
-	alembic upgrade head
+	docker compose exec api alembic upgrade head
 
-migrate-gen:
-	alembic revision --autogenerate -m "$(msg)"
-
-migrate-down:
-	alembic downgrade -1
-
-## ── Dev servers ──────────────────────────────────────────────────────────────
-
-dev:
-	uvicorn main:app --reload --host 0.0.0.0 --port 8000
-
-worker:
-	celery -A workers.celery_app worker --loglevel=info --concurrency=2
-
-beat:
-	celery -A workers.celery_app beat --loglevel=info
-
-frontend-dev:
-	cd frontend && npm run dev
-
-frontend-build:
-	cd frontend && npm run build
-
-## ── SSL setup (EC2 only) ─────────────────────────────────────────────────────
-
-ssl-setup:
-	bash scripts/setup_ssl.sh
-
-## ── Eval & benchmarks ────────────────────────────────────────────────────────
-
-eval:
-	python scripts/run_eval.py
-
-bench:
-	python scripts/benchmark.py --n 20 --agent all
-
-ingest:
-	python scripts/ingest_demo.py --dir ./docs
-
-## ── Backup ───────────────────────────────────────────────────────────────────
-
-backup:
-	bash scripts/backup.sh ./backups
-
-## ── Shell helpers ────────────────────────────────────────────────────────────
-
-shell-api:
-	docker compose exec api /bin/bash
-
-shell-db:
-	docker compose exec postgres psql -U helios -d helios
-
-## ── Production helpers ───────────────────────────────────────────────────────
-
-prod-restart:
-	docker compose -f docker-compose.yml -f docker-compose.prod.yml restart api worker
-
-deploy:
-	bash scripts/deploy.sh
-
-## ── Docker cleanup ───────────────────────────────────────────────────────────
-
-prune:
-	docker system prune -f
-	docker volume prune -f
-
-## ── Help ─────────────────────────────────────────────────────────────────────
-
-help:
-	@grep -E '^[a-zA-Z_-]+:' Makefile | grep -v '^.PHONY' | awk -F: '{print $$1}' | sort
+shell:
+	docker compose exec api python3 -i -c "from config import cfg; print('Helios shell')"
