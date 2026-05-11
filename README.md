@@ -461,15 +461,29 @@ All agents and the pipeline entry point are instrumented with OTLP spans. Celery
 
 ### Structured logging
 
+Every log line is emitted as JSON. Key fields:
+
+| Field | Description |
+|---|---|
+| `event` | Human-readable message |
+| `logger` | Module path (e.g. `helios.agents.synthesizer`) |
+| `level` | `debug` / `info` / `warning` / `error` |
+| `request_id` | UUID propagated from the incoming HTTP/WS request |
+| `trace_id` | OTLP trace ID — correlates logs to spans in your tracing backend |
+| `timestamp` | ISO-8601 UTC |
+
 ```json
 {
   "event": "Execution done — success=True  stdout_len=42",
   "logger": "helios.agents.executor",
   "level": "info",
   "request_id": "4f3a2b1c",
+  "trace_id": "00-abc123def456-01",
   "timestamp": "2026-04-26T10:30:00.000Z"
 }
 ```
+
+Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local development.
 
 ---
 
