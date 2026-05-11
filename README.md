@@ -446,6 +446,8 @@ helios/
 | `helios_agent_errors_total` | Counter | `agent` |
 | `helios_pipeline_latency_ms` | Histogram | — |
 | `helios_pipeline_requests_total` | Counter | `status` (success/failed/critic_failed) |
+| `helios_auth_failures_total` | Counter | `reason` (bad_credentials/inactive_user/bad_token) |
+| `helios_brute_force_blocked_total` | Counter | `path` (/auth/login, /auth/register) |
 | `helios_retrieval_docs_returned` | Histogram | `source` (dense/clip/bm25/merged) |
 | `helios_retrieval_score` | Summary | `source` |
 | `helios_critic_score` | Histogram | `dimension` (groundedness/faithfulness/completeness/overall) |
