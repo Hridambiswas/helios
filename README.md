@@ -97,11 +97,11 @@ python graphs/critic_score_distribution.py # Groundedness, faithfulness, complet
 
 | Agent | Model | Role | Key behaviour |
 |---|---|---|---|
-| **Planner** | GPT-4o (T=0) | Query decomposition | Produces typed `subtasks[]`, `requires_retrieval`, `requires_code` JSON; caps at `PLANNER_MAX_SUBTASKS` |
-| **Retriever** | OpenAI Ada + CLIP ViT-B/32 + BM25Okapi | Hybrid document retrieval | Weighted score fusion across three paths; deduplicates by `doc_id`; emits Prometheus histograms |
+| **Planner** | Groq `llama-3.3-70b-versatile` (T=0) | Query decomposition | Produces typed `subtasks[]`, `requires_retrieval`, `requires_code` JSON; caps at `PLANNER_MAX_SUBTASKS` |
+| **Retriever** | `BAAI/bge-small-en-v1.5` + CLIP `ViT-B/32` + BM25Okapi | Hybrid document retrieval | Weighted score fusion (dense 0.6 + CLIP 0.3 + BM25 0.1); deduplicates by `doc_id`; emits Prometheus histograms |
 | **Executor** | CPython 3.11 | Sandboxed code runner | AST import whitelist guard; forbidden builtins stripped; daemon thread with configurable timeout; stdout capped at 8 KB |
-| **Synthesizer** | GPT-4o (T=0.2) | Grounded answer generation | Enforces context-only citation; appends `[doc_id]` citation block with filenames |
-| **Critic** | GPT-4o (T=0) | LLM-as-judge QA | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; blocks response if overall < `CRITIC_MIN_SCORE` |
+| **Synthesizer** | Groq `llama-3.3-70b-versatile` (T=0.2) | Grounded answer generation | Cites local docs as [D1], web sources as [W1]; uses emojis naturally for readability; generates follow-up questions |
+| **Critic** | Groq `llama-3.3-70b-versatile` (T=0) | LLM-as-judge QA | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; blocks response if overall < `CRITIC_MIN_SCORE` (0.5) |
 
 ---
 
