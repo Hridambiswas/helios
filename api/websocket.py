@@ -107,14 +107,20 @@ async def ws_query(websocket: WebSocket):
                 await _send(websocket, "error", {"message": "Query too long — max 4096 characters"})
                 continue
 
-            # Stream progress events while pipeline runs in executor
+            raw_history = msg.get("history", [])
+            history = [
+                {"role": str(h.get("role", "")), "content": str(h.get("content", ""))[:4096]}
+                for h in raw_history[:20]
+                if h.get("role") in ("user", "assistant") and h.get("content")
+            ]
+
             await _send(websocket, "planning", {"query": query})
 
             loop = asyncio.get_running_loop()
             state: dict = {}
 
             def _run() -> dict:
-                return run_pipeline(query, user_id=user_id)
+                return run_pipeline(query, user_id=user_id, conversation_history=history)
 
             try:
                 # Pipeline runs in thread pool so it doesn't block the event loop
