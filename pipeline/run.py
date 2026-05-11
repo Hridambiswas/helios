@@ -6,7 +6,7 @@ import logging
 import threading
 import time
 from collections.abc import Callable
-from typing import Any, TypedDict, Optional
+from typing import Any, Literal, TypedDict, Optional
 
 from langgraph.graph import StateGraph, END
 
@@ -130,7 +130,7 @@ def route_after_retriever(state: HeliosState) -> str:
     return "synthesizer"
 
 
-def route_after_critic(state: HeliosState) -> str:
+def route_after_critic(state: HeliosState) -> Literal["synthesizer"] | str:
     """
     If critic failed and we haven't hit the retry cap, re-run the synthesizer
     with the critic's suggestions injected as extra guidance.
@@ -179,7 +179,7 @@ _graph = _build_graph().compile()  # graph topology is static; only agents are l
 def run_pipeline(
     query: str,
     user_id: str | None = None,
-    conversation_history: list | None = None,
+    conversation_history: list[dict] | None = None,
     token_callback: Callable[[str], None] | None = None,
     **extra,
 ) -> dict[str, Any]:

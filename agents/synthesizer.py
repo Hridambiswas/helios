@@ -64,7 +64,7 @@ def _format_web_sources(web: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
-def _format_history(history: list[dict]) -> list:
+def _format_history(history: list[dict]) -> list[HumanMessage | AIMessage]:
     """Convert conversation history to LangChain message objects (last 6 turns max)."""
     msgs = []
     for turn in history[-6:]:
