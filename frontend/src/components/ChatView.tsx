@@ -4,18 +4,19 @@ import ReactMarkdown from 'react-markdown'
 import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../hooks/useConversations'
 
-const PIPELINE_STEPS = ['planning', 'retrieving', 'executing', 'evaluating', 'done'] as const
+const PIPELINE_STEPS = ['planning', 'retrieving', 'executing', 'synthesizing', 'evaluating', 'done'] as const
 const STEP_ICON: Record<string, React.ReactNode> = {
-  planning:   <Zap size={11} />,
-  retrieving: <Search size={11} />,
-  executing:  <Code size={11} />,
-  evaluating: <Shield size={11} />,
-  done:       <CheckCircle size={11} />,
-  error:      <XCircle size={11} />,
+  planning:    <Zap size={11} />,
+  retrieving:  <Search size={11} />,
+  executing:   <Code size={11} />,
+  synthesizing:<Zap size={11} />,
+  evaluating:  <Shield size={11} />,
+  done:        <CheckCircle size={11} />,
+  error:       <XCircle size={11} />,
 }
 const STEP_LABEL: Record<string, string> = {
   planning: 'Planning', retrieving: 'Retrieving', executing: 'Executing',
-  evaluating: 'Evaluating', done: 'Done', error: 'Error',
+  synthesizing: 'Writing', evaluating: 'Evaluating', done: 'Done', error: 'Error',
 }
 
 function CopyBtn({ text }: { text: string }) {
@@ -228,7 +229,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
           } else if (event === 'token') {
             const t = (data as { token?: string })?.token ?? ''
             accumulated += t
-            onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'executing' })
+            onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'synthesizing' })
           } else if (event === 'done') {
             // Final answer from REST (includes metadata). Use it if we got no stream tokens.
             if (!accumulated) {
