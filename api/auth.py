@@ -216,3 +216,8 @@ async def get_user_by_email(email: str) -> "User | None":
     async with get_session() as session:
         result = await session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
+
+
+def sanitize_username(username: str) -> str:
+    """Lowercase and strip a username for case-insensitive comparison."""
+    return username.strip().lower()
