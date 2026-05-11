@@ -10,7 +10,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-OTLP-purple.svg)](https://opentelemetry.io)
 
-🌐 **Live:** [frontend-omega-blush-87.vercel.app](https://frontend-omega-blush-87.vercel.app) — API: [helios-hridam.ddns.net](https://helios-hridam.ddns.net)
+🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.ddns.net](https://helios-hridam.ddns.net)
 
 Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
 
@@ -216,7 +216,7 @@ curl -X POST http://localhost:8000/api/v1/query \
   -d '{"query": "Explain transformer attention in one paragraph"}'
 ```
 
-Or use the live UI at [frontend-omega-blush-87.vercel.app](https://frontend-omega-blush-87.vercel.app) — type a question, the chat view opens automatically.
+Or use the live UI at [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — type a question, the chat view opens automatically.
 
 ### 4. Ingest a document
 
@@ -295,7 +295,7 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 | `CHROMA_HOST` | `localhost` | ChromaDB host |
 | `GITHUB_CLIENT_ID` | — | GitHub OAuth App client ID |
 | `GITHUB_CLIENT_SECRET` | — | GitHub OAuth App client secret |
-| `OAUTH_FRONTEND_URL` | `https://frontend-omega-blush-87.vercel.app` | Frontend origin for OAuth redirect |
+| `OAUTH_FRONTEND_URL` | `https://helios-hridam.vercel.app` | Frontend origin for OAuth redirect |
 | `OAUTH_BACKEND_URL` | `https://helios-hridam.ddns.net` | Backend URL for building OAuth callback URI |
 | `RETRIEVER_TOP_K` | `10` | Documents per retrieval path |
 | `RETRIEVER_DENSE_WEIGHT` | `0.6` | BAAI/bge dense retrieval weight |
@@ -331,7 +331,7 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 | Component | Platform | URL |
 |---|---|---|
-| Frontend | Vercel (auto-deploy on push to `main`) | [frontend-omega-blush-87.vercel.app](https://frontend-omega-blush-87.vercel.app) |
+| Frontend | Vercel (auto-deploy on push to `main`) | [helios-hridam.vercel.app](https://helios-hridam.vercel.app) |
 | Backend API | AWS EC2 (Docker Compose) | [helios-hridam.ddns.net](https://helios-hridam.ddns.net) |
 | Database | Supabase managed PostgreSQL | Connection via `SUPABASE_DATABASE_URL` |
 | Redis / MinIO / ChromaDB | Self-hosted on EC2 | Docker Compose services |
