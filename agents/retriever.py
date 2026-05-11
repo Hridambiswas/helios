@@ -128,3 +128,8 @@ class RetrieverAgent(BaseAgent):
         )
 
         return {**state, "retrieved_docs": merged, "web_sources": web_sources}
+
+
+def get_web_sources_for_query(query: str) -> list[dict]:
+    """Public wrapper around _web_search — useful for testing or direct use."""
+    return _web_search(query, max_results=4)
