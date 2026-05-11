@@ -248,8 +248,16 @@ const ws = new WebSocket(
   `ws://localhost:8000/ws/query?token=${TOKEN}`
 );
 ws.onmessage = (e) => console.log(JSON.parse(e.data));
-ws.send(JSON.stringify({ query: "What is BM25?" }));
-// Events: planning → retrieving → evaluating → done
+// Send query with optional conversation history
+ws.send(JSON.stringify({
+  query: "What is BM25?",
+  history: [
+    { role: "user",      content: "Tell me about retrieval methods." },
+    { role: "assistant", content: "Retrieval methods include dense, sparse, and hybrid approaches…" }
+  ]
+}));
+// Events: planning → retrieving → synthesizing → token{…} × N → evaluating → done
+// On critic fail with retry: planning → synthesizing → token{…} → evaluating → done
 ```
 
 ---
@@ -278,7 +286,7 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 | `EXECUTOR_TIMEOUT_SECONDS` | `15` | Sandboxed execution timeout |
 | `CRITIC_MIN_SCORE` | `0.5` | Minimum critic score to pass |
 | `PLANNER_MAX_SUBTASKS` | `5` | Cap on decomposed subtasks |
-| `GUEST_QUERY_LIMIT` | `-1` | Guest queries before auth required (-1 = unlimited) |
+| `GUEST_QUERY_LIMIT` | `5` | Free queries before auth required |
 | `APP_ENV` | `development` | `development` or `production` |
 
 ---
