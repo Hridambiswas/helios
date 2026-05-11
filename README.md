@@ -713,11 +713,16 @@ pip install -r requirements.txt
 pytest tests/ -v
 
 # By category
-pytest tests/test_pipeline.py -v           # end-to-end pipeline
+pytest tests/test_pipeline.py -v           # end-to-end pipeline + retry loop
+pytest tests/test_agents.py -v             # memory injection and streaming callbacks
+pytest tests/test_schemas.py -v            # request/response schema validation
 pytest tests/test_security.py -v           # brute-force, JWT, upload hardening
 pytest tests/test_rate_limit_headers.py -v # rate-limit headers on all rated routes
 pytest tests/test_logout.py -v             # token revocation
 pytest tests/test_async_query.py -v        # WebSocket streaming + Celery path
+pytest tests/test_ws_streaming.py -v       # per-token streaming and history forwarding
+pytest tests/test_api.py -v                # REST routes including conversations and chunks
+pytest tests/test_websocket_security.py -v # WebSocket auth and message limits
 
 # With coverage
 pytest tests/ --cov=. --cov-report=term-missing
