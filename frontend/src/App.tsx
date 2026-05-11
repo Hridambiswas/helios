@@ -35,7 +35,7 @@ export default function App() {
   const [chatMode, setChatMode] = useState(false)
   const [showAuth, setShowAuth] = useState(false)
   const [showUpload, setShowUpload] = useState(false)
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => window.innerWidth < 640)
   const [historyRefresh, setHistoryRefresh] = useState(0)
   const [pendingQuery, setPendingQuery] = useState<string | undefined>()
   const [pendingGuestQuery, setPendingGuestQuery] = useState<string | undefined>()
