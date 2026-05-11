@@ -121,7 +121,7 @@ class RetrieverAgent(BaseAgent):
         retrieval_docs_histogram.labels(source="merged").observe(len(merged))
 
         # ── Web search — always runs to provide up-to-date context ────────────
-        web_sources = _web_search(query, max_results=4)
+        web_sources = _web_search(query, max_results=cfg.web_search_max_results)
         self.logger.info(
             "Retrieved %d local docs (dense=%d bm25=%d merged=%d) + %d web results",
             len(merged), len(dense_hits), len(sparse_hits), len(merged), len(web_sources),
