@@ -109,6 +109,11 @@ export const conversations = {
     api.post<ServerMessage>(`/conversations/${convId}/messages`, { role, content }),
 }
 
+export type ChunkPreview = { chunk_index: number; text: string; char_count: number }
+export type DocumentChunksResponse = { document_id: string; filename: string; total_chunks: number; chunks: ChunkPreview[] }
+export type TestRetrievalResult = { chunk_index: number; text: string; score: number; source: string }
+export type TestRetrievalResponse = { query: string; results: TestRetrievalResult[] }
+
 export const documents = {
   upload: (file: File) => {
     const fd = new FormData()
@@ -118,6 +123,10 @@ export const documents = {
   list: (limit = 50, offset = 0) => api.get(`/documents?limit=${limit}&offset=${offset}`),
   get: (id: string) => api.get(`/documents/${id}`),
   delete: (id: string) => api.delete(`/documents/${id}`),
+  chunks: (id: string, limit = 20, offset = 0) =>
+    api.get<DocumentChunksResponse>(`/documents/${id}/chunks?limit=${limit}&offset=${offset}`),
+  testSearch: (id: string, query: string) =>
+    api.post<TestRetrievalResponse>(`/documents/${id}/search`, { query }),
 }
 
 // WebSocket connection for streaming queries
