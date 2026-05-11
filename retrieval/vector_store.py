@@ -130,3 +130,47 @@ def ping() -> bool:
     except Exception as exc:
         logger.error("ChromaDB ping failed: %s", exc)
         return False
+
+
+def get_chunks_for_doc(doc_id: str, limit: int = 20, offset: int = 0) -> list[dict]:
+    """Return raw text chunks stored in ChromaDB for a given document."""
+    col = _get_collection()
+    results = col.get(
+        where={"doc_id": doc_id},
+        include=["documents", "metadatas"],
+        limit=limit,
+        offset=offset,
+    )
+    chunks = []
+    for i, chunk_id in enumerate(results["ids"]):
+        chunks.append({
+            "id": chunk_id,
+            "text": results["documents"][i] if results["documents"] else "",
+            "metadata": results["metadatas"][i] if results["metadatas"] else {},
+        })
+    return chunks
+
+
+def query_by_doc(query: str, doc_id: str, top_k: int = 5) -> list[dict]:
+    """Dense-only retrieval scoped to a single document id."""
+    from langchain_community.embeddings import FastEmbedEmbeddings
+    embedder = FastEmbedEmbeddings(model_name=cfg.embedding_model)
+    embedding = embedder.embed_query(query)
+    col = _get_collection()
+    results = col.query(
+        query_embeddings=[embedding],
+        n_results=min(top_k, col.count()),
+        where={"doc_id": doc_id},
+        include=["documents", "metadatas", "distances"],
+    )
+    hits = []
+    for i, chunk_id in enumerate(results["ids"][0]):
+        distance = results["distances"][0][i]
+        hits.append({
+            "id": chunk_id,
+            "document": results["documents"][0][i],
+            "metadata": results["metadatas"][0][i],
+            "score": 1.0 - distance,
+            "source": "dense",
+        })
+    return hits
