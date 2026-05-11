@@ -29,6 +29,7 @@ logger = logging.getLogger("helios.pipeline.run")
 class HeliosState(TypedDict, total=False):
     query: str
     user_id: Optional[str]
+    conversation_history: list   # [{"role": "user"|"assistant", "content": str}]
     plan: Optional[dict]
     retrieved_docs: list
     web_sources: list            # DuckDuckGo results: [{title, url, snippet}]
@@ -39,6 +40,7 @@ class HeliosState(TypedDict, total=False):
     follow_up_questions: list    # 2 suggested follow-up questions from synthesizer
     critic_scores: Optional[dict]
     critic_passed: Optional[bool]
+    retry_count: int             # how many synthesizer retries have been attempted
     error: Optional[str]
     failed_agent: Optional[str]
     pipeline_start_ms: Optional[float]
@@ -171,7 +173,12 @@ _graph = _build_graph().compile()  # graph topology is static; only agents are l
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
-def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, Any]:
+def run_pipeline(
+    query: str,
+    user_id: str | None = None,
+    conversation_history: list | None = None,
+    **extra,
+) -> dict[str, Any]:
     """
     Execute the full Helios agent pipeline for a query.
     Returns the final state dict including answer and critic_scores.
@@ -179,6 +186,7 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
     initial_state: HeliosState = {  # type: ignore[typeddict-item]
         "query": query,
         "user_id": user_id,
+        "conversation_history": conversation_history or [],
         "plan": None,
         "retrieved_docs": [],
         "web_sources": [],
@@ -188,6 +196,7 @@ def run_pipeline(query: str, user_id: str | None = None, **extra) -> dict[str, A
         "follow_up_questions": [],
         "critic_scores": None,
         "critic_passed": None,
+        "retry_count": 0,
         "error": None,
         "pipeline_start_ms": time.perf_counter() * 1000,
         "pipeline_version": _PIPELINE_VERSION,
