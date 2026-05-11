@@ -91,6 +91,20 @@ async def create_tables() -> None:
     logger.info("Database tables ensured")
 
 
+
+
+async def wait_for_db(retries: int = 5, delay: float = 2.0) -> None:
+    """Block until the database is reachable, with exponential backoff."""
+    import asyncio
+    for attempt in range(1, retries + 1):
+        if await ping():
+            return
+        if attempt < retries:
+            wait = delay * (2 ** (attempt - 1))
+            logger.warning("DB not ready (attempt %d/%d), retrying in %.0fs", attempt, retries, wait)
+            await asyncio.sleep(wait)
+    raise RuntimeError("Database unreachable after %d attempts" % retries)
+
 async def ping() -> bool:
     """Health check — returns True if Postgres is reachable."""
     try:
