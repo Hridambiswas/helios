@@ -291,6 +291,22 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 ---
 
+## New API endpoints (v1.1)
+
+| Method | Path | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/v1/query` | optional | Run pipeline; accepts `history[]` for multi-turn context |
+| `WS` | `/ws/query` | required | Streaming pipeline; accepts `{ query, history[] }` message |
+| `GET` | `/api/v1/conversations` | required | List user's server-side conversations |
+| `POST` | `/api/v1/conversations` | required | Create a new conversation |
+| `GET` | `/api/v1/conversations/{id}` | required | Get conversation + messages |
+| `POST` | `/api/v1/conversations/{id}/messages` | required | Append a message |
+| `DELETE` | `/api/v1/conversations/{id}` | required | Delete conversation (cascade) |
+| `GET` | `/api/v1/documents/{id}/chunks` | required | Paginated chunk text preview |
+| `POST` | `/api/v1/documents/{id}/search` | required | Test retrieval scoped to document |
+
+---
+
 ## Deployment
 
 ### Production setup (current)
