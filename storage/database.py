@@ -116,6 +116,27 @@ async def ping() -> bool:
         return False
 
 
+def connection_info() -> dict:
+    """Return non-sensitive connection metadata for health/debug endpoints."""
+    url, _ = _effective_database_url()
+    engine = _engine
+    pool_status: dict = {}
+    if engine is not None:
+        pool = engine.pool
+        pool_status = {
+            "size": pool.size(),
+            "checked_in": pool.checkedin(),
+            "checked_out": pool.checkedout(),
+            "overflow": pool.overflow(),
+        }
+    # Mask credentials from URL for safe logging
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    safe_url = f"{parsed.scheme}://***@{parsed.hostname}:{parsed.port}{parsed.path}"
+    backend = "supabase" if cfg.supabase_database_url else "local"
+    return {"backend": backend, "url": safe_url, "pool": pool_status}
+
+
 async def close_engine() -> None:
     global _engine
     if _engine:
