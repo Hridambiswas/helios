@@ -258,6 +258,32 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 ---
 
+## Deployment
+
+### Production setup (current)
+
+| Component | Platform | URL |
+|---|---|---|
+| Frontend | Vercel (auto-deploy on push to `main`) | [frontend-omega-blush-87.vercel.app](https://frontend-omega-blush-87.vercel.app) |
+| Backend API | AWS EC2 (Docker Compose) | [helios-hridam.ddns.net](https://helios-hridam.ddns.net) |
+| Database | Supabase managed PostgreSQL | Connection via `SUPABASE_DATABASE_URL` |
+| Redis / MinIO / ChromaDB | Self-hosted on EC2 | Docker Compose services |
+
+### GitHub Actions CI/CD
+
+Every push to `main` triggers:
+1. `CI` — ruff lint, pyright type-check, pytest (130 tests)
+2. `Deploy Backend to EC2` — SSH into EC2, inject secrets into `.env`, `docker compose up -d`
+3. `Deploy Frontend to Vercel` — Vercel CLI build + deploy
+
+### GitHub OAuth setup
+
+1. Go to [github.com/settings/developers](https://github.com/settings/developers) → **New OAuth App**
+2. Set **Authorization callback URL** to `https://your-backend/api/v1/auth/github/callback`
+3. Add `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` to your `.env` (or GitHub repo secrets as `GH_OAUTH_CLIENT_ID` / `GH_OAUTH_CLIENT_SECRET`)
+
+---
+
 ## Evaluation
 
 Helios ships a 30-question evaluation harness covering factual recall, analytical reasoning, code generation, multi-step problems, and no-context (hallucination-probe) queries.
