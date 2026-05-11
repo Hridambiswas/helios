@@ -2,7 +2,6 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
-import json
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import AsyncMock, MagicMock, patch

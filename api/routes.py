@@ -572,12 +572,12 @@ async def test_document_retrieval(
     raw_results = await asyncio.to_thread(query_by_doc, body.query, doc_id, top_k=5)
     results = [
         TestRetrievalResult(
-            chunk_index=int(r.get("metadata", {}).get("chunk_idx", i)),
+            chunk_index=int(r.get("metadata", {}).get("chunk_idx", idx)),
             text=r.get("document", "")[:500],
             score=round(r.get("score", 0.0), 4),
             source=r.get("source", "dense"),
         )
-        for r in raw_results
+        for idx, r in enumerate(raw_results)
     ]
     return TestRetrievalResponse(query=body.query, results=results)
 
