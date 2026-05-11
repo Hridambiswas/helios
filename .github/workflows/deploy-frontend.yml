@@ -35,7 +35,10 @@ jobs:
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Deploy to Vercel
-        run: cd frontend && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN_TWO }} --yes
+        run: |
+          DEPLOY_URL=$(cd frontend && npx vercel --prod --token=${{ secrets.VERCEL_TOKEN_TWO }} --yes 2>&1 | grep -o 'https://[^ ]*\.vercel\.app' | tail -1)
+          echo "Deployed: $DEPLOY_URL"
+          npx vercel alias set "$DEPLOY_URL" helios-hridam.vercel.app --token=${{ secrets.VERCEL_TOKEN_TWO }}
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID || 'team_ofA6Jc0CdsYFcOUH8TBhkG2y' }}
           VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID || 'prj_gsuByrxhtebWuprPEuORW5VmsaBT' }}
