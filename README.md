@@ -235,19 +235,25 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 | Variable | Default | Description |
 |---|---|---|
-| `OPENAI_API_KEY` | — | **Required.** OpenAI API key |
-| `JWT_SECRET_KEY` | — | **Required.** HS256 signing key |
-| `DATABASE_URL` | `postgresql+asyncpg://...` | Async Postgres DSN |
+| `GROQ_API_KEY` | — | **Required.** Groq API key for all LLM calls |
+| `JWT_SECRET_KEY` | — | **Required.** HS256 signing key (generate with `secrets.token_hex(32)`) |
+| `SUPABASE_DATABASE_URL` | — | Supabase asyncpg DSN (falls back to local Postgres if unset) |
+| `DATABASE_URL` | `postgresql+asyncpg://helios:@localhost/helios` | Local Postgres DSN |
 | `REDIS_URL` | `redis://localhost:6379/0` | Redis DSN |
 | `MINIO_ENDPOINT` | `localhost:9000` | MinIO host:port |
 | `CHROMA_HOST` | `localhost` | ChromaDB host |
+| `GITHUB_CLIENT_ID` | — | GitHub OAuth App client ID |
+| `GITHUB_CLIENT_SECRET` | — | GitHub OAuth App client secret |
+| `OAUTH_FRONTEND_URL` | `https://frontend-omega-blush-87.vercel.app` | Frontend origin for OAuth redirect |
+| `OAUTH_BACKEND_URL` | `https://helios-hridam.ddns.net` | Backend URL for building OAuth callback URI |
 | `RETRIEVER_TOP_K` | `10` | Documents per retrieval path |
-| `RETRIEVER_DENSE_WEIGHT` | `0.6` | Dense (OpenAI) retrieval weight |
+| `RETRIEVER_DENSE_WEIGHT` | `0.6` | BAAI/bge dense retrieval weight |
 | `RETRIEVER_CLIP_WEIGHT` | `0.3` | CLIP retrieval weight |
 | `RETRIEVER_BM25_WEIGHT` | `0.1` | BM25 sparse weight |
 | `EXECUTOR_TIMEOUT_SECONDS` | `15` | Sandboxed execution timeout |
-| `CRITIC_MIN_SCORE` | `0.7` | Minimum critic score to pass |
+| `CRITIC_MIN_SCORE` | `0.5` | Minimum critic score to pass |
 | `PLANNER_MAX_SUBTASKS` | `5` | Cap on decomposed subtasks |
+| `GUEST_QUERY_LIMIT` | `-1` | Guest queries before auth required (-1 = unlimited) |
 | `APP_ENV` | `development` | `development` or `production` |
 
 ---
