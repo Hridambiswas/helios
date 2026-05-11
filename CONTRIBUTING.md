@@ -117,21 +117,22 @@ Look for issues labelled:
 
 High-priority areas right now:
 
-- **Per-token streaming** — the WebSocket endpoint emits coarse-grained pipeline
-  events (planning / retrieving / executing / evaluating); fine-grained per-token
-  streaming from the synthesizer is not yet wired through to the frontend.
-- **Retry loops** — the critic scores a response but the pipeline never retries a
-  low-scoring answer; adding a LangGraph retry edge with a regeneration subtask
-  would close the loop.
 - **Eval coverage** — `eval/` has a 30-question harness; more diverse questions
   (multi-hop reasoning, table QA, code debugging) improve confidence in retrieval
   and generation quality.
-- **Conversation persistence** — chat history is currently stored in
-  `localStorage`; persisting it server-side (Supabase) would enable cross-device
-  history and search.
 - **Docker image size** — the current image bundles all ML model weights at build
   time; a multi-stage build with lazy model download would reduce the compressed
   image size significantly.
+- **Conversation search** — full-text search across persisted conversations so
+  users can find a past discussion by keyword without scrolling.
+- **Streaming progress on retry** — when the critic triggers a second synthesis
+  pass the `retrying` event is sent but the token stream restarts from zero;
+  smoothly transitioning the streamed text in the UI would improve UX.
+- **Multi-doc retrieval** — the `query_by_doc` helper scopes retrieval to a single
+  document; a ranked merge across multiple documents would support "compare these
+  two papers" queries.
+- **PWA manifest** — adding `manifest.json` and a service-worker would let mobile
+  users install the app and cache recent conversations offline.
 
 ---
 
