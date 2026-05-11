@@ -106,7 +106,7 @@ class TestConversationRoutes:
         assert resp.status_code == 401
 
     def test_list_conversations_returns_empty_list(self, client):
-        dep_key = self._set_auth(client, self._mock_user())
+        self._set_auth(client, self._mock_user())
         try:
             with patch("storage.database.get_session_factory") as mock_sf:
                 mock_session = AsyncMock()
@@ -134,7 +134,7 @@ class TestConversationRoutes:
         assert resp.status_code == 401
 
     def test_create_conversation_title_too_long_rejected(self, client):
-        dep_key = self._set_auth(client, self._mock_user())
+        self._set_auth(client, self._mock_user())
         try:
             resp = client.post(
                 "/api/v1/conversations",

@@ -6,6 +6,15 @@ import pytest
 from unittest.mock import AsyncMock, MagicMock
 
 
+@pytest.fixture(autouse=True)
+def reset_circuit_breakers():
+    """Reset all circuit breakers before each test to prevent global state pollution."""
+    from resilience.circuit_breaker import _registry
+    for breaker in _registry.values():
+        breaker.reset()
+    yield
+
+
 @pytest.fixture
 def base_state() -> dict:
     """Minimal pipeline state dict that satisfies all agents."""

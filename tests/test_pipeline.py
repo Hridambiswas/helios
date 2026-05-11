@@ -47,7 +47,11 @@ class TestPipelineRouting:
             assert len(result["retrieved_docs"]) == 1
 
     def test_pipeline_returns_error_key_on_crash(self):
-        with patch("agents.planner.PlannerAgent._run", side_effect=RuntimeError("LLM timeout")):
+        with (
+            patch("agents.planner.PlannerAgent._run", side_effect=RuntimeError("LLM timeout")),
+            patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
+            patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+        ):
             from pipeline.run import run_pipeline
             result = run_pipeline("test query")
             assert result.get("error") is not None
