@@ -1,0 +1,42 @@
+"""add conversations and conversation_messages tables
+
+Revision ID: 0005
+Revises: 0004
+Create Date: 2026-05-12
+"""
+from __future__ import annotations
+from alembic import op
+import sqlalchemy as sa
+
+revision = "0005"
+down_revision = "0004"
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.create_table(
+        "conversations",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("user_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False),
+        sa.Column("title", sa.String(255), nullable=False, server_default="New Chat"),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+        sa.Column("updated_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+    )
+    op.create_index("ix_conversations_user_id_updated_at", "conversations", ["user_id", "updated_at"])
+
+    op.create_table(
+        "conversation_messages",
+        sa.Column("id", sa.String(36), primary_key=True),
+        sa.Column("conversation_id", sa.String(36),
+                  sa.ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False),
+        sa.Column("role", sa.String(16), nullable=False),
+        sa.Column("content", sa.Text, nullable=False, server_default=""),
+        sa.Column("created_at", sa.DateTime(timezone=True), server_default=sa.func.now()),
+    )
+    op.create_index("ix_conv_messages_conv_id", "conversation_messages", ["conversation_id"])
+
+
+def downgrade() -> None:
+    op.drop_table("conversation_messages")
+    op.drop_table("conversations")
