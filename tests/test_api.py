@@ -195,3 +195,66 @@ class TestConversationRoutes:
                 headers={"Authorization": "Bearer tok"},
             )
             assert resp.status_code == 404
+
+
+class TestDocumentChunkRoutes:
+    """Tests for /documents/{id}/chunks and /documents/{id}/search."""
+
+    def _mock_user(self):
+        return MagicMock(id="user-1", username="hridam", is_active=True)
+
+    def test_get_chunks_requires_auth(self, client):
+        resp = client.get("/api/v1/documents/doc-1/chunks")
+        assert resp.status_code == 401
+
+    def test_get_chunks_returns_preview(self, client):
+        chunks_data = {
+            "document_id": "doc-1",
+            "filename": "test.txt",
+            "total_chunks": 2,
+            "chunks": [
+                {"chunk_index": 0, "text": "First chunk text", "char_count": 16},
+                {"chunk_index": 1, "text": "Second chunk text", "char_count": 17},
+            ],
+        }
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_chunks_for_doc", return_value=chunks_data),
+        ):
+            resp = client.get(
+                "/api/v1/documents/doc-1/chunks",
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 200
+            body = resp.json()
+            assert body["total_chunks"] == 2
+            assert len(body["chunks"]) == 2
+
+    def test_search_document_chunks(self, client):
+        search_data = {
+            "query": "find this",
+            "results": [
+                {"chunk_index": 0, "text": "Relevant text", "score": 0.92, "source": "dense"},
+            ],
+        }
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.query_by_doc", return_value=search_data),
+        ):
+            resp = client.post(
+                "/api/v1/documents/doc-1/search",
+                json={"query": "find this"},
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 200
+            body = resp.json()
+            assert body["results"][0]["score"] == 0.92
+
+    def test_search_document_empty_query_rejected(self, client):
+        with patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()):
+            resp = client.post(
+                "/api/v1/documents/doc-1/search",
+                json={"query": ""},
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 422
