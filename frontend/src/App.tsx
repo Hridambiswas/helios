@@ -27,6 +27,29 @@ export default function App() {
     setSplashDone(true)
   }
 
+  // Handle OAuth redirect — backend appends ?access_token=...&refresh_token=...
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
+    const oauthError = params.get('oauth_error')
+
+    if (oauthError) {
+      addToast('OAuth sign-in failed — please try again', 'error')
+      window.history.replaceState({}, '', window.location.pathname)
+      return
+    }
+
+    if (accessToken && refreshToken) {
+      localStorage.setItem('access_token', accessToken)
+      localStorage.setItem('refresh_token', refreshToken)
+      // Reload auth state — useAuth reads from localStorage on mount, trigger a re-fetch
+      window.dispatchEvent(new Event('helios:oauth-login'))
+      window.history.replaceState({}, '', window.location.pathname)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   // Pre-fill query from ?q= URL parameter so users can share deep links
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)

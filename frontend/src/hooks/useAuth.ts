@@ -22,9 +22,14 @@ export function useAuth() {
 
   useEffect(() => {
     fetchMe()
-    const handler = () => setUser(null)
-    window.addEventListener('helios:logout', handler)
-    return () => window.removeEventListener('helios:logout', handler)
+    const logoutHandler = () => setUser(null)
+    const oauthHandler = () => { fetchMe() }
+    window.addEventListener('helios:logout', logoutHandler)
+    window.addEventListener('helios:oauth-login', oauthHandler)
+    return () => {
+      window.removeEventListener('helios:logout', logoutHandler)
+      window.removeEventListener('helios:oauth-login', oauthHandler)
+    }
   }, [fetchMe])
 
   const login = async (username: string, password: string) => {

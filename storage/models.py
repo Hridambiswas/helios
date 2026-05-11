@@ -30,9 +30,12 @@ class User(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
     username: Mapped[str] = mapped_column(String(32), unique=True, nullable=False, index=True)
     email: Mapped[str] = mapped_column(String(256), unique=True, nullable=False, index=True)
-    hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
+    hashed_password: Mapped[str | None] = mapped_column(String(256), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=_now)
+    # OAuth social login — both nullable for password-only accounts
+    oauth_provider: Mapped[str | None] = mapped_column(String(32))   # "google" | "github"
+    oauth_id: Mapped[str | None] = mapped_column(String(128), index=True)
 
     queries: Mapped[list["QueryRecord"]] = relationship(back_populates="user", lazy="select")
 

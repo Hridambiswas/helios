@@ -115,6 +115,16 @@ class Settings(BaseSettings):
     rate_limit_window_seconds: int = 60
     guest_query_limit: int = 1
 
+    # ── OAuth (Google & GitHub social login) ─────────────────────────────────
+    google_client_id: str = ""
+    google_client_secret: SecretStr = SecretStr("")
+    github_client_id: str = ""
+    github_client_secret: SecretStr = SecretStr("")
+    # Where to redirect after successful OAuth. Should be the frontend origin.
+    oauth_frontend_url: str = "https://frontend-omega-blush-87.vercel.app"
+    # Public backend URL used to build the OAuth callback URI.
+    oauth_backend_url: str = "https://helios-hridam.ddns.net"
+
     # ── Security ──────────────────────────────────────────────────────────────
     cors_allowed_origins: str = ""
     max_upload_bytes: int = 52_428_800  # 50 MB

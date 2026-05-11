@@ -14,6 +14,7 @@ from config import cfg
 from observability.logging_config import setup_logging
 from observability.tracing import setup_tracing
 from api.routes import router
+from api.oauth import oauth_router
 from api.websocket import ws_router
 from api.middleware import RequestIDMiddleware, RateLimitMiddleware
 from api.security import SecurityHeadersMiddleware, AuthBruteForceMiddleware
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
 
     # ── Routers ───────────────────────────────────────────────────────────────
     app.include_router(router, prefix="/api/v1")
+    app.include_router(oauth_router)
     app.include_router(ws_router)
 
     # ── Global exception handler ──────────────────────────────────────────────
