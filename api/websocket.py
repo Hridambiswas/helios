@@ -117,15 +117,35 @@ async def ws_query(websocket: WebSocket):
             await _send(websocket, "planning", {"query": query})
 
             loop = asyncio.get_running_loop()
+            token_queue: asyncio.Queue[str | None] = asyncio.Queue()
+
+            def _token_cb(token: str) -> None:
+                loop.call_soon_threadsafe(token_queue.put_nowait, token)
+
             state: dict = {}
 
+            async def _drain_tokens() -> None:
+                while True:
+                    tok = await token_queue.get()
+                    if tok is None:
+                        break
+                    await _send(websocket, "token", {"token": tok})
+
             def _run() -> dict:
-                return run_pipeline(query, user_id=user_id, conversation_history=history)
+                result = run_pipeline(
+                    query, user_id=user_id,
+                    conversation_history=history,
+                    token_callback=_token_cb,
+                )
+                loop.call_soon_threadsafe(token_queue.put_nowait, None)  # sentinel
+                return result
 
             try:
-                # Pipeline runs in thread pool so it doesn't block the event loop
                 await _send(websocket, "retrieving", {})
-                state = await loop.run_in_executor(None, _run)
+                pipeline_task = loop.run_in_executor(None, _run)
+                drain_task = asyncio.ensure_future(_drain_tokens())
+                state = await pipeline_task
+                await drain_task
                 await _send(websocket, "evaluating", {})
 
                 if state.get("error"):
@@ -140,6 +160,7 @@ async def ws_query(websocket: WebSocket):
                         "retrieved_doc_count": len(state.get("retrieved_docs", [])),
                     })
             except Exception as exc:
+                loop.call_soon_threadsafe(token_queue.put_nowait, None)
                 logger.exception("WS pipeline error: %s", exc)
                 from config import cfg
                 msg = str(exc) if cfg.is_development else "Pipeline error — please try again"
