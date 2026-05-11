@@ -1,3 +1,6 @@
+# docker-compose.prod.yml — Production overrides for EC2 t2.micro (1 GB RAM)
+# Usage: docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# Memory limits are tuned for 1 GB total. Adjust if using larger instance.
 services:
   nginx:
     image: nginx:alpine
