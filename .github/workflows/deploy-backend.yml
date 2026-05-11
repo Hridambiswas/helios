@@ -28,12 +28,15 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
+            # Inject Supabase DB URL into .env (idempotent — only adds if missing)
+            if ! grep -q "SUPABASE_DATABASE_URL" /home/ubuntu/helios/.env 2>/dev/null; then
+              echo "SUPABASE_DATABASE_URL=${{ secrets.SUPABASE_DATABASE_URL }}" >> /home/ubuntu/helios/.env
+            fi
             # Free disk space before build — stale layers accumulate and fill the volume
             docker system prune -a -f
             cd /home/ubuntu/helios
             git pull origin main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api worker beat
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T api alembic upgrade head
             docker image prune -f
             echo "Deploy complete at $(date)"
