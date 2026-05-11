@@ -17,7 +17,7 @@ from sqlalchemy import select, desc
 from api.auth import (
     CurrentUser, OptionalUser, get_user_by_username, create_user,
     verify_password, issue_tokens, refresh_access_token,
-    validate_password_strength, get_user_by_id,
+    validate_password_strength,
 )
 from celery.result import AsyncResult
 from api.schemas import (

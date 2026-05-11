@@ -110,12 +110,13 @@ class SynthesizerAgent(BaseAgent):
         context_parts = [p for p in [local_block, web_block] if p]
         context_section = "\n\n".join(context_parts) if context_parts else "No external context available — answer from your knowledge."
 
+        exec_section = ("--- Code Execution Result ---\n" + exec_block) if exec_block else ""
         user_msg = f"""User question: {query}
 
 --- Context ---
 {context_section}
 
-{('--- Code Execution Result ---\n' + exec_block) if exec_block else ''}
+{exec_section}
 
 Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section containing exactly 2 follow-up questions."""
 
