@@ -6,9 +6,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc g++ libpq-dev curl && \
     rm -rf /var/lib/apt/lists/*
 
-# Install CPU-only torch first (avoids pulling 2.5GB CUDA libs)
+# Install CPU-only torch first so sentence-transformers picks it up (avoids 2.5GB CUDA libs)
 RUN pip install --no-cache-dir \
-    torch==2.5.1+cpu torchvision==0.20.1+cpu \
+    torch==2.5.1+cpu \
     --index-url https://download.pytorch.org/whl/cpu
 
 COPY requirements.txt .
