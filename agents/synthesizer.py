@@ -7,7 +7,7 @@ import re
 from typing import Any
 
 from langchain_groq import ChatGroq
-from langchain_core.messages import HumanMessage, SystemMessage
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 from config import cfg
 from agents.base import BaseAgent
@@ -63,6 +63,21 @@ def _format_web_sources(web: list[dict]) -> str:
     return "\n\n".join(lines)
 
 
+def _format_history(history: list[dict]) -> list:
+    """Convert conversation history to LangChain message objects (last 6 turns max)."""
+    msgs = []
+    for turn in history[-6:]:
+        role = turn.get("role", "")
+        content = str(turn.get("content", "")).strip()
+        if not content:
+            continue
+        if role == "user":
+            msgs.append(HumanMessage(content=content))
+        elif role == "assistant":
+            msgs.append(AIMessage(content=content))
+    return msgs
+
+
 def _format_execution(result: dict | None) -> str:
     if not result:
         return ""
@@ -103,6 +118,7 @@ class SynthesizerAgent(BaseAgent):
         docs: list[dict] = state.get("retrieved_docs", [])
         web: list[dict] = state.get("web_sources", [])
         exec_result: dict | None = state.get("execution_result")
+        history: list[dict] = state.get("conversation_history", [])
 
         local_block = _format_local_docs(docs)
         web_block = _format_web_sources(web)
@@ -121,8 +137,10 @@ class SynthesizerAgent(BaseAgent):
 
 Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section containing exactly 2 follow-up questions."""
 
+        history_msgs = _format_history(history)
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT),
+            *history_msgs,
             HumanMessage(content=user_msg),
         ]
         response = self._llm.invoke(messages, timeout=45)
