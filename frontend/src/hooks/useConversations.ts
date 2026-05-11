@@ -58,8 +58,8 @@ export function useConversations(isLoggedIn: boolean) {
           const existing = prev.find(c => c.serverId === sc.id || c.id === sc.id)
           return existing ? { ...existing, serverId: sc.id, title: sc.title } : {
             id: sc.id, serverId: sc.id, title: sc.title,
-            messages: [], createdAt: new Date(sc.created_at).getTime(),
-            updatedAt: new Date(sc.updated_at).getTime(),
+            messages: [], createdAt: sc.created_at ? new Date(sc.created_at).getTime() : Date.now(),
+            updatedAt: sc.updated_at ? new Date(sc.updated_at).getTime() : Date.now(),
           }
         })
         const merged = [...fromServer, ...localOnly]
@@ -104,12 +104,17 @@ export function useConversations(isLoggedIn: boolean) {
         const serverId = conv.serverId ?? conv.id
         convApi.get(serverId).then(({ data }) => {
           setConversations(p => {
+            const cur = p.find(c => c.id === id)
+            const serverMsgIds = new Set(data.messages.map(m => m.id))
+            // Keep local messages that haven't been persisted to server yet
+            const localPending = (cur?.messages ?? []).filter(m => !m.serverId && !serverMsgIds.has(m.id))
+            const serverMessages = data.messages.map(m => ({
+              id: m.id, serverId: m.id, role: m.role as 'user' | 'assistant',
+              content: m.content, timestamp: new Date(m.created_at).getTime(),
+            }))
             const next = p.map(c => c.id === id ? {
               ...c,
-              messages: data.messages.map(m => ({
-                id: m.id, serverId: m.id, role: m.role as 'user' | 'assistant',
-                content: m.content, timestamp: new Date(m.created_at).getTime(),
-              })),
+              messages: [...serverMessages, ...localPending],
               title: data.title,
             } : c)
             persist(next)

@@ -43,6 +43,7 @@ class HeliosState(TypedDict, total=False):
     critic_scores: Optional[dict]
     critic_passed: Optional[bool]
     retry_count: int             # how many synthesizer retries have been attempted
+    _token_callback: Optional[Callable[[str], None]]  # set by websocket; not persisted
     error: Optional[str]
     failed_agent: Optional[str]
     pipeline_start_ms: Optional[float]
@@ -135,7 +136,7 @@ def route_after_critic(state: HeliosState) -> Literal["synthesizer"] | str:
     If critic failed and we haven't hit the retry cap, re-run the synthesizer
     with the critic's suggestions injected as extra guidance.
     """
-    if not state.get("critic_passed") and (state.get("retry_count", 0) < _MAX_RETRIES):
+    if not state.get("critic_passed") and (state.get("retry_count", 0) <= _MAX_RETRIES):
         return "synthesizer"
     return END
 

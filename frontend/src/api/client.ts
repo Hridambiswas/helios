@@ -105,7 +105,7 @@ export const conversations = {
   create: (title = 'New Chat') => api.post<ServerConversation>('/conversations', { title }),
   get: (id: string) => api.get<ServerConversationDetail>(`/conversations/${id}`),
   delete: (id: string) => api.delete(`/conversations/${id}`),
-  addMessage: (convId: string, role: string, content: string) =>
+  addMessage: (convId: string, role: 'user' | 'assistant', content: string) =>
     api.post<ServerMessage>(`/conversations/${convId}/messages`, { role, content }),
 }
 

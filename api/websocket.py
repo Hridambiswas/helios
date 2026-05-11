@@ -119,14 +119,17 @@ async def ws_query(websocket: WebSocket):
             loop = asyncio.get_running_loop()
             token_queue: asyncio.Queue[str | None] = asyncio.Queue()
 
-            _first_token = [True]
+            import threading
+            _first_token_lock = threading.Lock()
+            _first_token_fired = [False]
 
             def _token_cb(token: str) -> None:
-                if _first_token[0]:
-                    _first_token[0] = False
-                    loop.call_soon_threadsafe(
-                        lambda: asyncio.ensure_future(_send(websocket, "synthesizing", {}))
-                    )
+                with _first_token_lock:
+                    if not _first_token_fired[0]:
+                        _first_token_fired[0] = True
+                        loop.call_soon_threadsafe(
+                            lambda: asyncio.ensure_future(_send(websocket, "synthesizing", {}))
+                        )
                 loop.call_soon_threadsafe(token_queue.put_nowait, token)
 
             state: dict = {}

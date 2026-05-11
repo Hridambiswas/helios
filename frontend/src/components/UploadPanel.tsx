@@ -49,6 +49,7 @@ export function UploadPanel({ isLoggedIn, onAuthClick, onClose }: Props) {
   const runSearch = (docId: string) => {
     if (!searchQuery.trim()) return
     setSearching(docId)
+    setSearchResults(prev => ({ ...prev, [docId]: [] }))
     documents.testSearch(docId, searchQuery).then(({ data }) => {
       setSearchResults(prev => ({ ...prev, [docId]: data.results }))
     }).catch(() => {}).finally(() => setSearching(null))

@@ -13,6 +13,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy import select, desc
+from sqlalchemy.orm import selectinload
 
 from api.auth import (
     CurrentUser, OptionalUser, get_user_by_username, create_user,
@@ -545,7 +546,7 @@ async def get_document_chunks(
     from retrieval.vector_store import get_chunks_for_doc
     raw_chunks = await asyncio.to_thread(get_chunks_for_doc, doc_id, limit=limit, offset=offset)
     chunks = [
-        ChunkPreview(chunk_index=i + offset, text=c["text"][:500], char_count=len(c["text"]))
+        ChunkPreview(chunk_index=i + offset, text=c.get("text", "")[:500], char_count=len(c.get("text", "")))
         for i, c in enumerate(raw_chunks)
     ]
     return DocumentChunksResponse(
@@ -571,8 +572,8 @@ async def test_document_retrieval(
     raw_results = await asyncio.to_thread(query_by_doc, body.query, doc_id, top_k=5)
     results = [
         TestRetrievalResult(
-            chunk_index=int(r.get("metadata", {}).get("chunk_idx", 0)),
-            text=r["document"][:500],
+            chunk_index=int(r.get("metadata", {}).get("chunk_idx", i)),
+            text=r.get("document", "")[:500],
             score=round(r.get("score", 0.0), 4),
             source=r.get("source", "dense"),
         )
@@ -617,23 +618,23 @@ async def list_conversations(
     limit: int = Query(50, ge=1, le=200),
     offset: int = Query(0, ge=0),
 ):
-    from sqlalchemy import func as sa_func
     async with get_read_session() as session:
         result = await session.execute(
             select(Conversation)
+            .options(selectinload(Conversation.messages))
             .where(Conversation.user_id == current_user.id)
             .order_by(desc(Conversation.updated_at))
             .limit(limit).offset(offset)
         )
         convs = list(result.scalars().all())
-    out = []
-    for c in convs:
-        out.append(ConversationOut(
-            id=c.id, title=c.title,
-            created_at=c.created_at, updated_at=c.updated_at,
-            message_count=len(c.messages),
-        ))
-    return out
+        return [
+            ConversationOut(
+                id=c.id, title=c.title,
+                created_at=c.created_at, updated_at=c.updated_at,
+                message_count=len(c.messages),
+            )
+            for c in convs
+        ]
 
 
 @router.post("/conversations", response_model=ConversationOut, status_code=201)
@@ -649,17 +650,21 @@ async def create_conversation(body: CreateConversationRequest, current_user: Cur
 @router.get("/conversations/{conv_id}", response_model=ConversationDetailOut)
 async def get_conversation(conv_id: str, current_user: CurrentUser):
     async with get_read_session() as session:
-        result = await session.execute(select(Conversation).where(Conversation.id == conv_id))
+        result = await session.execute(
+            select(Conversation)
+            .options(selectinload(Conversation.messages))
+            .where(Conversation.id == conv_id)
+        )
         conv = result.scalar_one_or_none()
-    if not conv or conv.user_id != current_user.id:
-        raise HTTPException(404, "Conversation not found")
-    msgs = [ConversationMessageOut(id=m.id, role=m.role, content=m.content, created_at=m.created_at)
-            for m in conv.messages]
-    return ConversationDetailOut(
-        id=conv.id, title=conv.title,
-        created_at=conv.created_at, updated_at=conv.updated_at,
-        message_count=len(msgs), messages=msgs,
-    )
+        if not conv or conv.user_id != current_user.id:
+            raise HTTPException(404, "Conversation not found")
+        msgs = [ConversationMessageOut(id=m.id, role=m.role, content=m.content, created_at=m.created_at)
+                for m in conv.messages]
+        return ConversationDetailOut(
+            id=conv.id, title=conv.title,
+            created_at=conv.created_at, updated_at=conv.updated_at,
+            message_count=len(msgs), messages=msgs,
+        )
 
 
 @router.post("/conversations/{conv_id}/messages", response_model=ConversationMessageOut, status_code=201)

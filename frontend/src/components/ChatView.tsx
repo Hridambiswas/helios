@@ -205,7 +205,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   }, [conversation?.messages.length])
 
   // Build history array from existing conversation messages (exclude the current pending ones)
-  const buildHistory = (msgs: typeof conversation.messages, beforeId: string): HistoryMessage[] => {
+  const buildHistory = (msgs: Conversation['messages'], beforeId: string): HistoryMessage[] => {
     const turns: HistoryMessage[] = []
     for (const m of msgs) {
       if (m.id === beforeId) break
