@@ -23,7 +23,7 @@ def extract_client_ip(request: Request) -> str:
     forwarded_for = request.headers.get("X-Forwarded-For", "")
     if forwarded_for and cfg.trusted_proxy_count > 0:
         hops = [h.strip() for h in forwarded_for.split(",")]
-        idx = max(0, len(hops) - cfg.trusted_proxy_count)
+        idx = max(0, len(hops) - 1 - cfg.trusted_proxy_count)
         return hops[idx]
     return request.client.host if request.client else "unknown"
 

@@ -21,7 +21,7 @@ def client():
         patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=45),
     ):
         from main import app
-        return TestClient(app)
+        yield TestClient(app)
 
 
 def _health_resp(client, **kwargs):
@@ -59,7 +59,7 @@ class TestRateLimitHeaders:
         with (
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=3),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=30),
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock,
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
             resp = client.get(
@@ -82,7 +82,7 @@ class TestRateLimitHeaders:
         with (
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=5),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=20),
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock,
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
             resp = client.get(
@@ -103,7 +103,7 @@ class TestRateLimitHeaders:
         with (
             patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
             patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=42),
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock,
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock,
                   return_value=type("U", (), {"id": "u1", "is_active": True})()),
         ):
             resp = client.get(

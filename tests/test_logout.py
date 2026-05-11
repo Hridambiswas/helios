@@ -21,7 +21,7 @@ def client():
         patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=60),
     ):
         from main import app
-        return TestClient(app)
+        yield TestClient(app)
 
 
 def _make_token(user_id: str = "u1") -> str:
@@ -91,7 +91,7 @@ class TestLogout:
 
     def test_logout_missing_body_rejected(self, client):
         mock_user = MagicMock(id="u1", is_active=True)
-        with patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=mock_user):
+        with patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user):
             resp = client.post(
                 "/api/v1/auth/logout",
                 json={},  # missing refresh_token

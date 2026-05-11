@@ -20,10 +20,12 @@ def client():
         patch("observability.logging_config.setup_logging"),
         patch("storage.database.close_engine", new_callable=AsyncMock),
         patch("storage.read_replica.close_read_engine", new_callable=AsyncMock),
-        patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
+        patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
+        patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=60),
+        patch("api.security.incr", new_callable=AsyncMock, return_value=1),
     ):
         from main import app
-        return TestClient(app)
+        yield TestClient(app)
 
 
 # ── Security headers ──────────────────────────────────────────────────────────
@@ -138,7 +140,7 @@ class TestBruteForceProtection:
         assert resp.status_code == 401  # wrong password, but not rate-limited
 
     def test_login_blocked_after_brute_force_limit(self, client):
-        with patch("storage.cache.incr", new_callable=AsyncMock, return_value=6):
+        with patch("api.security.incr", new_callable=AsyncMock, return_value=6):
             resp = client.post(
                 "/api/v1/auth/login",
                 data={"username": "attacker", "password": "guess"},
@@ -149,7 +151,7 @@ class TestBruteForceProtection:
         assert "Retry-After" in resp.headers
 
     def test_register_blocked_after_brute_force_limit(self, client):
-        with patch("storage.cache.incr", new_callable=AsyncMock, return_value=10):
+        with patch("api.security.incr", new_callable=AsyncMock, return_value=10):
             resp = client.post("/api/v1/auth/register", json={
                 "username": "x", "email": "x@x.com", "password": "pass123"
             })
@@ -267,7 +269,7 @@ class TestIngestHardening:
         return MagicMock(id="u1", username="h", email="h@t.com", is_active=True)
 
     def test_disallowed_extension_rejected(self, client):
-        with patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()):
+        with patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()):
             resp = client.post(
                 "/api/v1/ingest",
                 files={"file": ("evil.exe", b"malware", "application/octet-stream")},
@@ -278,7 +280,7 @@ class TestIngestHardening:
 
     def test_oversized_file_rejected(self, client):
         big = b"x" * (52_428_800 + 1)  # 50 MB + 1 byte
-        with patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()):
+        with patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()):
             resp = client.post(
                 "/api/v1/ingest",
                 files={"file": ("doc.txt", big, "text/plain")},
@@ -288,7 +290,7 @@ class TestIngestHardening:
 
     def test_path_traversal_sanitized(self, client):
         with (
-            patch("api.routes.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=self._mock_user()),
             patch("api.routes.ensure_bucket"),
             patch("api.routes.upload"),
             patch("api.routes.upsert_batch"),

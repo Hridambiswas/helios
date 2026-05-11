@@ -167,6 +167,14 @@ class Settings(BaseSettings):
     def is_development(self) -> bool:
         return self.app_env == "development"
 
+    @is_development.setter
+    def is_development(self, value: bool) -> None:
+        object.__setattr__(self, "app_env", "development" if value else "production")
+
+    @is_development.deleter
+    def is_development(self) -> None:
+        object.__setattr__(self, "app_env", "development")
+
     def validate_secrets(self) -> None:
         """Raise ValueError if required secrets are missing in production."""
         if not self.is_production:

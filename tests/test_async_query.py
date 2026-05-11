@@ -19,9 +19,11 @@ def client():
         patch("storage.read_replica.close_read_engine", new_callable=AsyncMock),
         patch("storage.cache.incr", new_callable=AsyncMock, return_value=1),
         patch("storage.cache.ttl_seconds", new_callable=AsyncMock, return_value=60),
+        patch("api.middleware.incr", new_callable=AsyncMock, return_value=1),
+        patch("api.middleware.ttl_seconds", new_callable=AsyncMock, return_value=60),
     ):
         from main import app
-        return TestClient(app)
+        yield TestClient(app)
 
 
 def _make_token(user_id: str = "u1") -> str:
@@ -48,7 +50,7 @@ class TestQueryAsync:
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("storage.database.get_session", return_value=mock_session),
+            patch("api.routes.get_session", return_value=mock_session),
             patch("api.routes.run_pipeline_task") as mock_task_fn,
             patch("resilience.backpressure.check_backpressure", new_callable=AsyncMock),
         ):
@@ -83,7 +85,7 @@ class TestQueryAsync:
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("storage.database.get_session", return_value=mock_session),
+            patch("api.routes.get_session", return_value=mock_session),
             patch("api.routes.run_pipeline_task") as mock_task_fn,
             patch("resilience.backpressure.check_backpressure", new_callable=AsyncMock),
         ):
@@ -118,7 +120,7 @@ class TestQueryAsync:
 
         with (
             patch("api.auth.get_user_by_id", new_callable=AsyncMock, return_value=mock_user),
-            patch("storage.database.get_session", return_value=mock_session),
+            patch("api.routes.get_session", return_value=mock_session),
             patch("api.routes.run_pipeline_task") as mock_task_fn,
             patch("resilience.backpressure.check_backpressure", new_callable=AsyncMock),
         ):
