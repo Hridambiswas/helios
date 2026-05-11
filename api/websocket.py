@@ -144,6 +144,12 @@ async def ws_query(websocket: WebSocket):
                     conversation_history=history,
                     token_callback=_token_cb,
                 )
+                if result.get("retry_count", 0) > 1:
+                    loop.call_soon_threadsafe(
+                        lambda: asyncio.ensure_future(
+                            _send(websocket, "retrying", {"attempt": result.get("retry_count", 1)})
+                        )
+                    )
                 loop.call_soon_threadsafe(token_queue.put_nowait, None)  # sentinel
                 return result
 
