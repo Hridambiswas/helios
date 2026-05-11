@@ -78,7 +78,7 @@ class Settings(BaseSettings):
     retriever_bm25_weight: float = 0.1
     retriever_rrf_k: int = 60                # RRF rank offset (higher = smoother)
     executor_timeout_seconds: int = 15
-    critic_min_score: float = 0.7
+    critic_min_score: float = 0.5
 
     # ── Ingest Tuning ─────────────────────────────────────────────────────────
     ingest_chunk_size: int = 500

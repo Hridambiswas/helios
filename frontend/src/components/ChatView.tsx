@@ -109,9 +109,6 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
         {/* Metadata row */}
         {result && !isStreaming && (
           <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-[#444]">
-            <span className={result.critic_passed ? 'text-green-500/70' : 'text-crimson/70'}>
-              {result.critic_passed ? '✓ critic pass' : '✗ critic fail'}
-            </span>
             <span>{result.latency_ms.toFixed(0)} ms</span>
             {result.retrieved_docs.length > 0 && <span>{result.retrieved_docs.length} sources</span>}
             {result.web_sources && result.web_sources.length > 0 && (
