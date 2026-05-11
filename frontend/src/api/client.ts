@@ -85,8 +85,11 @@ export const auth = {
   me: () => api.get('/auth/me'),
 }
 
+export type HistoryMessage = { role: 'user' | 'assistant'; content: string }
+
 export const queries = {
-  run: (query: string) => api.post<QueryResponse>('/query', { query }),
+  run: (query: string, history: HistoryMessage[] = []) =>
+    api.post<QueryResponse>('/query', { query, history }),
   history: (limit = 20, offset = 0) => api.get<HistoryItem[]>(`/query/history?limit=${limit}&offset=${offset}`),
   get: (id: string) => api.get<HistoryItem>(`/query/${id}`),
 }
@@ -119,4 +122,8 @@ export function connectQueryWS(
   }
   ws.onclose = onClose
   return ws
+}
+
+export function sendWSQuery(ws: WebSocket, query: string, history: HistoryMessage[] = []) {
+  ws.send(JSON.stringify({ query, history }))
 }
