@@ -65,6 +65,9 @@ async def register(body: RegisterRequest):
     pw_errors = validate_password_strength(body.password)
     if pw_errors:
         raise HTTPException(400, f"Password must contain: {', '.join(pw_errors)}")
+    existing_email = await get_user_by_email(body.email)
+    if existing_email:
+        raise HTTPException(400, "Email already registered")
     existing = await get_user_by_username(body.username)
     if existing:
         raise HTTPException(400, "Username already taken")
