@@ -58,11 +58,18 @@ class PlannerAgent(BaseAgent):
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
         query: str = state["query"]
+        history: list[dict] = state.get("conversation_history", [])
         self.logger.info("Planning query: %.80s ...", query)
+
+        context_note = ""
+        if history:
+            last_user = next((h["content"] for h in reversed(history) if h.get("role") == "user"), "")
+            if last_user:
+                context_note = f"\n\nConversation context (most recent prior user message): {last_user[:200]}"
 
         messages = [
             SystemMessage(content=_SYSTEM_PROMPT.format(max_subtasks=cfg.planner_max_subtasks)),
-            HumanMessage(content=query),
+            HumanMessage(content=query + context_note),
         ]
         response = self._llm.invoke(messages, timeout=30)
         raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
