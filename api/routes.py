@@ -163,9 +163,12 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         # Return cached result for unauthenticated duplicate queries
         return QueryResponse(**cached)
 
+    history = [{"role": m.role, "content": m.content} for m in (body.history or [])]
     async with active_pipeline():
         state = await asyncio.to_thread(
-            run_pipeline, body.query, user_id=current_user.id if current_user else None
+            run_pipeline, body.query,
+            user_id=current_user.id if current_user else None,
+            conversation_history=history,
         )
 
     elapsed_ms = (time.perf_counter() - t0) * 1000
