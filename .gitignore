@@ -62,7 +62,7 @@ htmlcov/
 
 # Docker
 
-# K8s secrets
+# K8s secrets (directory kept for reference, secrets gitignored)
 deploy/k8s/secrets/
 
 # MinIO / object store
@@ -91,3 +91,19 @@ backups/
 
 # Ruff cache
 .ruff_cache/
+
+# Pyright / type-checking cache
+pyrightconfig.json.bak
+.pyright/
+
+# Graphs output (keep scripts, ignore generated images)
+graphs/*.png
+graphs/*.svg
+graphs/*.pdf
+
+# Benchmark / profiling artifacts
+*.prof
+benchmark_results*.json
+
+# macOS extended attributes
+**/.DS_Store
