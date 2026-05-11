@@ -102,3 +102,50 @@ class TestQueryRequestValidators:
         from api.schemas import QueryRequest
         q = QueryRequest(query="What is CARLE?")
         assert q.query == "What is CARLE?"
+
+
+class TestHistoryMessage:
+
+    def test_valid_history_attached_to_query(self):
+        from api.schemas import QueryRequest, HistoryMessage
+        q = QueryRequest(
+            query="tell me more",
+            history=[
+                HistoryMessage(role="user", content="What is RAG?"),
+                HistoryMessage(role="assistant", content="RAG stands for…"),
+            ]
+        )
+        assert len(q.history) == 2
+        assert q.history[0].role == "user"
+
+    def test_history_capped_at_20(self):
+        from api.schemas import QueryRequest, HistoryMessage
+        with pytest.raises(ValidationError):
+            QueryRequest(
+                query="hi",
+                history=[HistoryMessage(role="user", content="x")] * 21
+            )
+
+    def test_empty_history_defaults(self):
+        from api.schemas import QueryRequest
+        q = QueryRequest(query="hello")
+        assert q.history == []
+
+
+class TestConversationSchemas:
+
+    def test_create_conversation_request_defaults(self):
+        from api.schemas import CreateConversationRequest
+        req = CreateConversationRequest()
+        assert req.title == "New Chat"
+
+    def test_append_message_role_validation(self):
+        from api.schemas import AppendMessageRequest
+        with pytest.raises(ValidationError):
+            AppendMessageRequest(role="system", content="bad role")
+
+    def test_append_message_valid_roles(self):
+        from api.schemas import AppendMessageRequest
+        for role in ("user", "assistant"):
+            msg = AppendMessageRequest(role=role, content="hello")
+            assert msg.role == role
