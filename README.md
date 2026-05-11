@@ -128,23 +128,23 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 
 | Layer | Technology |
 |---|---|
-| **API** | FastAPI 0.111, Pydantic v2, OAuth2 Bearer (JWT HS256) |
+| **Frontend** | React 18 + Vite + TypeScript, deployed on Vercel |
+| **API** | FastAPI 0.115, Pydantic v2, OAuth2 Bearer (JWT HS256) |
 | **Agent graph** | LangGraph 0.2 `StateGraph` with conditional routing |
-| **LLM** | OpenAI GPT-4o (planner, synthesizer, critic) |
-| **Dense retrieval** | OpenAI `text-embedding-3-small` → ChromaDB HTTP |
-| **Multi-modal retrieval** | CLIP `openai/clip-vit-base-patch32` (HuggingFace) |
+| **LLM** | Groq `llama-3.3-70b-versatile` (planner, synthesizer, critic) via `langchain-groq` |
+| **Dense retrieval** | `BAAI/bge-small-en-v1.5` (HuggingFace, local) → ChromaDB HTTP |
+| **Multi-modal retrieval** | CLIP `openai/clip-vit-base-patch32` (HuggingFace, local) |
 | **Sparse retrieval** | BM25Okapi (`rank-bm25`) in-memory |
-| **Relational DB** | PostgreSQL 16 via async SQLAlchemy 2.0 |
+| **Relational DB** | Supabase PostgreSQL via async SQLAlchemy 2.0 + asyncpg |
 | **Cache / broker** | Redis 7 (aioredis + Celery) |
 | **Object store** | MinIO (S3-compatible, `minio` Python SDK) |
 | **Async workers** | Celery 5 (`ack_late=True`, beat scheduler) |
 | **Migrations** | Alembic async |
-| **Auth** | bcrypt passwords, JWT access + refresh tokens (rotation in Postgres) |
+| **Auth** | bcrypt passwords, JWT access + refresh tokens + GitHub OAuth2 |
 | **Tracing** | OpenTelemetry SDK → OTLP gRPC exporter |
 | **Metrics** | Prometheus + prometheus-fastapi-instrumentator |
 | **Logging** | structlog (JSON in prod, ConsoleRenderer in dev) |
-| **Containers** | Docker + Docker Compose v2 |
-| **Orchestration** | Kubernetes manifests (Deployment, Service, Ingress, ConfigMap) |
+| **Containers** | Docker + Docker Compose v2 (EC2 deployment) |
 
 ---
 
