@@ -117,14 +117,21 @@ Look for issues labelled:
 
 High-priority areas right now:
 
-- **Streaming pipeline events** — the WebSocket endpoint emits coarse-grained
-  events; fine-grained per-token streaming from the synthesizer is not yet wired up.
-- **Retry loops** — the critic can flag a response as failing but the pipeline
-  always ends; adding a LangGraph retry edge would complete the loop.
-- **Eval coverage** — `eval/` has a harness but only a small question bank; more
-  diverse test questions improve confidence in retrieval quality.
-- **Docker image size** — the current image bundles everything; a multi-stage
-  build would cut it significantly.
+- **Per-token streaming** — the WebSocket endpoint emits coarse-grained pipeline
+  events (planning / retrieving / executing / evaluating); fine-grained per-token
+  streaming from the synthesizer is not yet wired through to the frontend.
+- **Retry loops** — the critic scores a response but the pipeline never retries a
+  low-scoring answer; adding a LangGraph retry edge with a regeneration subtask
+  would close the loop.
+- **Eval coverage** — `eval/` has a 30-question harness; more diverse questions
+  (multi-hop reasoning, table QA, code debugging) improve confidence in retrieval
+  and generation quality.
+- **Conversation persistence** — chat history is currently stored in
+  `localStorage`; persisting it server-side (Supabase) would enable cross-device
+  history and search.
+- **Docker image size** — the current image bundles all ML model weights at build
+  time; a multi-stage build with lazy model download would reduce the compressed
+  image size significantly.
 
 ---
 
