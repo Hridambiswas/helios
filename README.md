@@ -216,7 +216,28 @@ Or bulk-ingest a directory:
 python scripts/ingest_demo.py --dir ./docs --ext .txt .md .pdf
 ```
 
-### 5. WebSocket streaming
+### 5. Frontend (React + Vite)
+
+The frontend is a TypeScript React app deployed on Vercel.
+
+**Chat interface features:**
+- ChatGPT-style layout: collapsible sidebar (conversation history) + main chat area
+- Conversations persisted in `localStorage` (up to 50 sessions)
+- Submitting a query from the landing page opens the chat view automatically
+- User messages on the right, Helios responses on the left with live pipeline step indicators
+- Follow-up question chips after each response
+- Copy button, latency display, source count on each answer
+- GitHub OAuth — one-click sign in via "Continue with GitHub"
+
+```bash
+cd frontend
+npm install
+npm run dev   # http://localhost:5173
+```
+
+Set `VITE_API_URL` in `frontend/.env` to point at your backend.
+
+### 6. WebSocket streaming
 
 ```javascript
 const ws = new WebSocket(
