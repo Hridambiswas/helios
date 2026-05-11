@@ -152,3 +152,52 @@ class TestRetryLoop:
         from pipeline.run import _MAX_RETRIES
         assert synthesizer_calls["count"] == 1 + _MAX_RETRIES
         assert result["critic_passed"] is False
+
+
+class TestConversationHistory:
+
+    def test_history_propagated_to_state(self):
+        received_history = {}
+
+        def capture_synthesizer(state):
+            received_history["history"] = state.get("conversation_history", [])
+            return {**state, "answer": "ok", "cited_doc_ids": [],
+                    "follow_up_questions": [], "web_sources": [],
+                    "retry_count": state.get("retry_count", 0) + 1}
+
+        with (
+            patch("agents.planner.PlannerAgent._run", side_effect=_mock_planner_output),
+            patch("agents.retriever.RetrieverAgent._run", side_effect=_mock_retriever_output),
+            patch("agents.executor.ExecutorAgent._run", side_effect=lambda s: s),
+            patch("agents.synthesizer.SynthesizerAgent._run", side_effect=capture_synthesizer),
+            patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+        ):
+            from pipeline.run import run_pipeline
+            history = [
+                {"role": "user", "content": "Hello"},
+                {"role": "assistant", "content": "Hi there"},
+            ]
+            run_pipeline("follow-up question", conversation_history=history)
+
+        assert received_history["history"] == history
+
+    def test_empty_history_is_default(self):
+        received_history = {}
+
+        def capture_synthesizer(state):
+            received_history["history"] = state.get("conversation_history")
+            return {**state, "answer": "ok", "cited_doc_ids": [],
+                    "follow_up_questions": [], "web_sources": [],
+                    "retry_count": state.get("retry_count", 0) + 1}
+
+        with (
+            patch("agents.planner.PlannerAgent._run", side_effect=_mock_planner_output),
+            patch("agents.retriever.RetrieverAgent._run", side_effect=_mock_retriever_output),
+            patch("agents.executor.ExecutorAgent._run", side_effect=lambda s: s),
+            patch("agents.synthesizer.SynthesizerAgent._run", side_effect=capture_synthesizer),
+            patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+        ):
+            from pipeline.run import run_pipeline
+            run_pipeline("fresh query")
+
+        assert received_history["history"] == []
