@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 import logging
+import threading
 import time
 from typing import Any, TypedDict, Optional
 
@@ -42,37 +43,59 @@ class HeliosState(TypedDict, total=False):
     pipeline_version: Optional[str]
 
 
-# ── Agent singletons ──────────────────────────────────────────────────────────
-_planner = PlannerAgent()
-_retriever = RetrieverAgent()
-_executor = ExecutorAgent()
-_synthesizer = SynthesizerAgent()
-_critic = CriticAgent()
+# ── Agent singletons (lazy-initialised to keep startup fast) ─────────────────
+_planner: PlannerAgent | None = None
+_retriever: RetrieverAgent | None = None
+_executor: ExecutorAgent | None = None
+_synthesizer: SynthesizerAgent | None = None
+_critic: CriticAgent | None = None
+_init_lock = threading.Lock()
+
+
+def _ensure_agents() -> None:
+    global _planner, _retriever, _executor, _synthesizer, _critic
+    if _planner is not None:
+        return
+    with _init_lock:
+        if _planner is not None:
+            return
+        logger.info("Initialising pipeline agents …")
+        _planner = PlannerAgent()
+        _retriever = RetrieverAgent()
+        _executor = ExecutorAgent()
+        _synthesizer = SynthesizerAgent()
+        _critic = CriticAgent()
+        logger.info("Pipeline agents ready")
 
 
 # ── Node wrappers ─────────────────────────────────────────────────────────────
 
 def node_planner(state: HeliosState) -> HeliosState:
+    _ensure_agents()
     with span("helios.planner", {"query": state.get("query", "")[:80]}):
         return _planner.run(state)  # type: ignore
 
 
 def node_retriever(state: HeliosState) -> HeliosState:
+    _ensure_agents()
     with span("helios.retriever"):
         return _retriever.run(state)  # type: ignore
 
 
 def node_executor(state: HeliosState) -> HeliosState:
+    _ensure_agents()
     with span("helios.executor"):
         return _executor.run(state)  # type: ignore
 
 
 def node_synthesizer(state: HeliosState) -> HeliosState:
+    _ensure_agents()
     with span("helios.synthesizer"):
         return _synthesizer.run(state)  # type: ignore
 
 
 def node_critic(state: HeliosState) -> HeliosState:
+    _ensure_agents()
     with span("helios.critic"):
         return _critic.run(state)  # type: ignore
 
@@ -141,7 +164,7 @@ def _build_graph() -> StateGraph:
     return g
 
 
-_graph = _build_graph().compile()
+_graph = _build_graph().compile()  # graph topology is static; only agents are lazy
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
