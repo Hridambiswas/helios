@@ -60,11 +60,12 @@ const EXAMPLE_QUERIES = [
   'What are the most important findings?',
 ]
 
-export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRequired }: {
+export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRequired, onOpenChat }: {
   initialQuery?: string
   onNewResult?: (r: QueryResponse) => void
   isLoggedIn?: boolean
   onAuthRequired?: (q: string) => void
+  onOpenChat?: (q: string) => void
 }) {
   const [query, setQuery] = useState(initialQuery ?? '')
   const [step, setStep] = useState<PipelineStep>('idle')
@@ -150,6 +151,10 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
   const handleSubmit = () => {
     const q = query.trim().slice(0, 500)
     if (!q) return
+    if (onOpenChat) {
+      onOpenChat(q)
+      return
+    }
     setStep('idle')
     setTimeout(() => runQuery(q), 0)
   }
