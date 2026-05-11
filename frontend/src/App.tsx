@@ -84,15 +84,12 @@ export default function App() {
 
   const openChat = (initialQuery?: string) => {
     let id = activeId
-    if (!id || !active || (initialQuery && active.messages.length > 0)) {
+    if (!id || !active || active.messages.length > 0) {
       id = newConversation()
     }
     if (initialQuery && id) {
-      // Slight delay so newConversation state settles before we add the message
-      setTimeout(() => {
-        addUserMessage(id!, initialQuery)
-        addAssistantPlaceholder(id!)
-      }, 50)
+      // Add user message only — ChatView detects it and fires the API call
+      setTimeout(() => addUserMessage(id!, initialQuery), 50)
     }
     setChatMode(true)
     window.scrollTo(0, 0)

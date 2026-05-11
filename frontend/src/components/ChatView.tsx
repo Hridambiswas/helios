@@ -196,11 +196,66 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
+  const autoFiredRef = useRef<Set<string>>(new Set())
   const convId = conversation?.id ?? null
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversation?.messages.length])
+
+  // Core API call — given a question and an already-created placeholder message ID
+  const fireQuery = (q: string, cid: string, assistantMsgId: string) => {
+    setBusyMsgId(assistantMsgId)
+    const token = localStorage.getItem('access_token')
+
+    if (token) {
+      wsRef.current?.close()
+      const ws = connectQueryWS(
+        token,
+        (event, data) => {
+          if (['planning', 'retrieving', 'executing', 'evaluating'].includes(event)) {
+            onUpdateMessage(cid, assistantMsgId, { step: event })
+          } else if (event === 'done') {
+            onUpdateMessage(cid, assistantMsgId, { step: 'done' })
+            queries.run(q).then(({ data: r }) => {
+              onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
+              setBusyMsgId(null)
+            }).catch(() => setBusyMsgId(null))
+          } else if (event === 'error') {
+            const d = data as { message?: string }
+            onUpdateMessage(cid, assistantMsgId, { error: d.message ?? 'Pipeline error', step: 'error' })
+            setBusyMsgId(null)
+          }
+        },
+        () => setBusyMsgId(null)
+      )
+      wsRef.current = ws
+      ws.onopen = () => ws.send(JSON.stringify({ query: q }))
+    } else {
+      queries.run(q).then(({ data: r }) => {
+        onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
+        setBusyMsgId(null)
+      }).catch((e: unknown) => {
+        const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Request failed'
+        onUpdateMessage(cid, assistantMsgId, { error: msg, step: 'error' })
+        setBusyMsgId(null)
+      })
+    }
+  }
+
+  // Auto-fire when a user message has no assistant reply yet (e.g. opened from landing page)
+  useEffect(() => {
+    if (!conversation || busyMsgId) return
+    const msgs = conversation.messages
+    if (msgs.length === 0) return
+    const last = msgs[msgs.length - 1]
+    if (last.role !== 'user') return
+    if (autoFiredRef.current.has(last.id)) return
+    autoFiredRef.current.add(last.id)
+    const assistantMsgId = onAddPlaceholder(conversation.id)
+    fireQuery(last.content, conversation.id, assistantMsgId)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [conversation?.id, conversation?.messages.length, busyMsgId])
 
   // Wire follow-up button clicks via event delegation
   useEffect(() => {
@@ -218,51 +273,11 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
 
   const sendQuery = (q: string) => {
     if (!q.trim() || busyMsgId) return
-
     let cid = convId
     if (!cid) cid = onNeedConversation()
-
-    const userMsgId = onAddUserMessage(cid, q)
+    onAddUserMessage(cid, q)
     const assistantMsgId = onAddPlaceholder(cid)
-    setBusyMsgId(assistantMsgId)
-
-    const token = localStorage.getItem('access_token')
-
-    if (token) {
-      wsRef.current?.close()
-      const ws = connectQueryWS(
-        token,
-        (event, data) => {
-          if (['planning', 'retrieving', 'executing', 'evaluating'].includes(event)) {
-            onUpdateMessage(cid!, assistantMsgId, { step: event })
-          } else if (event === 'done') {
-            onUpdateMessage(cid!, assistantMsgId, { step: 'done' })
-            queries.run(q).then(({ data: r }) => {
-              onUpdateMessage(cid!, assistantMsgId, { content: r.answer, result: r, step: 'done' })
-              setBusyMsgId(null)
-            }).catch(() => setBusyMsgId(null))
-          } else if (event === 'error') {
-            const d = data as { message?: string }
-            onUpdateMessage(cid!, assistantMsgId, { error: d.message ?? 'Pipeline error', step: 'error' })
-            setBusyMsgId(null)
-          }
-        },
-        () => setBusyMsgId(null)
-      )
-      wsRef.current = ws
-      ws.onopen = () => ws.send(JSON.stringify({ query: q }))
-    } else {
-      queries.run(q).then(({ data: r }) => {
-        onUpdateMessage(cid!, assistantMsgId, { content: r.answer, result: r, step: 'done' })
-        setBusyMsgId(null)
-      }).catch((e: unknown) => {
-        const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Request failed'
-        onUpdateMessage(cid!, assistantMsgId, { error: msg, step: 'error' })
-        setBusyMsgId(null)
-      })
-    }
-
-    void userMsgId
+    fireQuery(q, cid, assistantMsgId)
   }
 
   const handleSubmit = () => {
