@@ -546,6 +546,49 @@ Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local develop
 
 ---
 
+## Document chunk feedback
+
+The Upload panel now lets you inspect exactly how an ingested document was chunked and test retrieval quality against it before using it in a conversation.
+
+### How it works
+
+1. After upload, each document card in the Upload panel has an expand button (chevron).
+2. Clicking it calls `GET /documents/{id}/chunks?limit=10` and renders the first 5 chunk previews — showing the raw text and character count per chunk.
+3. A search input lets you type any query and click the search icon (or press Enter) to call `POST /documents/{id}/search` with `{"query": "..."}`.
+4. The top matching chunks are returned ranked by cosine similarity score, shown as a percentage alongside the matched text.
+5. This lets you verify that a particular document will surface the right chunks for a given question before building a conversation around it.
+
+### API endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/documents/{id}/chunks` | Paginated chunk previews (`limit`, `offset` query params) |
+| `POST` | `/documents/{id}/search` | Test retrieval — returns top-`k` chunks ranked by score |
+
+### Response shapes
+
+```json
+// GET /documents/{id}/chunks
+{
+  "document_id": "uuid",
+  "filename": "paper.pdf",
+  "total_chunks": 42,
+  "chunks": [
+    { "chunk_index": 0, "text": "...", "char_count": 512 }
+  ]
+}
+
+// POST /documents/{id}/search
+{
+  "query": "what is CARLE?",
+  "results": [
+    { "chunk_index": 3, "text": "...", "score": 0.91, "source": "dense" }
+  ]
+}
+```
+
+---
+
 ## Server-side conversation persistence
 
 From v1.1, logged-in users have their conversation history persisted in Supabase PostgreSQL so that chats survive page reloads and are accessible from any device.
