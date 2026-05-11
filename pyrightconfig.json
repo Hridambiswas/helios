@@ -1,28 +1,19 @@
 {
-  "pythonVersion": "3.11",
-  "include": [
-    "agents",
-    "api",
-    "config.py",
-    "eval",
-    "gateway",
-    "main.py",
-    "observability",
-    "pipeline",
-    "resilience",
-    "retrieval",
-    "scripts",
-    "storage",
-    "workers"
-  ],
+  "include": ["."],
   "exclude": [
-    "graphs",
-    "k8s",
-    "tests",
-    "retrieval/clip_encoder.py",
-    "retrieval/vector_store.py"
+    "frontend",
+    ".venv",
+    "storage/migrations/versions",
+    "**/__pycache__"
   ],
-  "reportMissingImports": false,
-  "reportMissingModuleSource": false,
-  "reportUnusedVariable": true
+  "pythonVersion": "3.11",
+  "typeCheckingMode": "basic",
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": "none",
+  "reportUnknownMemberType": "none",
+  "reportUnknownVariableType": "none",
+  "reportUnknownArgumentType": "none",
+  "useLibraryCodeForTypes": true,
+  "venvPath": ".",
+  "venv": ".venv"
 }
