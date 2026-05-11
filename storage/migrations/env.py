@@ -12,7 +12,11 @@ from storage.database import Base
 from storage import models  # noqa: F401 — register models
 
 config = context.config
-config.set_main_option("sqlalchemy.url", cfg.database_url)
+
+_db_url = cfg.supabase_database_url or cfg.database_url
+if _db_url.startswith("postgresql://") and "+asyncpg" not in _db_url:
+    _db_url = _db_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+config.set_main_option("sqlalchemy.url", _db_url)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -34,10 +38,12 @@ def do_run_migrations(connection) -> None:
 
 
 async def run_migrations_online() -> None:
+    connect_args = {"ssl": True} if cfg.supabase_database_url else {}
     connectable = async_engine_from_config(
         config.get_section(config.config_ini_section, {}),
         prefix="sqlalchemy.",
         poolclass=pool.NullPool,
+        connect_args=connect_args,
     )
     async with connectable.connect() as connection:
         await connection.run_sync(do_run_migrations)

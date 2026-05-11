@@ -31,17 +31,29 @@ _engine: AsyncEngine | None = None
 _session_factory: async_sessionmaker[AsyncSession] | None = None
 
 
+def _effective_database_url() -> tuple[str, dict]:
+    """Return (url, connect_args) for the active database backend."""
+    if cfg.supabase_database_url:
+        url = cfg.supabase_database_url
+        if url.startswith("postgresql://") and "+asyncpg" not in url:
+            url = url.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return url, {"ssl": True}
+    return cfg.database_url, {}
+
+
 def get_engine() -> AsyncEngine:
     global _engine
     if _engine is None:
+        url, connect_args = _effective_database_url()
         _engine = create_async_engine(
-            cfg.database_url,
-            pool_size=10,
-            max_overflow=20,
-            pool_pre_ping=True,        # detect stale connections
-            pool_recycle=3600,         # recycle after 1h
-            pool_timeout=30,           # raise after 30s if no connection available
+            url,
+            pool_size=5,               # Supabase free tier: 60 connection limit
+            max_overflow=10,
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            pool_timeout=30,
             echo=cfg.is_development,
+            connect_args=connect_args,
         )
     return _engine
 

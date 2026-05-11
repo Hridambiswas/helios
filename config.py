@@ -29,13 +29,18 @@ class Settings(BaseSettings):
     jwt_expiry_minutes: int = 60
     jwt_refresh_expiry_days: int = 7
 
-    # ── PostgreSQL ────────────────────────────────────────────────────────────
+    # ── PostgreSQL (EC2 local) ────────────────────────────────────────────────
     postgres_host: str = "localhost"
     postgres_port: int = 5432
     postgres_db: str = "helios"
     postgres_user: str = "helios"
     postgres_password: str = ""
     database_url: str = ""
+
+    # ── Supabase (managed PostgreSQL — user database) ─────────────────────────
+    # Set SUPABASE_DATABASE_URL in .env to route all DB traffic through Supabase.
+    # Format: postgresql+asyncpg://postgres.PROJECT_REF:PASSWORD@HOST:5432/postgres
+    supabase_database_url: str = ""
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     redis_url: str = "redis://localhost:6379/0"
