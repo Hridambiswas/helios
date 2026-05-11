@@ -177,6 +177,33 @@ class TaskStatusResponse(BaseModel):
     result: dict | None = None  # present when celery_state == SUCCESS
 
 
+# ── Document chunk preview ────────────────────────────────────────────────────
+
+class ChunkPreview(BaseModel):
+    chunk_index: int
+    text: str
+    char_count: int
+
+
+class DocumentChunksResponse(BaseModel):
+    document_id: str
+    filename: str
+    total_chunks: int
+    chunks: list[ChunkPreview]
+
+
+class TestRetrievalResult(BaseModel):
+    chunk_index: int
+    text: str
+    score: float
+    source: str
+
+
+class TestRetrievalResponse(BaseModel):
+    query: str
+    results: list[TestRetrievalResult]
+
+
 # ── Conversations ─────────────────────────────────────────────────────────────
 
 class ConversationMessageOut(BaseModel):
