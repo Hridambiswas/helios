@@ -130,3 +130,68 @@ class TestConversationRoutes:
                 headers={"Authorization": "Bearer tok"},
             )
             assert resp.status_code == 201
+
+    def test_get_conversation_detail(self, client):
+        conv = self._mock_conv()
+        conv.messages = []
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_conversation", new_callable=AsyncMock, return_value=conv),
+        ):
+            resp = client.get(
+                "/api/v1/conversations/conv-1",
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 200
+
+    def test_get_conversation_not_found(self, client):
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_conversation", new_callable=AsyncMock, return_value=None),
+        ):
+            resp = client.get(
+                "/api/v1/conversations/missing",
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 404
+
+    def test_append_message_to_conversation(self, client):
+        msg = MagicMock()
+        msg.id = "msg-1"
+        msg.role = "user"
+        msg.content = "Hello"
+        msg.created_at = None
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_conversation", new_callable=AsyncMock, return_value=self._mock_conv()),
+            patch("api.routes.add_message", new_callable=AsyncMock, return_value=msg),
+        ):
+            resp = client.post(
+                "/api/v1/conversations/conv-1/messages",
+                json={"role": "user", "content": "Hello"},
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 201
+
+    def test_delete_conversation(self, client):
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_conversation", new_callable=AsyncMock, return_value=self._mock_conv()),
+            patch("api.routes.delete_conversation", new_callable=AsyncMock),
+        ):
+            resp = client.delete(
+                "/api/v1/conversations/conv-1",
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 204
+
+    def test_delete_conversation_not_found(self, client):
+        with (
+            patch("api.routes.get_current_user", new_callable=AsyncMock, return_value=self._mock_user()),
+            patch("api.routes.get_conversation", new_callable=AsyncMock, return_value=None),
+        ):
+            resp = client.delete(
+                "/api/v1/conversations/missing",
+                headers={"Authorization": "Bearer tok"},
+            )
+            assert resp.status_code == 404
