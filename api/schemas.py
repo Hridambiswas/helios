@@ -177,6 +177,40 @@ class TaskStatusResponse(BaseModel):
     result: dict | None = None  # present when celery_state == SUCCESS
 
 
+# ── Conversations ─────────────────────────────────────────────────────────────
+
+class ConversationMessageOut(BaseModel):
+    id: str
+    role: str
+    content: str
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationOut(BaseModel):
+    id: str
+    title: str
+    created_at: datetime
+    updated_at: datetime
+    message_count: int = 0
+
+    model_config = {"from_attributes": True}
+
+
+class ConversationDetailOut(ConversationOut):
+    messages: list[ConversationMessageOut] = []
+
+
+class CreateConversationRequest(BaseModel):
+    title: str = Field("New Chat", max_length=255)
+
+
+class AppendMessageRequest(BaseModel):
+    role: str = Field(..., pattern="^(user|assistant)$")
+    content: str = Field(..., max_length=32768)
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 class HealthResponse(BaseModel):
