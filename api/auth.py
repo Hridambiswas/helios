@@ -20,6 +20,8 @@ from api.schemas import TokenResponse
 
 logger = logging.getLogger("helios.api.auth")
 
+_MAX_PASSWORD_BYTES = 72  # bcrypt hard limit
+
 _oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 
 
