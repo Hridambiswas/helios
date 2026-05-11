@@ -22,6 +22,12 @@ services:
     ports: []
     mem_limit: 512m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     environment:
       - CORS_ALLOWED_ORIGINS=https://frontend-omega-blush-87.vercel.app
       - TRUSTED_PROXY_COUNT=1
@@ -50,6 +56,11 @@ services:
     command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
     mem_limit: 80m
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
 
   minio:
     ports: []
