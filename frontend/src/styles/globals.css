@@ -260,3 +260,29 @@ body::after {
   pointer-events: none;
   z-index: 0;
 }
+
+/* ── Mobile / safe-area improvements ───────────────────────────────────────── */
+
+/* Push chat input above iOS home indicator */
+.chat-input-bar {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+}
+
+/* Prevent iOS font scaling */
+@media (max-width: 640px) {
+  html { -webkit-text-size-adjust: 100%; }
+
+  /* Larger tap targets on mobile */
+  button { min-height: 36px; }
+
+  /* Full-width message bubbles on small screens */
+  .user-bubble { max-width: 100% !important; }
+
+  /* Hide pipeline step labels on xs but show icons */
+  .step-label { display: none !important; }
+}
+
+/* Bottom nav safe area */
+.bottom-nav {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
