@@ -546,6 +546,54 @@ Set `LOG_FORMAT=text` in `.env` to switch to plain-text output for local develop
 
 ---
 
+## Server-side conversation persistence
+
+From v1.1, logged-in users have their conversation history persisted in Supabase PostgreSQL so that chats survive page reloads and are accessible from any device.
+
+### Data model
+
+```
+conversations
+  id          UUID PK
+  user_id     UUID FK → users.id  (cascade delete)
+  title       VARCHAR(255)
+  created_at  TIMESTAMPTZ
+  updated_at  TIMESTAMPTZ
+
+conversation_messages
+  id               UUID PK
+  conversation_id  UUID FK → conversations.id  (cascade delete)
+  role             VARCHAR(16)   -- "user" | "assistant"
+  content          TEXT
+  created_at       TIMESTAMPTZ
+```
+
+Both tables are indexed on their parent FK columns (`user_id`, `conversation_id`) for fast list queries.
+
+### REST endpoints
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/conversations` | List all conversations for the authenticated user |
+| `POST` | `/api/v1/conversations` | Create a new conversation (body: `{"title": "..."}`) |
+| `GET` | `/api/v1/conversations/{id}` | Get conversation with all messages |
+| `POST` | `/api/v1/conversations/{id}/messages` | Append a message (`role`, `content`) |
+| `DELETE` | `/api/v1/conversations/{id}` | Delete conversation and all its messages |
+
+### Frontend sync
+
+`useConversations(isLoggedIn)` in the frontend handles bi-directional sync:
+
+1. On login — fetches server conversations and merges with any local-only chats (local ones get a `serverId` after the first sync).
+2. On `newConversation()` — calls `POST /conversations` and stores the returned `serverId`.
+3. On `selectConversation()` — lazy-loads messages via `GET /conversations/{id}` when the local message list is empty, avoiding N+1 fetches on the conversation list view.
+4. On every assistant turn — calls `POST /conversations/{id}/messages` to append the persisted answer.
+5. On logout — clears the `syncedRef` flag so the next login re-syncs from the server.
+
+Guest users (not logged in) continue to use a local-only in-memory conversation store with no persistence.
+
+---
+
 ## Mobile layout
 
 The frontend is fully usable on iOS and Android browsers from v1.1.
