@@ -75,6 +75,7 @@ class Settings(BaseSettings):
     retriever_top_k: int = 10
     retriever_dense_weight: float = 0.6
     retriever_clip_weight: float = 0.3
+    web_search_max_results: int = 4       # DuckDuckGo results per query
     retriever_bm25_weight: float = 0.1
     retriever_rrf_k: int = 60                # RRF rank offset (higher = smoother)
     executor_timeout_seconds: int = 15
