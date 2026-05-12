@@ -27,9 +27,12 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            # Pull latest code first so backend/ directory exists on EC2
+            # Sync EC2 to exactly match remote — hard reset avoids conflicts
+            # from locally modified files (e.g. nginx/nginx.conf after the
+            # repo restructure that moved it into backend/)
             cd /home/ubuntu/helios
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # One-time migration: move .env from old root location into backend/
             if [ -f /home/ubuntu/helios/.env ] && [ ! -f /home/ubuntu/helios/backend/.env ]; then
