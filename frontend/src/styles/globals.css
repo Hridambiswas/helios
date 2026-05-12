@@ -24,7 +24,7 @@ html { scroll-behavior: smooth; }
 body {
   background-color: #000;
   color: #fff;
-  font-family: 'Inter', system-ui, sans-serif;
+  font-family: 'Outfit', system-ui, sans-serif;
   overflow-x: hidden;
   min-height: 100vh;
 }

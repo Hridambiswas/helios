@@ -14,7 +14,6 @@ import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
 import { FireDivider } from './components/DragonDecor'
-import { PurpleExplosion } from './components/PurpleExplosion'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useConversations } from './hooks/useConversations'
@@ -225,9 +224,6 @@ export default function App() {
             onAuthClick={() => setShowAuth(true)}
             onLogout={logout}
           />
-
-          {/* Purple explosion — fixed canvas, scroll-driven */}
-          <PurpleExplosion />
 
           <main className="pt-12">
             <Hero

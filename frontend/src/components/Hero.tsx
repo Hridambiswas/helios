@@ -43,7 +43,7 @@ export function Hero({
       >
         <div
           style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
+            fontFamily: '"Bebas Neue", Impact, sans-serif',
             fontSize: 'clamp(120px, 28vw, 380px)',
             letterSpacing: '-0.03em',
             color: '#ffffff',
@@ -55,7 +55,7 @@ export function Hero({
         </div>
         <div
           style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
+            fontFamily: '"Bebas Neue", Impact, sans-serif',
             fontSize: 'clamp(120px, 28vw, 380px)',
             letterSpacing: '-0.03em',
             color: '#ffffff',
@@ -122,7 +122,7 @@ export function Hero({
           transition={{ delay: 0.45, duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
           className="mb-10 select-none"
           style={{
-            fontFamily: '"Impact", "Arial Black", sans-serif',
+            fontFamily: '"Bebas Neue", Impact, sans-serif',
             fontSize: 'clamp(52px, 10vw, 120px)',
             letterSpacing: '-0.02em',
             lineHeight: 1,
