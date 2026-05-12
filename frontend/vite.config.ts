@@ -21,12 +21,13 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ['react', 'react-dom'],
-          lucide: ['lucide-react'],
+          vendor:  ['react', 'react-dom'],
+          lucide:  ['lucide-react'],
+          three:   ['three', '@react-three/fiber', '@react-three/drei', '@react-three/postprocessing', 'postprocessing'],
         },
       },
     },

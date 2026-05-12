@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { Hero } from './components/Hero'
 import { QueryInterface } from './components/QueryInterface'
 import { PipelineSection } from './components/PipelineSection'
@@ -12,7 +13,6 @@ import { ChatSidebar } from './components/ChatSidebar'
 import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
-import { ParticleField } from './components/ParticleField'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useConversations } from './hooks/useConversations'
@@ -121,16 +121,29 @@ export default function App() {
 
   return (
     <>
-      {!splashDone && (
-        <SplashScreen onComplete={() => { sessionStorage.setItem('helios_splash', '1'); setSplashDone(true) }} />
-      )}
+      {/* 3-D dragon splash */}
+      <AnimatePresence>
+        {!splashDone && (
+          <SplashScreen
+            key="splash"
+            onComplete={() => { sessionStorage.setItem('helios_splash', '1'); setSplashDone(true) }}
+          />
+        )}
+      </AnimatePresence>
 
-      <ParticleField />
       <div className="scanline" />
 
       {/* ── CHAT MODE ── */}
+      <AnimatePresence mode="wait">
       {chatMode ? (
-        <div className="flex h-screen overflow-hidden bg-ink pb-14 sm:pb-0">
+        <motion.div
+          key="chat"
+          initial={{ opacity: 0, x: 40 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: 40 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="flex h-screen overflow-hidden bg-black pb-14 sm:pb-0"
+        >
           {/* Sidebar */}
           <ChatSidebar
             conversations={conversations}
@@ -195,10 +208,16 @@ export default function App() {
               />
             </div>
           </div>
-        </div>
+        </motion.div>
       ) : (
         /* ── LANDING MODE ── */
-        <>
+        <motion.div
+          key="landing"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.3 }}
+        >
           <Navbar
             user={user}
             onAuthClick={() => setShowAuth(true)}
@@ -245,8 +264,9 @@ export default function App() {
           </main>
 
           <ScrollToTop />
-        </>
+        </motion.div>
       )}
+      </AnimatePresence>
 
       {/* Mobile bottom nav (shown in both modes) */}
       <MobileBottomNav
