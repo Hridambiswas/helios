@@ -54,24 +54,17 @@ uniform float uTime;
 
 void main(){
   vec3 n = normalize(vN);
-  vec3 v = normalize(-vPV);
+  vec3 vdir = normalize(-vPV);
 
-  // Two moving lights
-  vec3 l1 = normalize(vec3(cos(uTime*0.4)*2.0, sin(uTime*0.3)*1.5+1.0, 3.0));
-  vec3 l2 = normalize(vec3(-1.2, -0.8, 1.5));
+  vec3 ldir = normalize(vec3(cos(uTime*0.4)*2.0, sin(uTime*0.3)*1.5+1.0, 3.0));
+  vec3 hdir = normalize(ldir + vdir);
 
-  vec3  h1   = normalize(l1+v);
-  float diff = max(dot(n,l1),0.0)*0.15;
-  float spec = pow(max(dot(n,h1),0.0),90.0)*2.2;
+  float diff = max(dot(n, ldir), 0.0) * 0.15;
+  float spec = pow(max(dot(n, hdir), 0.0), 90.0) * 2.2;
+  float fr   = pow(1.0 - max(dot(n, vdir), 0.0), 3.8);
 
-  // Fresnel rim — gives the "wet" edge
-  float fr = pow(1.0 - max(dot(n,v),0.0), 3.8);
-
-  // Almost-black base
-  vec3 col  = vec3(0.012, 0.006, 0.025) * (diff + 0.08);
-  // White specular highlights
+  vec3 col = vec3(0.012, 0.006, 0.025) * (diff + 0.08);
   col += vec3(0.75, 0.80, 0.85) * spec;
-  // Purple-tinted rim
   col += fr * vec3(0.12, 0.08, 0.22) * 0.9;
 
   gl_FragColor = vec4(col, 1.0);
@@ -196,7 +189,6 @@ export function VenomOverlay() {
             color: '#fff',
             lineHeight: 1,
             userSelect: 'none',
-            mixBlendMode: 'difference',
           }}
         >
           HELIOS
