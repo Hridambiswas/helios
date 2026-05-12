@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { Hero } from './components/Hero'
+import { VenomHero } from './components/VenomHero'
 import { QueryInterface } from './components/QueryInterface'
 import { PipelineSection } from './components/PipelineSection'
 import { HistorySection } from './components/HistorySection'
@@ -13,7 +13,6 @@ import { ChatSidebar } from './components/ChatSidebar'
 import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
-import { LiquidCursor } from './components/LiquidCursor'
 import { FireDivider } from './components/DragonDecor'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
@@ -123,7 +122,6 @@ export default function App() {
 
   return (
     <>
-      <LiquidCursor />
       {/* 3-D dragon splash */}
       <AnimatePresence>
         {!splashDone && (
@@ -228,7 +226,7 @@ export default function App() {
           />
 
           <main className="pt-12">
-            <Hero
+            <VenomHero
               onQuerySubmit={handleQuerySubmit}
               onAuthClick={() => setShowAuth(true)}
               isLoggedIn={!!user}
