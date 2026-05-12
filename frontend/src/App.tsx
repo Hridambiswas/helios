@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { VenomOverlay } from './components/VenomOverlay'
 import { PromptPage } from './components/PromptPage'
@@ -22,13 +22,11 @@ export default function App() {
   const [chatMode, setChatMode]       = useState(false)
   const [showAuth, setShowAuth]       = useState(false)
 
-  // App owns the overlay timer — no prop-callback dance
   useEffect(() => {
     const t = setTimeout(() => setOverlayDone(true), 3200)
     return () => clearTimeout(t)
   }, [])
 
-  // Handle OAuth redirect
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
     const at = p.get('access_token'), rt = p.get('refresh_token')
@@ -54,29 +52,17 @@ export default function App() {
     window.scrollTo(0, 0)
   }
 
-  // While auth is resolving keep the overlay up (don't flash blank)
   if (loading) {
     return (
       <div style={{
-        position: 'fixed', inset: 0, zIndex: 200,
+        position: 'fixed', inset: 0,
         background: '#000',
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center', gap: 24,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
         <h1 style={{
-          fontFamily: '"Inter Tight", "Montserrat", sans-serif',
-          fontWeight: 900, fontSize: 'clamp(72px, 16vw, 200px)',
-          letterSpacing: '-0.045em', color: '#fff', lineHeight: 1,
-        }}>
-          HELIOS
-        </h1>
-        <p style={{
-          fontFamily: '"IBM Plex Mono", monospace', fontSize: 9,
-          letterSpacing: '0.5em', textTransform: 'uppercase',
-          color: 'rgba(255,255,255,0.3)',
-        }}>
-          Loading
-        </p>
+          fontFamily: '"Montserrat", sans-serif', fontWeight: 900,
+          fontSize: 'clamp(72px, 16vw, 200px)', letterSpacing: '-0.045em', color: '#fff',
+        }}>HELIOS</h1>
       </div>
     )
   }
@@ -135,7 +121,6 @@ export default function App() {
         />
       )}
 
-      {/* Toasts */}
       <div style={{
         position: 'fixed', top: 16, right: 16, zIndex: 9990,
         display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none',
@@ -143,19 +128,14 @@ export default function App() {
         {toasts.map(t => (
           <div key={t.id} style={{
             pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 12,
-            padding: '10px 16px',
-            background: 'rgba(0,0,0,0.9)',
+            padding: '10px 16px', background: 'rgba(0,0,0,0.9)',
             border: '1px solid rgba(255,255,255,0.08)',
-            backdropFilter: 'blur(16px)',
             fontFamily: '"IBM Plex Mono", monospace', fontSize: 11,
-            color: t.type === 'error' ? 'rgba(255,120,120,0.9)' : 'rgba(255,255,255,0.65)',
-            maxWidth: 320,
+            color: t.type === 'error' ? '#f87171' : 'rgba(255,255,255,0.65)', maxWidth: 320,
           }}>
             <span style={{ flex: 1 }}>{t.message}</span>
-            <button onClick={() => removeToast(t.id)} style={{
-              background: 'none', border: 'none',
-              color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 14,
-            }}>×</button>
+            <button onClick={() => removeToast(t.id)}
+              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.3)', cursor: 'pointer', fontSize: 14 }}>×</button>
           </div>
         ))}
       </div>
