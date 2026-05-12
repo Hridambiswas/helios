@@ -1,178 +1,252 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { motion } from 'framer-motion'
 
+// ── Easing ────────────────────────────────────────────────────────────────────
+const lerp    = (a: number, b: number, t: number) => a + (b - a) * t
 const easeOut = (t: number) => 1 - Math.pow(1 - t, 3)
 const easeIn  = (t: number) => t * t * t
 
-function drawCreature(ctx: CanvasRenderingContext2D, W: number, H: number, elapsed: number) {
-  const cx   = W / 2
-  const cy   = H / 2 + H * 0.025
-  const size = Math.min(W, H) * 0.1
+// ── Creature renderer ─────────────────────────────────────────────────────────
+function drawScene(ctx: CanvasRenderingContext2D, W: number, H: number, elapsed: number) {
+  const cx = W / 2
 
-  const FORM_DUR   = 0.9
-  const HOLD_END   = 2.1
-  const TOTAL      = 3.0
+  // Timeline
+  const RISE_DUR  = 0.55
+  const MOUTH_AT  = 0.90
+  const MOUTH_DUR = 1.05
+  const FADE_AT   = 2.45
 
-  const formP     = Math.min(1, elapsed / FORM_DUR)
-  const dissolveP = elapsed > HOLD_END ? Math.min(1, (elapsed - HOLD_END) / (TOTAL - HOLD_END)) : 0
-  const gA        = easeOut(formP) * (1 - easeIn(dissolveP))
+  const riseP  = easeOut(Math.min(1, elapsed / RISE_DUR))
+  const bodyA  = easeOut(Math.min(1, elapsed / 0.75))
+  const mouthP = elapsed > MOUTH_AT
+    ? easeOut(Math.min(1, (elapsed - MOUTH_AT) / MOUTH_DUR))
+    : 0
+  const fadeP  = elapsed > FADE_AT
+    ? easeIn(Math.min(1, (elapsed - FADE_AT) / (3.0 - FADE_AT)))
+    : 0
 
-  if (gA <= 0.01) return
+  const gA   = bodyA * (1 - fadeP)
+  const yOff = (1 - riseP) * H * 0.12
+  const sway = Math.sin(elapsed * 1.1) * (2.5 + mouthP * 2.5)
 
-  const t = elapsed
+  // Creature metrics
+  const creatureH = Math.min(H * 0.82, W * 1.55)
+  const footY     = H * 0.94 + yOff
+  const headCY    = footY - creatureH * 0.91
+  const headR     = creatureH * 0.105
+  const torsoW    = creatureH * 0.155
+  const hipW      = creatureH * 0.125
+  const legW      = creatureH * 0.052
+  const armW      = creatureH * 0.036
+  const torsoTop  = headCY + headR * 2.6
+  const hipY      = footY - creatureH * 0.36
+  const kneeY     = footY - creatureH * 0.19
 
-  // ── Atmosphere ──────────────────────────────────────────────────────────
-  const atm = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 6.5)
-  atm.addColorStop(0,    `rgba(28,  0, 46, ${0.88 * gA})`)
-  atm.addColorStop(0.35, `rgba(10,  0, 18, ${0.62 * gA})`)
-  atm.addColorStop(0.7,  `rgba( 4,  0,  8, ${0.38 * gA})`)
+  // ── Atmospheric glow ──────────────────────────────────────────────────────
+  const atmCY = headCY + creatureH * 0.42
+  const atmR  = creatureH * 0.72
+  const atm   = ctx.createRadialGradient(cx, atmCY, 0, cx, atmCY, atmR)
+  atm.addColorStop(0,    `rgba(40, 4, 4, ${0.68 * gA})`)
+  atm.addColorStop(0.35, `rgba(16, 1, 1, ${0.48 * gA})`)
+  atm.addColorStop(0.70, `rgba( 5, 0, 0, ${0.28 * gA})`)
   atm.addColorStop(1,    'rgba(0,0,0,0)')
   ctx.fillStyle = atm
   ctx.fillRect(0, 0, W, H)
 
-  // ── Main tentacles (12) ─────────────────────────────────────────────────
-  for (let i = 0; i < 12; i++) {
-    const baseAngle  = (i / 12) * Math.PI * 2
-    const lenFactor  = 0.88 + (i % 4) * 0.13
-    const tentLen    = size * 4.8 * lenFactor * easeOut(formP)
-    const w1 = Math.sin(t * 1.1 + i * 2.09) * 0.28
-    const w2 = Math.sin(t * 0.75 + i * 3.14) * 0.17
-
-    const cp1x = cx + Math.cos(baseAngle + w2 * 0.5) * tentLen * 0.36
-    const cp1y = cy + Math.sin(baseAngle + w2 * 0.5) * tentLen * 0.36
-    const cp2x = cx + Math.cos(baseAngle + w2)       * tentLen * 0.72
-    const cp2y = cy + Math.sin(baseAngle + w2)       * tentLen * 0.72
-    const ex   = cx + Math.cos(baseAngle + w1)       * tentLen
-    const ey   = cy + Math.sin(baseAngle + w1)       * tentLen
-
-    const alpha = gA * (0.70 + Math.sin(t * 1.8 + i * 0.8) * 0.16)
-
-    const grd = ctx.createLinearGradient(cx, cy, ex, ey)
-    grd.addColorStop(0,   `rgba(55, 12, 82, ${alpha})`)
-    grd.addColorStop(0.5, `rgba(22,  4, 38, ${alpha * 0.7})`)
-    grd.addColorStop(1,   'rgba(0,0,0,0)')
-
-    ctx.beginPath()
-    ctx.moveTo(cx, cy)
-    ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, ex, ey)
-    ctx.strokeStyle = grd
-    ctx.lineWidth   = Math.max(1, (11.5 - (i % 5) * 1.6) * (1 - dissolveP * 0.85))
-    ctx.lineCap     = 'round'
-    ctx.stroke()
-  }
-
-  // ── Secondary thin tendrils ─────────────────────────────────────────────
   ctx.save()
-  ctx.globalCompositeOperation = 'screen'
-  for (let i = 0; i < 22; i++) {
-    const a   = (i / 22) * Math.PI * 2 + t * 0.09 + Math.sin(t * 1.5 + i * 0.55) * 0.26
-    const len = size * (1.9 + (i % 4) * 0.38) * easeOut(formP)
-    const ex  = cx + Math.cos(a) * len
-    const ey  = cy + Math.sin(a) * len
-    const grd = ctx.createLinearGradient(cx, cy, ex, ey)
-    grd.addColorStop(0, `rgba(100, 20, 162, ${0.22 * gA})`)
-    grd.addColorStop(1, 'rgba(0,0,0,0)')
-    ctx.strokeStyle = grd
-    ctx.lineWidth   = 0.8 + (i % 3) * 0.6
-    ctx.beginPath()
-    ctx.moveTo(cx, cy)
-    ctx.lineTo(ex, ey)
-    ctx.stroke()
-  }
-  ctx.restore()
+  ctx.translate(sway, 0)
+  ctx.globalAlpha = gA
 
-  // ── Body blob ───────────────────────────────────────────────────────────
-  const bodyA = formP > 0.35 ? easeOut(Math.min(1, (formP - 0.35) / 0.45)) : 0
-  if (bodyA > 0.01) {
+  // ── Body silhouette ───────────────────────────────────────────────────────
+  ctx.beginPath()
+  ctx.moveTo(cx - torsoW * 0.30, torsoTop)
+  ctx.bezierCurveTo(cx - torsoW, torsoTop + creatureH * 0.02, cx - torsoW * 1.05, hipY - creatureH * 0.08, cx - hipW * 0.95, hipY)
+  ctx.bezierCurveTo(cx - hipW * 1.0, kneeY - creatureH * 0.03, cx - legW * 2.8, kneeY + creatureH * 0.07, cx - legW * 1.6, footY)
+  ctx.lineTo(cx + legW * 1.6, footY)
+  ctx.bezierCurveTo(cx + legW * 2.8, kneeY + creatureH * 0.07, cx + hipW * 1.0, kneeY - creatureH * 0.03, cx + hipW * 0.95, hipY)
+  ctx.bezierCurveTo(cx + torsoW * 1.05, hipY - creatureH * 0.08, cx + torsoW, torsoTop + creatureH * 0.02, cx + torsoW * 0.30, torsoTop)
+  ctx.closePath()
+
+  const bGrd = ctx.createLinearGradient(cx - torsoW, torsoTop, cx, footY)
+  bGrd.addColorStop(0,   'rgba(34, 21, 15, 0.97)')
+  bGrd.addColorStop(0.5, 'rgba(22, 13,  9, 0.97)')
+  bGrd.addColorStop(1,   'rgba(13,  8,  5, 0.97)')
+  ctx.fillStyle = bGrd
+  ctx.fill()
+
+  // ── Arms ──────────────────────────────────────────────────────────────────
+  const armTopY = torsoTop + creatureH * 0.025
+  const armEndY = hipY + creatureH * 0.195
+
+  for (const side of [-1, 1] as const) {
+    const sx   = side * torsoW * 0.85
+    const midX = side * torsoW * 1.45
+    const endX = side * torsoW * 1.58
+
     ctx.beginPath()
-    for (let i = 0; i <= 36; i++) {
-      const angle = (i / 36) * Math.PI * 2
-      const noise = Math.sin(angle * 3 + t * 2.2) * 0.10
-                  + Math.sin(angle * 7 + t * 1.5) * 0.06
-                  + Math.sin(angle * 11+ t * 0.9) * 0.03
-      const r = size * (1 + noise) * (1 - dissolveP * 0.45)
-      const x = cx + Math.cos(angle) * r
-      const y = cy + Math.sin(angle) * r
-      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y)
-    }
+    ctx.moveTo(cx + sx, armTopY)
+    ctx.bezierCurveTo(cx + midX, armTopY + creatureH * 0.11, cx + endX, armEndY - creatureH * 0.07, cx + endX, armEndY)
+    ctx.lineTo(cx + endX - side * armW * 2, armEndY)
+    ctx.bezierCurveTo(cx + endX - side * armW * 2, armEndY - creatureH * 0.07, cx + midX - side * armW, armTopY + creatureH * 0.11, cx + sx - side * armW, armTopY)
     ctx.closePath()
+    ctx.fillStyle = 'rgba(28, 17, 11, 0.97)'
+    ctx.fill()
 
-    const bGrd = ctx.createRadialGradient(cx, cy, 0, cx, cy, size * 1.3)
-    bGrd.addColorStop(0,    `rgba(92, 22, 138, ${0.96 * bodyA * gA})`)
-    bGrd.addColorStop(0.45, `rgba(46,  9,  70, ${0.90 * bodyA * gA})`)
-    bGrd.addColorStop(0.85, `rgba(18,  3,  28, ${0.80 * bodyA * gA})`)
-    bGrd.addColorStop(1,    `rgba( 5,  0,  10, ${0.60 * bodyA * gA})`)
-    ctx.fillStyle = bGrd
+    // Claws
+    for (let k = 0; k < 4; k++) {
+      const clawX = cx + endX + side * (k - 1.5) * armW * 0.9 - side * armW
+      ctx.beginPath()
+      ctx.moveTo(clawX - side * armW * 0.3, armEndY)
+      ctx.bezierCurveTo(clawX - side * armW * 0.4, armEndY + armW, clawX + side * armW * 0.05, armEndY + armW * 1.9, clawX + side * armW * 0.35, armEndY + armW * 1.6)
+      ctx.lineTo(clawX + side * armW * 0.5, armEndY)
+      ctx.closePath()
+      ctx.fillStyle = 'rgba(16, 10, 6, 0.97)'
+      ctx.fill()
+    }
+  }
+
+  // ── Neck ──────────────────────────────────────────────────────────────────
+  const neckW   = creatureH * 0.065
+  const neckTop = headCY + headR * 1.05
+  const neckBot = torsoTop + creatureH * 0.005
+
+  ctx.beginPath()
+  ctx.moveTo(cx - neckW, neckBot)
+  ctx.lineTo(cx - neckW * 0.75, neckTop)
+  ctx.lineTo(cx + neckW * 0.75, neckTop)
+  ctx.lineTo(cx + neckW, neckBot)
+  ctx.closePath()
+  ctx.fillStyle = 'rgba(30, 18, 12, 0.97)'
+  ctx.fill()
+
+  // ── Petal Mouth (the iconic Demogorgon feature) ───────────────────────────
+  const NUM         = 5
+  const openLen     = headR * 1.95
+  const closedLen   = headR * 0.16
+  const openW       = headR * 0.74
+  const closedW     = headR * 0.38
+  const petalLen    = lerp(closedLen, openLen, mouthP)
+  const petalW      = lerp(closedW, openW, mouthP)
+
+  // Draw in back-to-front order: bottom petals drawn first
+  const drawOrder = [2, 3, 4, 0, 1]
+
+  for (const i of drawOrder) {
+    const angle = (i / NUM) * Math.PI * 2 - Math.PI / 2
 
     ctx.save()
-    ctx.shadowColor = 'rgba(139,92,246,0.7)'
-    ctx.shadowBlur  = 30 * bodyA
+    ctx.translate(cx, headCY)
+    ctx.rotate(angle)
+
+    // Petal shape — pointed teardrop
+    ctx.beginPath()
+    ctx.moveTo(-petalW * 0.42, 0)
+    ctx.bezierCurveTo(-petalW, petalLen * 0.24, -petalW * 0.88, petalLen * 0.64, -petalW * 0.12, petalLen)
+    ctx.bezierCurveTo(-petalW * 0.04, petalLen + petalW * 0.13, petalW * 0.04, petalLen + petalW * 0.13, petalW * 0.12, petalLen)
+    ctx.bezierCurveTo(petalW * 0.88, petalLen * 0.64, petalW, petalLen * 0.24, petalW * 0.42, 0)
+    ctx.closePath()
+
+    const red = Math.round(lerp(20, 98, mouthP))
+    const pg  = ctx.createLinearGradient(0, 0, 0, petalLen)
+    pg.addColorStop(0,   `rgba(${42 + red}, 16, 10, 0.97)`)
+    pg.addColorStop(0.4, `rgba(${55 + red}, 20, 12, 0.95)`)
+    pg.addColorStop(1,   `rgba(${30 + red}, 10,  6, 0.92)`)
+    ctx.fillStyle = pg
     ctx.fill()
-    ctx.strokeStyle = `rgba(100,40,162, ${0.4 * bodyA * gA})`
-    ctx.lineWidth   = 2
-    ctx.stroke()
+
+    // Ridge down centre of petal
+    if (mouthP > 0.04) {
+      ctx.beginPath()
+      ctx.moveTo(0, petalW * 0.06)
+      ctx.lineTo(0, petalLen * 0.9)
+      ctx.strokeStyle = `rgba(10, 4, 2, ${0.4 + mouthP * 0.3})`
+      ctx.lineWidth   = Math.max(0.5, petalW * 0.12)
+      ctx.stroke()
+    }
+
+    // Teeth — appear once mouth is 25% open
+    if (mouthP > 0.25) {
+      const toothA = Math.min(1, (mouthP - 0.25) / 0.4)
+      for (let j = 1; j <= 4; j++) {
+        const tp = j / 5
+        const ty = tp * petalLen * 0.88
+        const tw = Math.sin(tp * Math.PI) * petalW * 0.58
+        const tl = petalW * 0.23 * (1 - tp * 0.15)
+        for (const s of [-1, 1] as const) {
+          ctx.beginPath()
+          ctx.moveTo(s * tw, ty)
+          ctx.lineTo(s * (tw + tl), ty - tl * 0.55)
+          ctx.lineTo(s * (tw + tl * 0.28), ty + tl * 0.65)
+          ctx.closePath()
+          ctx.fillStyle = `rgba(220, 206, 185, ${toothA * 0.88})`
+          ctx.fill()
+        }
+      }
+    }
+
     ctx.restore()
   }
 
-  // ── Eyes ────────────────────────────────────────────────────────────────
-  const eyeA = formP > 0.68 ? easeOut(Math.min(1, (formP - 0.68) / 0.25)) : 0
-  if (eyeA > 0.01) {
-    const pulse   = 1 + Math.sin(t * 5.2) * 0.13
-    const spacing = size * 0.44
+  // ── Inner mouth void ──────────────────────────────────────────────────────
+  {
+    const voidR = lerp(headR * 0.22, headR * 0.90, mouthP)
+    const vg    = ctx.createRadialGradient(cx, headCY, 0, cx, headCY, voidR)
+    vg.addColorStop(0,    `rgba(0, 0, 0, ${0.28 + mouthP * 0.68})`)
+    vg.addColorStop(0.25, `rgba(32, 2, 0, ${mouthP * 0.9})`)
+    vg.addColorStop(0.55, `rgba(72, 9, 3, ${mouthP * 0.72})`)
+    vg.addColorStop(1,    'rgba(0,0,0,0)')
+    ctx.fillStyle = vg
+    ctx.beginPath()
+    ctx.arc(cx, headCY, voidR, 0, Math.PI * 2)
+    ctx.fill()
+  }
 
-    for (const side of [-1, 1]) {
-      const ex = cx + side * spacing
-      const ey = cy - size * 0.07
-
-      // Blood halo
-      const halo = ctx.createRadialGradient(ex, ey, 0, ex, ey, size * 0.6)
-      halo.addColorStop(0,   `rgba(255, 35,  0, ${0.78 * eyeA * gA * (1 - dissolveP)})`)
-      halo.addColorStop(0.4, `rgba(180,  8,  0, ${0.36 * eyeA * gA * (1 - dissolveP)})`)
-      halo.addColorStop(1,   'rgba(0,0,0,0)')
-      ctx.fillStyle = halo
+  // ── Slime drips (after mouth is mostly open) ──────────────────────────────
+  if (mouthP > 0.65 && elapsed < FADE_AT) {
+    const slimeA = Math.min(1, (mouthP - 0.65) / 0.28)
+    for (let d = 0; d < 5; d++) {
+      const dX    = cx + (d - 2) * headR * 0.4
+      const dBase = headCY + openLen * mouthP * 0.44 + headR * 0.08
+      const dLen  = (Math.sin(elapsed * 0.75 + d * 1.3) * 0.5 + 0.5) * headR * 0.28
       ctx.beginPath()
-      ctx.arc(ex, ey, size * 0.6, 0, Math.PI * 2)
-      ctx.fill()
-
-      // Iris
-      ctx.save()
-      ctx.shadowColor = 'rgba(255,80,0,1)'
-      ctx.shadowBlur  = 22
-      ctx.fillStyle   = `rgba(255, 88, 8, ${eyeA * gA * (1 - dissolveP)})`
+      ctx.moveTo(dX, dBase)
+      ctx.lineTo(dX + Math.sin(elapsed + d) * 2.5, dBase + dLen)
+      ctx.strokeStyle = `rgba(88, 13, 5, ${slimeA * 0.52})`
+      ctx.lineWidth   = 1.5 + d % 2
+      ctx.stroke()
       ctx.beginPath()
-      ctx.ellipse(ex, ey, size * 0.19 * pulse, size * 0.13 * pulse, 0, 0, Math.PI * 2)
+      ctx.arc(dX + Math.sin(elapsed + d) * 2.5, dBase + dLen, 2.8, 0, Math.PI * 2)
+      ctx.fillStyle = `rgba(88, 13, 5, ${slimeA * 0.42})`
       ctx.fill()
-
-      // Slit pupil
-      ctx.fillStyle = `rgba(255, 215, 60, ${eyeA * gA})`
-      ctx.beginPath()
-      ctx.ellipse(ex, ey, size * 0.055, size * 0.11 * pulse, 0, 0, Math.PI * 2)
-      ctx.fill()
-      ctx.restore()
     }
   }
 
-  // ── Floating spore particles ─────────────────────────────────────────────
-  if (formP > 0.5 && dissolveP < 0.8) {
-    const sporeA = easeOut(Math.min(1, (formP - 0.5) / 0.3)) * (1 - dissolveP) * gA
-    for (let i = 0; i < 40; i++) {
-      const angle = (i / 40) * Math.PI * 2 + t * (0.15 + (i % 5) * 0.04)
-      const dist  = size * (1.2 + (i % 7) * 0.45 + Math.sin(t * 1.2 + i) * 0.3)
-      const px    = cx + Math.cos(angle) * dist
-      const py    = cy + Math.sin(angle) * dist
-      const r     = 1 + (i % 3) * 0.8
-      ctx.fillStyle = `rgba(${100 + (i % 60)}, ${10 + (i % 20)}, ${150 + (i % 50)}, ${sporeA * 0.5})`
+  // ── Dark spores orbiting creature ────────────────────────────────────────
+  if (bodyA > 0.35) {
+    const sporeA = easeOut(Math.min(1, (bodyA - 0.35) / 0.5)) * (1 - fadeP)
+    for (let i = 0; i < 30; i++) {
+      const a    = (i / 30) * Math.PI * 2 + elapsed * (0.09 + (i % 5) * 0.025)
+      const dist = creatureH * (0.11 + (i % 8) * 0.028 + Math.sin(elapsed * 0.65 + i) * 0.018)
+      const px   = cx + Math.cos(a) * dist * 1.85
+      const py   = headCY + creatureH * 0.44 + Math.sin(a) * dist * 0.88
+      ctx.fillStyle = `hsla(5, 65%, ${14 + (i % 14)}%, ${sporeA * 0.42})`
       ctx.beginPath()
-      ctx.arc(px, py, r, 0, Math.PI * 2)
+      ctx.arc(px, py, 1.1 + (i % 4) * 0.4, 0, Math.PI * 2)
       ctx.fill()
     }
   }
+
+  ctx.restore()
 }
 
+// ── Component ─────────────────────────────────────────────────────────────────
 export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const rafRef    = useRef(0)
   const startRef  = useRef<number | null>(null)
   const doneRef   = useRef(false)
+  const fadingRef = useRef(false)
+  const [fading, setFading] = useState(false)
 
   useEffect(() => {
     const canvas = canvasRef.current!
@@ -188,13 +262,18 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
     const frame = (ts: number) => {
       if (!startRef.current) startRef.current = ts
       const elapsed = (ts - startRef.current) / 1000
+
+      if (elapsed >= 2.45 && !fadingRef.current) {
+        fadingRef.current = true
+        setFading(true)
+      }
+
       const W = canvas.width
       const H = canvas.height
-
       ctx.clearRect(0, 0, W, H)
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, W, H)
-      drawCreature(ctx, W, H, elapsed)
+      drawScene(ctx, W, H, elapsed)
 
       if (elapsed < 3.0) {
         rafRef.current = requestAnimationFrame(frame)
@@ -212,17 +291,15 @@ export function SplashScreen({ onComplete }: { onComplete: () => void }) {
   }, [onComplete])
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 200,
-        background: '#000',
-        display: 'block',
-      }}
-    />
+    <motion.div
+      style={{ position: 'fixed', inset: 0, zIndex: 200, background: '#000' }}
+      animate={{ opacity: fading ? 0 : 1 }}
+      transition={{ duration: 0.55, ease: 'easeInOut' }}
+    >
+      <canvas
+        ref={canvasRef}
+        style={{ width: '100%', height: '100%', display: 'block' }}
+      />
+    </motion.div>
   )
 }

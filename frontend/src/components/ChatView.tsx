@@ -4,6 +4,103 @@ import ReactMarkdown from 'react-markdown'
 import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../hooks/useConversations'
 
+// ── Floating particles ────────────────────────────────────────────────────────
+const PARTICLES = Array.from({ length: 28 }, (_, i) => {
+  const r = (seed: number) => { const x = Math.sin(seed) * 43758.5453; return x - Math.floor(x) }
+  return {
+    x:     r(i * 13.1),
+    y:     r(i * 7.7),
+    vx:    (r(i * 3.3) - 0.5) * 0.000055,
+    vy:    (r(i * 17.9) - 0.5) * 0.000038 - 0.000018,
+    size:  1.0 + r(i * 5.5) * 2.2,
+    phase: i * 1.618,
+    shape: i % 3,
+    alpha: 0.04 + r(i * 11.3) * 0.055,
+  }
+})
+
+function FloatingParticles() {
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const rafRef    = useRef(0)
+  const posRef    = useRef(PARTICLES.map(p => ({ x: p.x, y: p.y })))
+
+  useEffect(() => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')!
+
+    const resize = () => {
+      canvas.width  = canvas.offsetWidth
+      canvas.height = canvas.offsetHeight
+    }
+    resize()
+    const ro = new ResizeObserver(resize)
+    ro.observe(canvas)
+
+    let start: number | null = null
+    const frame = (ts: number) => {
+      if (!start) start = ts
+      const t  = (ts - start) / 1000
+      const W  = canvas.width
+      const H  = canvas.height
+      ctx.clearRect(0, 0, W, H)
+
+      PARTICLES.forEach((p, i) => {
+        const pos = posRef.current[i]
+        pos.x += p.vx
+        pos.y += p.vy
+        if (pos.x < -0.05) pos.x = 1.05
+        if (pos.x >  1.05) pos.x = -0.05
+        if (pos.y < -0.05) pos.y = 1.05
+        if (pos.y >  1.05) pos.y = -0.05
+
+        const x  = pos.x * W
+        const y  = pos.y * H
+        const a  = p.alpha * (0.6 + Math.sin(t * 0.55 + p.phase) * 0.4)
+        const sz = p.size  * (0.85 + Math.sin(t * 0.85 + p.phase * 1.3) * 0.15)
+
+        ctx.save()
+        ctx.globalAlpha = a
+
+        if (p.shape === 0) {
+          // dot
+          ctx.fillStyle = '#ffffff'
+          ctx.beginPath()
+          ctx.arc(x, y, sz, 0, Math.PI * 2)
+          ctx.fill()
+        } else if (p.shape === 1) {
+          // tiny square
+          ctx.fillStyle = '#ffffff'
+          ctx.fillRect(x - sz, y - sz, sz * 2, sz * 2)
+        } else {
+          // dash
+          ctx.globalAlpha = a * 0.45
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth   = 0.6
+          ctx.beginPath()
+          ctx.moveTo(x - sz * 5, y)
+          ctx.lineTo(x + sz * 5, y)
+          ctx.stroke()
+        }
+
+        ctx.restore()
+      })
+
+      rafRef.current = requestAnimationFrame(frame)
+    }
+
+    rafRef.current = requestAnimationFrame(frame)
+    return () => { cancelAnimationFrame(rafRef.current); ro.disconnect() }
+  }, [])
+
+  return (
+    <canvas
+      ref={canvasRef}
+      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0 }}
+    />
+  )
+}
+
 const PIPELINE_STEPS = ['planning', 'retrieving', 'executing', 'synthesizing', 'evaluating', 'done'] as const
 const STEP_ICON: Record<string, React.ReactNode> = {
   planning:    <Zap size={10} />,
@@ -441,7 +538,8 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   return (
     <div className="flex flex-col h-full" style={{ background: '#030305' }}>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 space-y-8">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 space-y-8 relative">
+        <FloatingParticles />
         {messages.length === 0
           ? <EmptyState onExample={q => { setInput(q); inputRef.current?.focus() }} />
           : messages.map(msg =>

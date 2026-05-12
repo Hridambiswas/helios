@@ -29,9 +29,9 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Bebas Neue', 'Impact', 'sans-serif'],
-        body:    ['Outfit', 'system-ui', 'sans-serif'],
-        mono:    ['Space Mono', 'Courier New', 'monospace'],
+        display: ['Orbitron', 'sans-serif'],
+        body:    ['DM Sans', 'system-ui', 'sans-serif'],
+        mono:    ['IBM Plex Mono', 'Courier New', 'monospace'],
       },
       animation: {
         'pulse-violet': 'pulse-violet 2s ease-in-out infinite',
