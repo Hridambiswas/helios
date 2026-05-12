@@ -85,10 +85,10 @@ beat:
 	celery -A workers.celery_app beat --loglevel=info
 
 frontend-dev:
-	cd frontend && npm run dev
+	cd ../frontend && npm run dev
 
 frontend-build:
-	cd frontend && npm run build
+	cd ../frontend && npm run build
 
 ## ── SSL setup (EC2 only) ─────────────────────────────────────────────────────
 

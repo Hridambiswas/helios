@@ -63,15 +63,15 @@ htmlcov/
 # Docker
 
 # K8s secrets (directory kept for reference, secrets gitignored)
-deploy/k8s/secrets/
+backend/deploy/k8s/secrets/
 
 # MinIO / object store
 uploads/
 media/
 
 # Eval output (keep directory, ignore generated reports)
-eval/reports/*.json
-eval/reports/*.csv
+backend/eval/reports/*.json
+backend/eval/reports/*.csv
 
 # Frontend build artifacts
 frontend/node_modules/
