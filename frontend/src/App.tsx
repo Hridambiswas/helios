@@ -14,6 +14,7 @@ import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
 import { FireDivider } from './components/DragonDecor'
+import { PurpleExplosion } from './components/PurpleExplosion'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useConversations } from './hooks/useConversations'
@@ -225,14 +226,15 @@ export default function App() {
             onLogout={logout}
           />
 
+          {/* Purple explosion — fixed canvas, scroll-driven */}
+          <PurpleExplosion />
+
           <main className="pt-12">
             <Hero
               onQuerySubmit={handleQuerySubmit}
               onAuthClick={() => setShowAuth(true)}
               isLoggedIn={!!user}
             />
-
-            <FireDivider />
 
             {/* Inline query interface — submitting opens chat */}
             <div id="query-section">
