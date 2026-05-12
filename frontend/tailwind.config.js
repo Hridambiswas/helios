@@ -4,33 +4,28 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Gold replaces crimson as the primary dragon accent
         crimson: {
-          DEFAULT: '#C9A227',
-          dark:    '#8B6914',
-          light:   '#FFD700',
-          glow:    'rgba(201,162,39,0.15)',
+          DEFAULT: '#8b5cf6',
+          dark:    '#7c3aed',
+          light:   '#a78bfa',
+          glow:    'rgba(139,92,246,0.15)',
         },
-        gold: {
-          DEFAULT: '#C9A227',
-          light:   '#FFD700',
-          dark:    '#8B6914',
-          glow:    'rgba(201,162,39,0.15)',
+        violet: {
+          DEFAULT: '#8b5cf6',
+          light:   '#a78bfa',
+          dark:    '#7c3aed',
+          glow:    'rgba(139,92,246,0.15)',
         },
-        fire: {
-          DEFAULT: '#FF6B00',
-          light:   '#FF9500',
-          dark:    '#CC4400',
-          glow:    'rgba(255,107,0,0.2)',
-        },
-        dragon: {
-          scale:   '#1A0E00',
-          spine:   '#3D2800',
+        fuchsia: {
+          DEFAULT: '#c026d3',
+          light:   '#d946ef',
+          dark:    '#a21caf',
+          glow:    'rgba(192,38,211,0.2)',
         },
         ink: {
-          DEFAULT: '#050505',
-          light:   '#0D0D0D',
-          card:    'rgba(255,255,255,0.02)',
+          DEFAULT: '#000000',
+          light:   '#0a0a0f',
+          card:    'rgba(139,92,246,0.03)',
         },
       },
       fontFamily: {
@@ -39,22 +34,17 @@ export default {
         mono:    ['JetBrains Mono', 'Courier New', 'monospace'],
       },
       animation: {
-        'pulse-gold':  'pulse-gold 2s ease-in-out infinite',
-        'fire-flicker':'fire-flicker 0.15s ease-in-out infinite',
-        'flicker':     'flicker 3s linear infinite',
-        'slide-up':    'slide-up 0.6s ease-out forwards',
-        'fade-in':     'fade-in 0.8s ease-out forwards',
-        'spin-slow':   'spin 3s linear infinite',
-        'float':       'float 4s ease-in-out infinite',
+        'pulse-violet': 'pulse-violet 2s ease-in-out infinite',
+        'flicker':      'flicker 3s linear infinite',
+        'slide-up':     'slide-up 0.6s ease-out forwards',
+        'fade-in':      'fade-in 0.8s ease-out forwards',
+        'float':        'float 4s ease-in-out infinite',
+        'spin-slow':    'spin 8s linear infinite',
       },
       keyframes: {
-        'pulse-gold': {
-          '0%, 100%': { boxShadow: '0 0 0px rgba(201,162,39,0)' },
-          '50%':      { boxShadow: '0 0 30px rgba(201,162,39,0.5)' },
-        },
-        'fire-flicker': {
-          '0%, 100%': { opacity: '1', transform: 'scaleY(1)' },
-          '50%':      { opacity: '0.85', transform: 'scaleY(0.97)' },
+        'pulse-violet': {
+          '0%, 100%': { boxShadow: '0 0 0px rgba(139,92,246,0)' },
+          '50%':      { boxShadow: '0 0 40px rgba(139,92,246,0.5)' },
         },
         'flicker': {
           '0%, 100%': { opacity: '1' },
@@ -74,7 +64,7 @@ export default {
         },
         'float': {
           '0%, 100%': { transform: 'translateY(0px)' },
-          '50%':      { transform: 'translateY(-8px)' },
+          '50%':      { transform: 'translateY(-10px)' },
         },
       },
     },
