@@ -2,7 +2,7 @@ import { useRef, useMemo } from 'react'
 import { Canvas, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-// ─── Shaders ────────────────────────────────────────────────────────────────
+// ─── Shaders ─────────────────────────────────────────────────────────────────
 
 const VERT = /* glsl */`
 precision highp float;
@@ -23,10 +23,10 @@ uniform float uTime;
 uniform vec2  uMouse;
 uniform vec2  uResolution;
 
-// ── Simplex 2D (Ian McEwan) ──────────────────────────────────────────────────
-vec3 _m289v3(vec3 x){return x-floor(x*(1./289.))*289.;}
-vec2 _m289v2(vec2 x){return x-floor(x*(1./289.))*289.;}
-vec3 _perm(vec3 x){return _m289v3(((x*34.)+1.)*x);}
+// ── Simplex noise 2D (Ian McEwan) ────────────────────────────────────────────
+vec3 smod289(vec3 x){ return x - floor(x*(1./289.))*289.; }
+vec2 smod289v2(vec2 x){ return x - floor(x*(1./289.))*289.; }
+vec3 sperm(vec3 x){ return smod289(((x*34.)+1.)*x); }
 
 float snoise(vec2 v){
   const vec4 C=vec4(.211324865405187,.366025403784439,-.577350269189626,.024390243902439);
@@ -34,15 +34,17 @@ float snoise(vec2 v){
   vec2 x0=v-i+dot(i,C.xx);
   vec2 i1=(x0.x>x0.y)?vec2(1.,0.):vec2(0.,1.);
   vec4 x12=x0.xyxy+C.xxzz; x12.xy-=i1;
-  i=_m289v2(i);
-  vec3 p=_perm(_perm(i.y+vec3(0.,i1.y,1.))+i.x+vec3(0.,i1.x,1.));
+  i=smod289v2(i);
+  vec3 p=sperm(sperm(i.y+vec3(0.,i1.y,1.))+i.x+vec3(0.,i1.x,1.));
   vec3 m=max(.5-vec3(dot(x0,x0),dot(x12.xy,x12.xy),dot(x12.zw,x12.zw)),0.);
   m=m*m; m=m*m;
   vec3 x=2.*fract(p*C.www)-1.;
   vec3 h=abs(x)-.5;
   vec3 a0=x-floor(x+.5);
   m*=1.79284291400159-.85373472095314*(a0*a0+h*h);
-  vec3 g; g.x=a0.x*x0.x+h.x*x0.y; g.yz=a0.yz*x12.xz+h.yz*x12.yw;
+  vec3 g;
+  g.x  = a0.x*x0.x  + h.x*x0.y;
+  g.yz = a0.yz*x12.xz + h.yz*x12.yw;
   return 130.*dot(m,g);
 }
 
@@ -58,57 +60,67 @@ float fbm(vec2 p){
 void main(){
   vec2 uv = vUv;
   float ar = uResolution.x / uResolution.y;
-  vec2 p  = (uv - .5) * vec2(ar, 1.);
-  float t = uTime * .09;
+  vec2 p   = (uv - .5) * vec2(ar, 1.);
+  float t  = uTime * .10;
 
   // Mouse ripple
   vec2 mouse = (uMouse - .5) * vec2(ar, 1.);
-  vec2 tm    = p - mouse;
-  float md   = length(tm);
-  float ripple  = .18 * exp(-md * 5.5) * sin(md * 14. - t * 10.);
-  vec2  rDir = normalize(tm + .001) * ripple;
+  float md   = length(p - mouse);
+  float ripple  = .22 * exp(-md * 4.5) * sin(md * 12. - t * 9.);
+  vec2 rDir  = normalize(p - mouse + .001) * ripple;
 
   // 2-pass domain warp
-  vec2 q = vec2(fbm(p + t*vec2(.8,-.4)), fbm(p + t*vec2(-.5,.7)));
-  vec2 r = vec2(
-    fbm(p + 1.9*q + t*vec2(1.,-.5) + rDir),
-    fbm(p + 1.9*q + t*vec2(-.6,.9) + rDir)
-  );
+  vec2 q = vec2(fbm(p + t*vec2(.8,-.4)),
+                fbm(p + t*vec2(-.5,.7)));
+  vec2 r = vec2(fbm(p + 1.9*q + t*vec2(1.,-.5) + rDir),
+                fbm(p + 1.9*q + t*vec2(-.6,.9) + rDir));
   float n = fbm(p + 2.4*r + rDir);
 
   // Surface normals → specular
   float eps = .003;
   float dnx = fbm(p+vec2(eps,0.)+2.4*r) - fbm(p-vec2(eps,0.)+2.4*r);
   float dny = fbm(p+vec2(0.,eps)+2.4*r) - fbm(p-vec2(0.,eps)+2.4*r);
-  vec3 norm = normalize(vec3(dnx*5., dny*5., eps*16.));
+  vec3 norm  = normalize(vec3(dnx*5., dny*5., eps*14.));
 
-  vec3 l1 = normalize(vec3(-.6,.8,1.2));
-  vec3 l2 = normalize(vec3(.5,-.4,.8));
-  float s1 = pow(max(dot(norm,l1),0.), 40.) * .28;
-  float s2 = pow(max(dot(norm,l2),0.), 28.) * .14;
+  vec3 l1 = normalize(vec3(-.6, .8, 1.0));
+  vec3 l2 = normalize(vec3( .5,-.3, .7));
+  float s1 = pow(max(dot(norm,l1),0.), 36.) * .35;
+  float s2 = pow(max(dot(norm,l2),0.), 22.) * .20;
 
-  // Oil-slick iridescence
-  float ii   = snoise(p*5. + t*2.5) * .5 + .5;
-  vec3  irid = .5 + .5*cos(vec3(0.,2.094,4.189) + ii*5. + 1.5);
-  irid *= vec3(.22,.32,.85);
+  // Oil-slick iridescence — clearly visible
+  float ii   = snoise(p*4.5 + t*2.2) * .5 + .5;
+  vec3  irid = .5 + .5*cos(vec3(0., 2.094, 4.189) + ii*4.8 + 1.8);
+  irid *= vec3(.35, .45, 1.0); // blue-violet tint
 
-  // Depth micro-detail
-  float depth = fbm(p*.5 + t*.06) * .5 + .5;
+  // Large-scale undulation (visible surface topology)
+  float bigN = fbm(p*.45 + t*.07) * .5 + .5;
+  float depth = bigN;
 
-  // Compose
+  // ── Compose (dark liquid with clear surface detail) ──────────────────────
   vec3 col = vec3(0.);
-  col += irid * .10 * (n*.4+.6);
-  col += vec3(s1+s2) * vec3(.65,.72,1.) * .75;
-  col += vec3(.025,.012,.055) * depth * .6;
 
-  // Vignette
-  col *= 1. - dot(uv-.5, uv-.5) * 1.4;
+  // Base dark purple tint
+  col += vec3(.025, .010, .060) * depth;
+
+  // Iridescence — 50% strength, clearly visible
+  col += irid * .50 * (n*.4 + .6);
+
+  // Specular highlights — 2× brighter
+  col += vec3(s1 + s2) * vec3(.65,.75,1.) * 2.0;
+
+  // Micro gloss — adds 'wet' look
+  float gloss = snoise(p*8. + t*1.4) * .5 + .5;
+  col += vec3(.01,.005,.025) * gloss * bigN;
+
+  // Vignette (slightly lighter at center to show the fluid mass)
+  float vig = 1. - dot(uv-.5, uv-.5) * 1.6;
+  col *= max(vig, 0.);
 
   gl_FragColor = vec4(col, 1.);
 }
 `
 
-// ─── R3F mesh ────────────────────────────────────────────────────────────────
+// ─── R3F mesh ─────────────────────────────────────────────────────────────────
 
 function FluidMesh({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: number; y: number }> }) {
   const uniforms = useMemo(() => ({
@@ -137,7 +149,7 @@ function FluidMesh({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: number;
   )
 }
 
-// ─── Public export ───────────────────────────────────────────────────────────
+// ─── Export ───────────────────────────────────────────────────────────────────
 
 export function FluidBackground({ mouseRef }: { mouseRef: React.MutableRefObject<{ x: number; y: number }> }) {
   return (

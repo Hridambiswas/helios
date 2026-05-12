@@ -119,9 +119,8 @@ export default function App() {
   } = useConversations(!!user)
 
   // Skip overlay if already seen in this browser session
-  const [overlayDone, setOverlayDone] = useState(
-    () => sessionStorage.getItem('venom_intro') === '1'
-  )
+  // Always show overlay on hard refresh; skip only on in-session navigation
+  const [overlayDone, setOverlayDone] = useState(false)
   const [chatMode, setChatMode]   = useState(false)
   const [showAuth, setShowAuth]   = useState(false)
 
@@ -177,10 +176,7 @@ export default function App() {
         {!overlayDone && (
           <VenomOverlay
             key="overlay"
-            onComplete={() => {
-              sessionStorage.setItem('venom_intro', '1')
-              setOverlayDone(true)
-            }}
+            onComplete={() => setOverlayDone(true)}
           />
         )}
 

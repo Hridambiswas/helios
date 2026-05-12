@@ -2,46 +2,16 @@ import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { FluidBackground } from './FluidBackground'
 
-// 24-point clip-path keyframes — same point count in every frame so Framer
-// Motion can interpolate each coordinate pair individually.
-const P_FULL = `polygon(
-  0% 0%,   17% 0%,  33% 0%,  50% 0%,  67% 0%,  83% 0%,
-  100% 0%, 100% 17%,100% 33%,100% 50%,100% 67%,100% 83%,
-  100% 100%,83% 100%,67% 100%,50% 100%,33% 100%,17% 100%,
-  0% 100%, 0% 83%,  0% 67%,  0% 50%,  0% 33%,  0% 17%
-)`
-
-// Slightly past viewport – the "aggressive expand"
-const P_EXPAND = `polygon(
-  -7% -7%,  17% -7%,  33% -7%,  50% -7%,  67% -7%,  83% -7%,
-  107% -7%, 107% 17%, 107% 33%, 107% 50%, 107% 67%, 107% 83%,
-  107% 107%, 83% 107%, 67% 107%, 50% 107%, 33% 107%, 17% 107%,
-  -7% 107%,-7% 83%,  -7% 67%,  -7% 50%,  -7% 33%,  -7% 17%
-)`
-
-// Same 24 points but mid-edge points bitten inward — jagged dissolution
-const P_JAGGED = `polygon(
-  0% 0%,   17% 17%, 33% 5%,  50% 14%, 67% 6%,  83% 18%,
-  100% 0%, 85% 17%, 95% 33%, 87% 50%, 96% 67%, 86% 83%,
-  100% 100%, 83% 85%, 67% 95%, 50% 88%, 33% 95%, 17% 86%,
-  0% 100%, 13% 83%, 5% 67%,  14% 50%, 5% 33%,  15% 17%
-)`
-
-// All 24 points collapsed to center
-const P_NONE = `polygon(
-  50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%,
-  50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%,
-  50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%,
-  50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%, 50% 50%
-)`
-
 interface Props {
   onComplete: () => void
 }
 
 export function VenomOverlay({ onComplete }: Props) {
-  const [dissolving, setDissolving] = useState(false)
-  const mouseRef = useRef({ x: 0.5, y: 0.5 })
+  const [phase, setPhase] = useState<'idle' | 'dissolving'>('idle')
+  const mouseRef    = useRef({ x: 0.5, y: 0.5 })
+  // Keep a ref to onComplete so the timer never re-registers if App re-renders
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete }, [onComplete])
 
   useEffect(() => {
     const move = (e: MouseEvent) => {
@@ -52,59 +22,100 @@ export function VenomOverlay({ onComplete }: Props) {
     }
     window.addEventListener('mousemove', move, { passive: true })
 
-    // 3 s idle → start dissolve; 4.4 s total → hand off to next page
-    const t1 = setTimeout(() => setDissolving(true), 3000)
-    const t2 = setTimeout(() => onComplete(), 4400)
+    // 2.5 s display → dissolve; 3.4 s total → hand off
+    const t1 = setTimeout(() => setPhase('dissolving'), 2500)
+    const t2 = setTimeout(() => onCompleteRef.current(), 3400)
 
     return () => {
       window.removeEventListener('mousemove', move)
       clearTimeout(t1)
       clearTimeout(t2)
     }
-  }, [onComplete])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []) // intentionally empty — timers fire once on mount
+
+  const dissolving = phase === 'dissolving'
 
   return (
     <motion.div
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 100,
-        background: '#000',
-        clipPath: P_FULL,
+      style={{ position: 'fixed', inset: 0, zIndex: 100, overflow: 'hidden' }}
+      // The venom mass "swallows" the screen then retracts — circle collapse
+      animate={dissolving ? {
+        clipPath: [
+          'circle(150% at 50% 50%)',
+          'circle(162% at 50% 50%)', // aggressive expand
+          'circle(0%   at 50% 50%)', // collapse to nothing
+        ],
+        transition: {
+          duration: 0.9,
+          times: [0, 0.14, 1.0],
+          ease: [0.76, 0, 0.24, 1],
+        },
+      } : {
+        clipPath: 'circle(150% at 50% 50%)',
       }}
-      animate={
-        dissolving
-          ? { clipPath: [P_FULL, P_EXPAND, P_JAGGED, P_NONE] }
-          : { clipPath: P_FULL }
-      }
-      transition={
-        dissolving
-          ? { duration: 1.4, times: [0, 0.12, 0.52, 1.0], ease: 'easeInOut' }
-          : { duration: 0 }
-      }
     >
-      <FluidBackground mouseRef={mouseRef} />
+      {/* WebGL fluid surface */}
+      <div style={{ position: 'absolute', inset: 0, background: '#000' }}>
+        <FluidBackground mouseRef={mouseRef} />
+      </div>
 
-      {/* Eyebrow text */}
+      {/* Centered branding */}
       <div style={{
         position: 'absolute', inset: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        pointerEvents: 'none',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: 20, pointerEvents: 'none',
       }}>
-        <motion.span
-          initial={{ opacity: 0 }}
-          animate={{ opacity: dissolving ? 0 : 0.18 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
+        <motion.h1
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: dissolving ? 0 : 1, y: dissolving ? -8 : 0 }}
+          transition={{ duration: dissolving ? 0.3 : 0.9, delay: dissolving ? 0 : 0.5 }}
           style={{
-            fontFamily: '"IBM Plex Mono", monospace',
-            fontSize: 10,
-            letterSpacing: '0.5em',
-            textTransform: 'uppercase',
+            fontFamily: '"Inter Tight", "Montserrat", sans-serif',
+            fontWeight: 900,
+            fontSize: 'clamp(56px, 12vw, 140px)',
+            letterSpacing: '-0.04em',
             color: '#fff',
+            lineHeight: 1,
+            userSelect: 'none',
+            // Subtle glow so it reads against the dark fluid
+            textShadow: '0 0 60px rgba(255,255,255,0.25), 0 0 120px rgba(255,255,255,0.08)',
           }}
         >
           HELIOS
-        </motion.span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }}
+          animate={{ opacity: dissolving ? 0 : 0.45 }}
+          transition={{ duration: 0.8, delay: 0.9 }}
+          style={{
+            fontFamily: '"IBM Plex Mono", monospace',
+            fontSize: 10, letterSpacing: '0.45em',
+            textTransform: 'uppercase', color: '#fff',
+          }}
+        >
+          Initializing
+        </motion.p>
+
+        {/* Thin progress line */}
+        <motion.div
+          initial={{ scaleX: 0 }}
+          animate={{ scaleX: dissolving ? 1 : 1 }}
+          style={{
+            width: 80, height: 1,
+            background: 'rgba(255,255,255,0.25)',
+            transformOrigin: 'left',
+          }}
+        >
+          <motion.div
+            initial={{ scaleX: 0 }}
+            animate={{ scaleX: 1 }}
+            transition={{ duration: 2.5, ease: 'easeInOut' }}
+            style={{ width: '100%', height: '100%', background: '#fff', transformOrigin: 'left' }}
+          />
+        </motion.div>
       </div>
     </motion.div>
   )
