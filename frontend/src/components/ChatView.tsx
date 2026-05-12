@@ -1,22 +1,22 @@
 import { useState, useRef, useEffect } from 'react'
-import { Send, Loader, Copy, Check, Zap, Search, Code, Shield, CheckCircle, XCircle, ChevronRight, Globe } from 'lucide-react'
+import { Send, Loader, Copy, Check, Zap, Search, Code, Shield, CheckCircle, XCircle, ChevronRight, Globe, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../hooks/useConversations'
 
 const PIPELINE_STEPS = ['planning', 'retrieving', 'executing', 'synthesizing', 'evaluating', 'done'] as const
 const STEP_ICON: Record<string, React.ReactNode> = {
-  planning:    <Zap size={11} />,
-  retrieving:  <Search size={11} />,
-  executing:   <Code size={11} />,
-  synthesizing:<Zap size={11} />,
-  evaluating:  <Shield size={11} />,
-  done:        <CheckCircle size={11} />,
-  error:       <XCircle size={11} />,
+  planning:    <Zap size={10} />,
+  retrieving:  <Search size={10} />,
+  executing:   <Code size={10} />,
+  synthesizing:<Zap size={10} />,
+  evaluating:  <Shield size={10} />,
+  done:        <CheckCircle size={10} />,
+  error:       <XCircle size={10} />,
 }
 const STEP_LABEL: Record<string, string> = {
-  planning: 'Planning', retrieving: 'Retrieving', executing: 'Executing',
-  synthesizing: 'Writing', evaluating: 'Evaluating', done: 'Done', error: 'Error',
+  planning: 'Planning', retrieving: 'Retrieve', executing: 'Execute',
+  synthesizing: 'Writing', evaluating: 'Evaluate', done: 'Done', error: 'Error',
 }
 
 function CopyBtn({ text }: { text: string }) {
@@ -24,9 +24,14 @@ function CopyBtn({ text }: { text: string }) {
   return (
     <button
       onClick={() => { navigator.clipboard.writeText(text); setCopied(true); setTimeout(() => setCopied(false), 2000) }}
-      className="flex items-center gap-1 font-mono text-[10px] text-[#555] hover:text-crimson transition-colors"
+      className="flex items-center gap-1.5 font-mono text-[9px] transition-colors px-2 py-1 border"
+      style={{
+        borderColor: 'rgba(255,255,255,0.06)',
+        color: copied ? '#86efac' : 'rgba(255,255,255,0.25)',
+        background: copied ? 'rgba(134,239,172,0.06)' : 'transparent',
+      }}
     >
-      {copied ? <Check size={11} className="text-green-400" /> : <Copy size={11} />}
+      {copied ? <Check size={10} /> : <Copy size={10} />}
       {copied ? 'Copied' : 'Copy'}
     </button>
   )
@@ -35,18 +40,22 @@ function CopyBtn({ text }: { text: string }) {
 function PipelineIndicator({ step }: { step: string }) {
   const idx = PIPELINE_STEPS.indexOf(step as typeof PIPELINE_STEPS[number])
   return (
-    <div className="flex items-center gap-1.5 mt-2">
+    <div className="flex items-center gap-1 mb-3">
       {PIPELINE_STEPS.filter(s => s !== 'done').map((s, i) => {
         const active = i === idx
-        const done = i < idx
+        const done   = i < idx
         return (
-          <div key={s} className={`flex items-center gap-1 font-mono text-[9px] px-1.5 py-0.5 border transition-colors ${
-            active ? 'border-crimson/50 text-crimson bg-crimson/10' :
-            done   ? 'border-green-900/40 text-green-500/60 bg-green-900/10' :
-                     'border-white/5 text-[#333]'
-          }`}>
+          <div
+            key={s}
+            className={`flex items-center gap-1 font-mono text-[9px] px-2 py-1 transition-all`}
+            style={{
+              border: `1px solid ${active ? 'rgba(139,92,246,0.5)' : done ? 'rgba(134,239,172,0.2)' : 'rgba(255,255,255,0.05)'}`,
+              color:  active ? '#a78bfa' : done ? 'rgba(134,239,172,0.55)' : 'rgba(255,255,255,0.15)',
+              background: active ? 'rgba(139,92,246,0.08)' : done ? 'rgba(134,239,172,0.04)' : 'transparent',
+            }}
+          >
             {active ? <Loader size={9} className="animate-spin" /> : STEP_ICON[s]}
-            <span className="step-label hidden sm:inline">{STEP_LABEL[s]}</span>
+            <span className="hidden sm:inline">{STEP_LABEL[s]}</span>
           </div>
         )
       })}
@@ -58,46 +67,88 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
   const result = msg.result
 
   return (
-    <div className="flex gap-3 max-w-3xl">
-      {/* Avatar */}
-      <div className="shrink-0 w-7 h-7 bg-crimson/15 border border-crimson/30 flex items-center justify-center text-crimson font-mono text-[10px] mt-1">
-        H
+    <div className="flex gap-4 max-w-3xl">
+      {/* Left accent line */}
+      <div className="shrink-0 flex flex-col items-center gap-1 pt-0.5">
+        <div
+          className="w-5 h-5 flex items-center justify-center font-mono text-[9px] shrink-0"
+          style={{ background: 'rgba(139,92,246,0.12)', border: '1px solid rgba(139,92,246,0.25)', color: '#a78bfa' }}
+        >
+          H
+        </div>
+        {(msg.content || isStreaming) && (
+          <div className="w-px flex-1" style={{ background: 'rgba(139,92,246,0.1)', minHeight: 20 }} />
+        )}
       </div>
 
-      <div className="flex-1 min-w-0">
-        {/* Streaming pipeline indicator */}
+      <div className="flex-1 min-w-0 pb-4">
+        {/* Pipeline steps */}
         {isStreaming && msg.step && msg.step !== 'done' && (
-          <>
-            <PipelineIndicator step={msg.step} />
-            {msg.step === 'planning' && msg.content === '' && (
-              <p className="font-mono text-[9px] text-crimson/60 mt-1 animate-pulse">Improving answer…</p>
-            )}
-          </>
+          <PipelineIndicator step={msg.step} />
         )}
 
         {/* Error */}
         {msg.error && (
-          <div className="mt-2 px-3 py-2 border border-crimson/40 bg-crimson/5 text-crimson font-mono text-xs">
+          <div
+            className="px-4 py-3 font-mono text-xs"
+            style={{ border: '1px solid rgba(248,113,113,0.3)', background: 'rgba(248,113,113,0.05)', color: '#f87171' }}
+          >
             {msg.error}
           </div>
         )}
 
-        {/* Answer */}
+        {/* Answer content */}
         {msg.content && (
-          <div className="mt-2 text-white/90 text-sm leading-relaxed">
+          <div
+            className="text-sm leading-[1.8]"
+            style={{ color: 'rgba(255,255,255,0.85)' }}
+          >
             <ReactMarkdown
               components={{
-                a: ({ href, children }) => <a href={href} target="_blank" rel="noopener noreferrer" className="text-crimson hover:underline">{children}</a>,
-                code: ({ children }) => <code className="bg-white/10 px-1 py-0.5 rounded text-xs font-mono text-crimson/90">{children}</code>,
-                pre: ({ children }) => <pre className="bg-white/5 border border-white/10 p-3 rounded text-xs overflow-x-auto my-3">{children}</pre>,
-                strong: ({ children }) => <strong className="text-white font-semibold">{children}</strong>,
-                ul: ({ children }) => <ul className="list-disc list-inside space-y-1 my-2">{children}</ul>,
-                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1 my-2">{children}</ol>,
-                li: ({ children }) => <li className="text-white/80">{children}</li>,
-                h1: ({ children }) => <h1 className="text-white text-lg font-semibold mt-4 mb-2">{children}</h1>,
-                h2: ({ children }) => <h2 className="text-white text-base font-semibold mt-3 mb-1">{children}</h2>,
-                h3: ({ children }) => <h3 className="text-white/90 font-medium mt-2 mb-1">{children}</h3>,
-                p: ({ children }) => <p className="mb-2">{children}</p>,
+                a: ({ href, children }) => (
+                  <a
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#a78bfa', textDecoration: 'none' }}
+                    onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.textDecoration = 'underline')}
+                    onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.textDecoration = 'none')}
+                  >
+                    {children}
+                  </a>
+                ),
+                code: ({ children }) => (
+                  <code
+                    className="px-1.5 py-0.5 rounded font-mono text-[12px]"
+                    style={{ background: 'rgba(139,92,246,0.1)', color: '#c4b5fd', border: '1px solid rgba(139,92,246,0.15)' }}
+                  >
+                    {children}
+                  </code>
+                ),
+                pre: ({ children }) => (
+                  <pre
+                    className="text-xs overflow-x-auto my-4 p-4 font-mono"
+                    style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)', color: 'rgba(255,255,255,0.7)' }}
+                  >
+                    {children}
+                  </pre>
+                ),
+                strong: ({ children }) => <strong style={{ color: '#ffffff', fontWeight: 600 }}>{children}</strong>,
+                ul: ({ children }) => <ul className="list-disc list-inside space-y-1.5 my-3">{children}</ul>,
+                ol: ({ children }) => <ol className="list-decimal list-inside space-y-1.5 my-3">{children}</ol>,
+                li: ({ children }) => <li style={{ color: 'rgba(255,255,255,0.75)' }}>{children}</li>,
+                h1: ({ children }) => <h1 className="text-lg font-semibold mt-5 mb-2" style={{ color: '#ffffff' }}>{children}</h1>,
+                h2: ({ children }) => <h2 className="text-base font-semibold mt-4 mb-1.5" style={{ color: '#ffffff' }}>{children}</h2>,
+                h3: ({ children }) => <h3 className="font-medium mt-3 mb-1" style={{ color: 'rgba(255,255,255,0.9)' }}>{children}</h3>,
+                p: ({ children }) => <p className="mb-2.5">{children}</p>,
+                blockquote: ({ children }) => (
+                  <blockquote
+                    className="pl-4 my-3 italic"
+                    style={{ borderLeft: '2px solid rgba(139,92,246,0.4)', color: 'rgba(255,255,255,0.5)' }}
+                  >
+                    {children}
+                  </blockquote>
+                ),
               }}
             >
               {msg.content}
@@ -105,37 +156,63 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
           </div>
         )}
 
-        {/* Blinking cursor — shows while waiting for first token OR appended after streamed text */}
+        {/* Streaming cursor */}
         {isStreaming && !msg.error && (
-          <span className={`inline-block w-1.5 h-4 bg-crimson/60 animate-pulse align-middle ${msg.content ? 'ml-0.5' : 'mt-2'}`} />
+          <span
+            className={`inline-block w-1 h-4 animate-pulse align-middle ${msg.content ? 'ml-0.5' : 'mt-1'}`}
+            style={{ background: 'rgba(139,92,246,0.7)' }}
+          />
         )}
 
-        {/* Metadata row */}
+        {/* Metadata */}
         {result && !isStreaming && (
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-[#444]">
-            <span>{result.latency_ms.toFixed(0)} ms</span>
-            {result.retrieved_docs.length > 0 && <span>{result.retrieved_docs.length} sources</span>}
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              {result.latency_ms.toFixed(0)}ms
+            </span>
+            {result.retrieved_docs.length > 0 && (
+              <span className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                {result.retrieved_docs.length} sources
+              </span>
+            )}
             {result.web_sources && result.web_sources.length > 0 && (
-              <span className="flex items-center gap-1"><Globe size={9} />{result.web_sources.length} web</span>
+              <span className="flex items-center gap-1 font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.2)' }}>
+                <Globe size={9} />{result.web_sources.length} web
+              </span>
             )}
             <CopyBtn text={msg.content} />
           </div>
         )}
 
-        {/* Follow-up questions */}
+        {/* Follow-ups */}
         {result?.follow_up_questions && result.follow_up_questions.length > 0 && !isStreaming && (
-          <div className="mt-4 space-y-1.5">
-            <p className="font-mono text-[9px] text-[#444] uppercase tracking-wider mb-2">You might ask</p>
-            {result.follow_up_questions.map((q, i) => (
-              <button
-                key={i}
-                className="follow-up-btn flex items-center gap-2 text-left font-mono text-xs text-[#777] hover:text-white border border-white/5 hover:border-crimson/30 px-3 py-2 transition-all w-full"
-                data-question={q}
-              >
-                <ChevronRight size={11} className="text-crimson shrink-0" />
-                {q}
-              </button>
-            ))}
+          <div className="mt-5">
+            <p className="font-mono text-[9px] tracking-[0.25em] uppercase mb-2" style={{ color: 'rgba(255,255,255,0.2)' }}>
+              Related questions
+            </p>
+            <div className="space-y-1.5">
+              {result.follow_up_questions.map((q, i) => (
+                <button
+                  key={i}
+                  className="follow-up-btn flex items-center gap-2.5 text-left font-mono text-[11px] w-full px-3 py-2.5 transition-all"
+                  data-question={q}
+                  style={{ border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.4)', background: 'transparent' }}
+                  onMouseEnter={e => {
+                    ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(139,92,246,0.3)'
+                    ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(167,139,250,0.9)'
+                    ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(139,92,246,0.04)'
+                  }}
+                  onMouseLeave={e => {
+                    ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.06)'
+                    ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)'
+                    ;(e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+                  }}
+                >
+                  <ChevronRight size={11} style={{ color: '#8b5cf6', flexShrink: 0 }} />
+                  {q}
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -146,7 +223,14 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
 function UserBubble({ msg }: { msg: ChatMessage }) {
   return (
     <div className="flex justify-end">
-      <div className="user-bubble w-full sm:max-w-xl bg-white/6 border border-white/10 px-4 py-2.5 text-white/90 text-sm leading-relaxed font-sans whitespace-pre-wrap break-words">
+      <div
+        className="font-sans text-sm leading-relaxed whitespace-pre-wrap break-words px-4 py-3 max-w-xl"
+        style={{
+          background: 'rgba(139,92,246,0.08)',
+          border: '1px solid rgba(139,92,246,0.18)',
+          color: 'rgba(255,255,255,0.88)',
+        }}
+      >
         {msg.content}
       </div>
     </div>
@@ -155,25 +239,62 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
 
 function EmptyState({ onExample }: { onExample: (q: string) => void }) {
   const examples = [
-    'Summarize the key concepts in my documents',
-    'What are the main topics in the knowledge base?',
-    'Explain the architecture of this system',
-    'What are the most important findings?',
+    { label: 'Summarize my documents', icon: '⟐' },
+    { label: 'What are the main topics?', icon: '◈' },
+    { label: 'Explain the pipeline architecture', icon: '⟡' },
+    { label: 'Find the most important findings', icon: '◇' },
   ]
   return (
-    <div className="flex flex-col items-center justify-center h-full gap-8 pb-20 px-4">
-      <div className="text-center">
-        <div className="font-mono text-4xl text-crimson mb-2">HELIOS</div>
-        <p className="text-[#555] font-mono text-xs tracking-wider">Your AI research assistant</p>
+    <div className="flex flex-col items-center justify-center h-full gap-10 pb-16 px-6">
+      {/* Branding */}
+      <div className="text-center space-y-3">
+        <div className="flex items-center justify-center gap-3 mb-4">
+          <div
+            className="w-10 h-10 flex items-center justify-center"
+            style={{ background: 'rgba(139,92,246,0.1)', border: '1px solid rgba(139,92,246,0.25)' }}
+          >
+            <Sparkles size={18} style={{ color: '#8b5cf6' }} />
+          </div>
+        </div>
+        <h2
+          className="font-mono tracking-[0.3em] uppercase"
+          style={{ fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: '0.3em' }}
+        >
+          HELIOS
+        </h2>
+        <p className="font-mono text-[10px] tracking-wider" style={{ color: 'rgba(255,255,255,0.2)' }}>
+          Distributed Multi-Agent AI · Five agents · One pipeline
+        </p>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-xl">
+
+      {/* Divider */}
+      <div className="w-24 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(139,92,246,0.3), transparent)' }} />
+
+      {/* Examples */}
+      <div className="w-full max-w-lg space-y-2">
+        <p className="font-mono text-[9px] tracking-[0.3em] uppercase text-center mb-4" style={{ color: 'rgba(255,255,255,0.18)' }}>
+          Try asking
+        </p>
         {examples.map(ex => (
           <button
-            key={ex}
-            onClick={() => onExample(ex)}
-            className="text-left border border-white/8 hover:border-crimson/30 bg-white/2 hover:bg-crimson/5 px-4 py-3 text-[#777] hover:text-white font-mono text-[11px] transition-all leading-relaxed"
+            key={ex.label}
+            onClick={() => onExample(ex.label)}
+            className="flex items-center gap-3 w-full px-4 py-3 text-left font-mono text-[11px] transition-all"
+            style={{ border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.01)' }}
+            onMouseEnter={e => {
+              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(139,92,246,0.25)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(167,139,250,0.8)'
+              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(139,92,246,0.04)'
+            }}
+            onMouseLeave={e => {
+              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.05)'
+              ;(e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.35)'
+              ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.01)'
+            }}
           >
-            {ex}
+            <span style={{ color: 'rgba(139,92,246,0.5)', fontFamily: 'monospace' }}>{ex.icon}</span>
+            {ex.label}
+            <ChevronRight size={11} className="ml-auto shrink-0" style={{ color: 'rgba(139,92,246,0.3)' }} />
           </button>
         ))}
       </div>
@@ -204,7 +325,6 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [conversation?.messages.length])
 
-  // Build history array from existing conversation messages (exclude the current pending ones)
   const buildHistory = (msgs: Conversation['messages'], beforeId: string): HistoryMessage[] => {
     const turns: HistoryMessage[] = []
     for (const m of msgs) {
@@ -213,10 +333,9 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
         turns.push({ role: m.role, content: m.content })
       }
     }
-    return turns.slice(-12) // last 6 exchanges
+    return turns.slice(-12)
   }
 
-  // Core API call — given a question and an already-created placeholder message ID
   const fireQuery = (q: string, cid: string, assistantMsgId: string) => {
     setBusyMsgId(assistantMsgId)
     const token = localStorage.getItem('access_token')
@@ -236,14 +355,12 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
             accumulated += t
             onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'synthesizing' })
           } else if (event === 'done') {
-            // Final answer from REST (includes metadata). Use it if we got no stream tokens.
             if (!accumulated) {
               queries.run(q, history).then(({ data: r }) => {
                 onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
                 setBusyMsgId(null)
               }).catch(() => setBusyMsgId(null))
             } else {
-              // Fetch metadata only (follow-ups, critic scores, latency) without re-rendering answer
               queries.run(q, history).then(({ data: r }) => {
                 onUpdateMessage(cid, assistantMsgId, { result: r, step: 'done' })
                 setBusyMsgId(null)
@@ -277,7 +394,6 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
     }
   }
 
-  // Auto-fire when a user message has no assistant reply yet (e.g. opened from landing page)
   useEffect(() => {
     if (!conversation || busyMsgId) return
     const msgs = conversation.messages
@@ -291,7 +407,6 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [conversation?.id, conversation?.messages.length, busyMsgId])
 
-  // Wire follow-up button clicks via event delegation
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       const btn = (e.target as Element).closest('.follow-up-btn') as HTMLElement | null
@@ -324,9 +439,9 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   const messages = conversation?.messages ?? []
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full" style={{ background: '#030305' }}>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 space-y-8">
         {messages.length === 0
           ? <EmptyState onExample={q => { setInput(q); inputRef.current?.focus() }} />
           : messages.map(msg =>
@@ -339,9 +454,26 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
       </div>
 
       {/* Input bar */}
-      <div className="border-t border-white/8 bg-[#0d0d0d] px-4 py-3 chat-input-bar">
-        <div className="max-w-3xl mx-auto relative">
-          <div className="flex items-end gap-2 bg-white/4 border border-white/10 hover:border-crimson/30 focus-within:border-crimson/50 transition-all px-4 py-3">
+      <div
+        className="px-4 sm:px-8 py-4"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)', background: '#030305' }}
+      >
+        <div className="max-w-3xl mx-auto">
+          <div
+            className="flex items-end gap-3 px-4 py-3 transition-all duration-200"
+            style={{
+              border: '1px solid rgba(255,255,255,0.08)',
+              background: 'rgba(255,255,255,0.02)',
+            }}
+            onFocusCapture={e => {
+              ;(e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(139,92,246,0.4)'
+              ;(e.currentTarget as HTMLDivElement).style.boxShadow  = '0 0 0 1px rgba(139,92,246,0.1), 0 8px 32px rgba(0,0,0,0.4)'
+            }}
+            onBlurCapture={e => {
+              ;(e.currentTarget as HTMLDivElement).style.borderColor = 'rgba(255,255,255,0.08)'
+              ;(e.currentTarget as HTMLDivElement).style.boxShadow  = 'none'
+            }}
+          >
             <textarea
               ref={inputRef}
               rows={1}
@@ -353,20 +485,25 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
               }}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit() } }}
               placeholder="Ask anything about your documents…"
-              className="flex-1 bg-transparent text-white font-sans text-sm placeholder-[#444] outline-none resize-none leading-relaxed"
-              style={{ minHeight: '24px', maxHeight: '160px' }}
+              className="flex-1 bg-transparent font-sans text-sm outline-none resize-none leading-relaxed placeholder:text-[rgba(255,255,255,0.18)]"
+              style={{ minHeight: '24px', maxHeight: '160px', color: 'rgba(255,255,255,0.88)', caretColor: '#8b5cf6' }}
             />
             <button
               onClick={handleSubmit}
               disabled={!!busyMsgId || !input.trim()}
-              className="shrink-0 p-1.5 bg-crimson hover:bg-crimson-light disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-white"
+              className="shrink-0 w-8 h-8 flex items-center justify-center transition-all"
+              style={{
+                background: busyMsgId || !input.trim() ? 'rgba(139,92,246,0.1)' : 'rgba(139,92,246,0.85)',
+                color: busyMsgId || !input.trim() ? 'rgba(139,92,246,0.4)' : '#fff',
+                cursor: busyMsgId || !input.trim() ? 'not-allowed' : 'pointer',
+              }}
             >
-              {busyMsgId ? <Loader size={15} className="animate-spin" /> : <Send size={15} />}
+              {busyMsgId ? <Loader size={14} className="animate-spin" /> : <Send size={14} />}
             </button>
           </div>
-          <p className="font-mono text-[9px] text-[#333] mt-1.5 text-center">
-            Enter to send · Shift+Enter for newline
-            {!isLoggedIn && ' · 5 free queries · Sign in for unlimited'}
+          <p className="font-mono text-[9px] mt-2 text-center" style={{ color: 'rgba(255,255,255,0.12)' }}>
+            Enter ↵ to send · Shift+Enter for newline
+            {!isLoggedIn && ' · Sign in for unlimited queries'}
           </p>
         </div>
       </div>
