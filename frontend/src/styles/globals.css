@@ -110,19 +110,7 @@ input:focus, textarea:focus {
     0 0 100px rgba(139,92,246,0.2);
 }
 
-/* ── Venom chat: squircle / organic bubble shapes ─────────────────────── */
-
-/* User bubble — asymmetric squircle, right-aligned */
-.venom-chat [class*="flex justify-end"] > div {
-  border-radius: 20px 18px 4px 20px / 18px 20px 20px 18px !important;
-  border-color: rgba(255,255,255,0.10) !important;
-  background: rgba(255,255,255,0.04) !important;
-}
-
-/* Assistant bubble content area */
-.venom-chat .flex.gap-4.max-w-3xl > div.flex-1 > div:first-child {
-  border-radius: 4px 20px 18px 20px / 20px 18px 20px 18px;
-}
+/* ── Venom chat ───────────────────────────────────────────────────────── */
 
 /* Scrollbar — white thin line */
 .venom-chat ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }

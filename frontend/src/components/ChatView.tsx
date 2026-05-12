@@ -323,9 +323,10 @@ function UserBubble({ msg }: { msg: ChatMessage }) {
       <div
         className="font-sans text-sm leading-relaxed whitespace-pre-wrap break-words px-4 py-3 max-w-xl"
         style={{
-          background: 'rgba(139,92,246,0.08)',
-          border: '1px solid rgba(139,92,246,0.18)',
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.10)',
           color: 'rgba(255,255,255,0.88)',
+          borderRadius: '60% 40% 30% 70% / 60% 30% 70% 40%',
         }}
       >
         {msg.content}

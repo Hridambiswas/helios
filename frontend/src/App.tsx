@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import { CustomCursor } from './components/CustomCursor'
 import { VenomOverlay } from './components/VenomOverlay'
 import { PromptPage } from './components/PromptPage'
 import { ChatPage } from './components/ChatPage'
@@ -22,19 +23,21 @@ export default function App() {
   const [chatMode, setChatMode]       = useState(false)
   const [showAuth, setShowAuth]       = useState(false)
 
+  // Timer fires once — empty deps, no dependency on any prop/state
   useEffect(() => {
     const t = setTimeout(() => setOverlayDone(true), 3200)
     return () => clearTimeout(t)
   }, [])
 
+  // OAuth token from query string
   useEffect(() => {
     const p = new URLSearchParams(window.location.search)
-    const at = p.get('access_token'), rt = p.get('refresh_token')
     if (p.get('oauth_error')) {
       addToast('OAuth sign-in failed', 'error')
       window.history.replaceState({}, '', window.location.pathname)
       return
     }
+    const at = p.get('access_token'), rt = p.get('refresh_token')
     if (at && rt) {
       localStorage.setItem('access_token', at)
       localStorage.setItem('refresh_token', rt)
@@ -52,23 +55,30 @@ export default function App() {
     window.scrollTo(0, 0)
   }
 
+  // Auth loading state — cursor still renders
   if (loading) {
     return (
-      <div style={{
-        position: 'fixed', inset: 0,
-        background: '#000',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <h1 style={{
-          fontFamily: '"Montserrat", sans-serif', fontWeight: 900,
-          fontSize: 'clamp(72px, 16vw, 200px)', letterSpacing: '-0.045em', color: '#fff',
-        }}>HELIOS</h1>
-      </div>
+      <>
+        <CustomCursor />
+        <div style={{
+          position: 'fixed', inset: 0,
+          background: '#000',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <h1 style={{
+            fontFamily: '"Montserrat", sans-serif', fontWeight: 900,
+            fontSize: 'clamp(72px, 16vw, 200px)', letterSpacing: '-0.045em', color: '#fff',
+          }}>HELIOS</h1>
+        </div>
+      </>
     )
   }
 
   return (
     <>
+      {/* Custom metaball cursor — always on top */}
+      <CustomCursor />
+
       <div className="scanline" />
 
       <AnimatePresence mode="wait">
@@ -121,6 +131,7 @@ export default function App() {
         />
       )}
 
+      {/* Toast stack */}
       <div style={{
         position: 'fixed', top: 16, right: 16, zIndex: 9990,
         display: 'flex', flexDirection: 'column', gap: 8, pointerEvents: 'none',

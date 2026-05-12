@@ -35,10 +35,10 @@ export function ChatPage({
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
+      initial={{ clipPath: 'circle(0% at 50% 55%)', opacity: 0 }}
+      animate={{ clipPath: 'circle(150% at 50% 55%)', opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.45, delay: 0.08 }}
+      transition={{ duration: 0.75, ease: [0.16, 1, 0.3, 1] }}
       className="venom-chat"
       style={{ display: 'flex', height: '100vh', overflow: 'hidden', background: '#000' }}
     >
