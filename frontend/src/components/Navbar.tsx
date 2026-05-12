@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { LogOut, User, Menu, X } from 'lucide-react'
+import { LogOut, Menu, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { User as UserType } from '../hooks/useAuth'
 import { api } from '../api/client'
 
@@ -23,129 +24,131 @@ export function Navbar({ user, onAuthClick, onLogout }: {
   }, [])
 
   useEffect(() => {
-    const handler = () => setScrolled(window.scrollY > 20)
+    const handler = () => setScrolled(window.scrollY > 30)
     window.addEventListener('scroll', handler, { passive: true })
     return () => window.removeEventListener('scroll', handler)
   }, [])
 
   const navLinks = [
-    { href: '#query-section',    label: 'QUERY'    },
-    { href: '#pipeline-section', label: 'PIPELINE' },
-    { href: '#history-section',  label: 'HISTORY'  },
-    { href: '#upload-section',   label: 'INGEST'   },
+    { href: '#query-section',    label: 'Query'    },
+    { href: '#pipeline-section', label: 'Pipeline' },
+    { href: '#history-section',  label: 'History'  },
+    { href: '#upload-section',   label: 'Ingest'   },
   ]
 
-  const statusColor =
-    apiStatus === 'ok'       ? '#22c55e' :
-    apiStatus === 'degraded' ? '#eab308' : '#8b5cf6'
+  const statusColor = apiStatus === 'ok' ? '#4ade80' : apiStatus === 'degraded' ? '#facc15' : 'rgba(255,255,255,0.3)'
 
   return (
-    <nav
-      className="fixed top-0 left-0 right-0 z-40 transition-all duration-300"
+    <motion.nav
+      initial={{ y: -72, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
       style={{
-        background: scrolled ? 'rgba(0,0,0,0.92)' : 'transparent',
-        backdropFilter: scrolled ? 'blur(16px)' : 'none',
-        borderBottom: scrolled ? '1px solid rgba(139,92,246,0.1)' : '1px solid transparent',
+        position: 'fixed', top: 0, left: 0, right: 0, zIndex: 40,
+        transition: 'background 0.4s, backdrop-filter 0.4s, border-color 0.4s',
+        background:     scrolled ? 'rgba(0,0,0,0.72)' : 'transparent',
+        backdropFilter: scrolled ? 'blur(24px) saturate(180%)' : 'none',
+        borderBottom:   scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
       }}
     >
-      <div className="max-w-6xl mx-auto px-4 h-12 flex items-center justify-between">
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 1.5rem', height: 56, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
 
         {/* Logo */}
-        <div className="flex items-center gap-3">
-          {/* Minimal orb icon */}
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ opacity: 0.8 }}>
-            <circle cx="7" cy="7" r="6" stroke="#8b5cf6" strokeWidth="1"/>
-            <circle cx="7" cy="7" r="3" fill="#8b5cf6" fillOpacity="0.2" stroke="#8b5cf6" strokeWidth="0.8"/>
-            <circle cx="7" cy="7" r="1.2" fill="#a78bfa"/>
-          </svg>
-          <a
-            href="#"
-            className="font-display text-lg tracking-tight"
-            style={{ fontFamily: 'Impact, Arial Black, sans-serif', textDecoration: 'none' }}
-          >
-            <span className="text-white">HEL</span>
-            <span style={{ color: '#8b5cf6', textShadow: '0 0 16px rgba(139,92,246,0.6)' }}>IOS</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <a href="#" style={{ textDecoration: 'none' }}>
+            <span style={{ fontFamily: '"Montserrat", sans-serif', fontWeight: 900, fontSize: 17, letterSpacing: '-0.03em', color: '#fff' }}>
+              HELIOS
+            </span>
           </a>
           {apiStatus && (
-            <div className="hidden sm:flex items-center gap-1" title={`API: ${apiStatus}`}>
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: statusColor, boxShadow: `0 0 4px ${statusColor}` }} />
-              <span className="font-mono text-[9px]" style={{ color: statusColor }}>{apiStatus.toUpperCase()}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} title={`API: ${apiStatus}`}>
+              <div style={{ width: 5, height: 5, borderRadius: '50%', background: statusColor, boxShadow: `0 0 5px ${statusColor}` }} />
             </div>
           )}
         </div>
 
-        {/* Desktop nav */}
-        <div className="hidden md:flex items-center gap-6">
+        {/* Desktop nav links */}
+        <div className="hidden md:flex" style={{ gap: 32, alignItems: 'center' }}>
           {navLinks.map(({ href, label }) => (
             <a
               key={label}
               href={href}
-              className="font-mono text-[10px] tracking-widest uppercase transition-all duration-200"
-              style={{ color: 'rgba(255,255,255,0.3)', textDecoration: 'none' }}
-              onMouseEnter={e => {
-                e.currentTarget.style.color      = '#fff'
-                e.currentTarget.style.textShadow = 'none'
+              style={{
+                fontFamily: '"IBM Plex Mono", monospace',
+                fontSize: 10,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: 'rgba(255,255,255,0.32)',
+                textDecoration: 'none',
+                transition: 'color 0.2s',
               }}
-              onMouseLeave={e => {
-                e.currentTarget.style.color      = 'rgba(255,255,255,0.3)'
-                e.currentTarget.style.textShadow = 'none'
-              }}
+              onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.85)')}
+              onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.32)')}
             >
               {label}
             </a>
           ))}
         </div>
 
-        {/* Auth */}
-        <div className="flex items-center gap-3">
+        {/* Auth + mobile toggle */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           {user ? (
-            <>
-              <div className="hidden md:flex items-center gap-2">
-                <User size={12} style={{ color: 'rgba(139,92,246,0.6)' }} />
-                <span className="font-mono text-[10px] max-w-[100px] truncate" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                  {user.username}
-                </span>
-              </div>
+            <div className="hidden md:flex" style={{ alignItems: 'center', gap: 14 }}>
+              <span style={{ fontFamily: '"IBM Plex Mono", monospace', fontSize: 10, color: 'rgba(255,255,255,0.28)' }}>
+                {user.username}
+              </span>
               <button
                 onClick={onLogout}
-                className="flex items-center gap-1.5 font-mono text-[10px] tracking-wider uppercase transition-colors"
-                style={{ color: 'rgba(255,255,255,0.3)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.3)')}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+                  letterSpacing: '0.2em', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.28)', background: 'none', border: 'none',
+                  cursor: 'none', transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.75)')}
+                onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.28)')}
               >
-                <LogOut size={12} />
-                <span className="hidden sm:inline">LOGOUT</span>
+                <LogOut size={11} /> Out
               </button>
-            </>
+            </div>
           ) : (
             <button
               onClick={onAuthClick}
-              className="font-mono text-[10px] tracking-widest uppercase px-3 py-1 transition-all duration-200"
+              className="hidden md:block"
               style={{
-                color: '#8b5cf6',
-                border: '1px solid rgba(139,92,246,0.4)',
+                fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+                letterSpacing: '0.22em', textTransform: 'uppercase',
+                padding: '7px 18px',
+                border: '1px solid rgba(255,255,255,0.14)',
+                color: 'rgba(255,255,255,0.58)',
+                background: 'rgba(255,255,255,0.03)',
+                cursor: 'none',
+                transition: 'border-color 0.2s, color 0.2s, background 0.2s',
               }}
               onMouseEnter={e => {
-                e.currentTarget.style.background   = 'rgba(139,92,246,0.1)'
-                e.currentTarget.style.borderColor  = 'rgba(139,92,246,0.8)'
-                e.currentTarget.style.boxShadow    = '0 0 16px rgba(139,92,246,0.25)'
+                const b = e.currentTarget as HTMLButtonElement
+                b.style.borderColor = 'rgba(255,255,255,0.38)'
+                b.style.color       = '#fff'
+                b.style.background  = 'rgba(255,255,255,0.06)'
               }}
               onMouseLeave={e => {
-                e.currentTarget.style.background   = 'transparent'
-                e.currentTarget.style.borderColor  = 'rgba(139,92,246,0.4)'
-                e.currentTarget.style.boxShadow    = 'none'
+                const b = e.currentTarget as HTMLButtonElement
+                b.style.borderColor = 'rgba(255,255,255,0.14)'
+                b.style.color       = 'rgba(255,255,255,0.58)'
+                b.style.background  = 'rgba(255,255,255,0.03)'
               }}
             >
-              ⟡ ENTER
+              Enter
             </button>
           )}
 
           <button
-            className="md:hidden transition-colors"
-            style={{ color: 'rgba(255,255,255,0.4)' }}
+            className="md:hidden"
             onClick={() => setMobileOpen(o => !o)}
-            onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.4)')}
+            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'none', transition: 'color 0.2s' }}
+            onMouseEnter={e => ((e.currentTarget as HTMLButtonElement).style.color = '#fff')}
+            onMouseLeave={e => ((e.currentTarget as HTMLButtonElement).style.color = 'rgba(255,255,255,0.4)')}
           >
             {mobileOpen ? <X size={18} /> : <Menu size={18} />}
           </button>
@@ -153,32 +156,68 @@ export function Navbar({ user, onAuthClick, onLogout }: {
       </div>
 
       {/* Mobile drawer */}
-      {mobileOpen && (
-        <div className="md:hidden" style={{ borderTop: '1px solid rgba(139,92,246,0.1)', background: 'rgba(0,0,0,0.97)' }}>
-          {navLinks.map(({ href, label }) => (
-            <a
-              key={label}
-              href={href}
-              onClick={() => setMobileOpen(false)}
-              className="block px-4 py-3 font-mono text-[10px] tracking-widest uppercase transition-all"
-              style={{ color: 'rgba(255,255,255,0.35)', borderBottom: '1px solid rgba(139,92,246,0.06)', textDecoration: 'none' }}
-              onMouseEnter={e => { e.currentTarget.style.color = '#fff'; e.currentTarget.style.background = 'rgba(139,92,246,0.05)' }}
-              onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.35)'; e.currentTarget.style.background = 'transparent' }}
-            >
-              ⟡ {label}
-            </a>
-          ))}
-          {user && (
-            <button
-              onClick={() => { setMobileOpen(false); onLogout() }}
-              className="w-full text-left px-4 py-3 font-mono text-[10px] uppercase flex items-center gap-2 transition-colors"
-              style={{ color: 'rgba(255,255,255,0.35)' }}
-            >
-              <LogOut size={12} /> LOGOUT
-            </button>
-          )}
-        </div>
-      )}
-    </nav>
+      <AnimatePresence>
+        {mobileOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={{ duration: 0.22 }}
+            style={{
+              borderTop: '1px solid rgba(255,255,255,0.06)',
+              background: 'rgba(0,0,0,0.92)',
+              backdropFilter: 'blur(24px)',
+            }}
+            className="md:hidden"
+          >
+            {navLinks.map(({ href, label }) => (
+              <a
+                key={label}
+                href={href}
+                onClick={() => setMobileOpen(false)}
+                style={{
+                  display: 'block', padding: '14px 24px',
+                  fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+                  letterSpacing: '0.25em', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.32)',
+                  borderBottom: '1px solid rgba(255,255,255,0.04)',
+                  textDecoration: 'none', transition: 'color 0.2s',
+                }}
+                onMouseEnter={e => ((e.currentTarget as HTMLAnchorElement).style.color = '#fff')}
+                onMouseLeave={e => ((e.currentTarget as HTMLAnchorElement).style.color = 'rgba(255,255,255,0.32)')}
+              >
+                {label}
+              </a>
+            ))}
+            {user ? (
+              <button
+                onClick={() => { setMobileOpen(false); onLogout() }}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8,
+                  width: '100%', padding: '14px 24px',
+                  fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+                  letterSpacing: '0.25em', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.32)', background: 'none', border: 'none', cursor: 'none',
+                }}
+              >
+                <LogOut size={12} /> Sign out
+              </button>
+            ) : (
+              <button
+                onClick={() => { setMobileOpen(false); onAuthClick() }}
+                style={{
+                  display: 'block', width: '100%', padding: '14px 24px', textAlign: 'left',
+                  fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+                  letterSpacing: '0.25em', textTransform: 'uppercase',
+                  color: 'rgba(255,255,255,0.55)', background: 'none', border: 'none', cursor: 'none',
+                }}
+              >
+                Sign in
+              </button>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </motion.nav>
   )
 }

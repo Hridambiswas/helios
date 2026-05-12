@@ -29,7 +29,7 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Orbitron', 'sans-serif'],
+        display: ['Montserrat', 'sans-serif'],
         body:    ['DM Sans', 'system-ui', 'sans-serif'],
         mono:    ['IBM Plex Mono', 'Courier New', 'monospace'],
       },

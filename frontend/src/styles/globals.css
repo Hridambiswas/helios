@@ -25,6 +25,7 @@ body {
   background-color: #000;
   color: #fff;
   font-family: 'DM Sans', system-ui, sans-serif;
+  cursor: none;
   overflow-x: hidden;
   min-height: 100vh;
 }

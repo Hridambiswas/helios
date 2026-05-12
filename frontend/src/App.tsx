@@ -13,6 +13,7 @@ import { ChatSidebar } from './components/ChatSidebar'
 import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
+import { LiquidCursor } from './components/LiquidCursor'
 import { FireDivider } from './components/DragonDecor'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
@@ -122,6 +123,7 @@ export default function App() {
 
   return (
     <>
+      <LiquidCursor />
       {/* 3-D dragon splash */}
       <AnimatePresence>
         {!splashDone && (
