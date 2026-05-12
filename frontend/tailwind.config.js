@@ -29,9 +29,9 @@ export default {
         },
       },
       fontFamily: {
-        display: ['Montserrat', 'sans-serif'],
-        body:    ['DM Sans', 'system-ui', 'sans-serif'],
-        mono:    ['IBM Plex Mono', 'Courier New', 'monospace'],
+        display: ['"Inter Tight"', '"Montserrat"', 'sans-serif'],
+        body:    ['"DM Sans"', 'system-ui', 'sans-serif'],
+        mono:    ['"IBM Plex Mono"', 'Courier New', 'monospace'],
       },
       animation: {
         'pulse-violet': 'pulse-violet 2s ease-in-out infinite',
