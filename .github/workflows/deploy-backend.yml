@@ -27,7 +27,17 @@ jobs:
           command_timeout: 30m
           script: |
             set -e
-            # Inject secrets into .env (idempotent — only adds if missing)
+            # Pull latest code first so backend/ directory exists on EC2
+            cd /home/ubuntu/helios
+            git pull origin main
+
+            # One-time migration: move .env from old root location into backend/
+            if [ -f /home/ubuntu/helios/.env ] && [ ! -f /home/ubuntu/helios/backend/.env ]; then
+              cp /home/ubuntu/helios/.env /home/ubuntu/helios/backend/.env
+              echo ".env migrated from root to backend/"
+            fi
+
+            # Inject secrets into backend/.env (idempotent — only adds if missing)
             if ! grep -q "SUPABASE_DATABASE_URL" /home/ubuntu/helios/backend/.env 2>/dev/null; then
               echo "SUPABASE_DATABASE_URL=${{ secrets.SUPABASE_DATABASE_URL }}" >> /home/ubuntu/helios/backend/.env
             fi
@@ -37,10 +47,9 @@ jobs:
             if ! grep -q "GITHUB_CLIENT_SECRET" /home/ubuntu/helios/backend/.env 2>/dev/null; then
               echo "GITHUB_CLIENT_SECRET=${{ secrets.GH_OAUTH_CLIENT_SECRET }}" >> /home/ubuntu/helios/backend/.env
             fi
+
             # Free disk space before build — stale layers accumulate and fill the volume
             docker system prune -a -f
-            cd /home/ubuntu/helios
-            git pull origin main
             cd /home/ubuntu/helios/backend
             docker compose -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api worker beat
