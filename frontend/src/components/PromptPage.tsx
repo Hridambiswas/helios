@@ -99,10 +99,9 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
   const handleSubmit = useCallback(() => {
     const q = query.trim()
     if (!q) return
-    if (!user) { onAuthClick(); return }
     setSwallowing(true)
     setTimeout(() => onSubmit(q), 680)
-  }, [query, user, onAuthClick, onSubmit])
+  }, [query, onSubmit])
 
   return (
     <motion.div
@@ -110,6 +109,45 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
       transition={{ duration: 0.5, ease: [0.76, 0, 0.24, 1] }}
       style={{ background: '#000', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}
     >
+      {/* ── Persistent top-right auth button ───────────────────────────────── */}
+      <div style={{
+        position: 'fixed', top: 20, right: 24, zIndex: 50,
+      }}>
+        {user ? (
+          <span style={{
+            fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
+            color: 'rgba(255,255,255,0.28)', letterSpacing: '0.12em',
+          }}>
+            {user.username}
+          </span>
+        ) : (
+          <button
+            onClick={onAuthClick}
+            style={{
+              fontFamily: '"IBM Plex Mono", monospace',
+              fontSize: 10, letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: 'rgba(255,255,255,0.45)',
+              background: 'none',
+              border: '1px solid rgba(255,255,255,0.12)',
+              padding: '7px 16px',
+              cursor: 'none',
+              transition: 'border-color 0.2s, color 0.2s',
+            }}
+            onMouseEnter={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.5)'
+              e.currentTarget.style.color = '#fff'
+            }}
+            onMouseLeave={e => {
+              e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'
+              e.currentTarget.style.color = 'rgba(255,255,255,0.45)'
+            }}
+          >
+            Sign in
+          </button>
+        )}
+      </div>
+
       {/* ── Swallow transition overlay ──────────────────────────────────────── */}
       <AnimatePresence>
         {swallowing && (
@@ -231,27 +269,6 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
             </Magnetic>
           </motion.div>
 
-          {/* Auth hint */}
-          {!user && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 1.0 }}
-              style={{
-                fontFamily: '"IBM Plex Mono", monospace', fontSize: 10,
-                color: 'rgba(255,255,255,0.18)',
-                marginTop: 12, textAlign: 'center', letterSpacing: '0.1em',
-              }}
-            >
-              Sign in required to run queries —{' '}
-              <button
-                onClick={onAuthClick}
-                style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.45)', cursor: 'none', fontFamily: 'inherit', fontSize: 'inherit' }}
-              >
-                Enter
-              </button>
-            </motion.p>
-          )}
         </motion.div>
 
         {/* Scroll cue */}
