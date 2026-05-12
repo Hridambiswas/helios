@@ -13,6 +13,7 @@ import { ChatSidebar } from './components/ChatSidebar'
 import { ChatView } from './components/ChatView'
 import { AuthModal } from './components/AuthModal'
 import { SplashScreen } from './components/SplashScreen'
+import { FireDivider } from './components/DragonDecor'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useConversations } from './hooks/useConversations'
@@ -231,7 +232,7 @@ export default function App() {
               isLoggedIn={!!user}
             />
 
-            <InkDivider />
+            <FireDivider />
 
             {/* Inline query interface — submitting opens chat */}
             <div id="query-section">
@@ -244,13 +245,13 @@ export default function App() {
               />
             </div>
 
-            <InkDivider flip />
+            <FireDivider flip />
 
             <div id="pipeline-section">
               <PipelineSection />
             </div>
 
-            <InkDivider />
+            <FireDivider />
 
             <div id="history-section">
               <HistorySection isLoggedIn={!!user} refreshTrigger={historyRefresh} />
@@ -326,14 +327,3 @@ function ScrollToTop() {
   )
 }
 
-function InkDivider({ flip = false }: { flip?: boolean }) {
-  return (
-    <div className={`relative h-16 overflow-hidden ${flip ? 'scale-y-[-1]' : ''}`}>
-      <svg viewBox="0 0 1400 64" className="absolute inset-0 w-full h-full" preserveAspectRatio="none">
-        <path d="M0,0 C200,64 400,0 700,32 C1000,64 1200,0 1400,32 L1400,64 L0,64 Z" fill="rgba(196,30,58,0.04)" />
-        <path d="M0,20 C150,64 350,8 600,36 C850,64 1100,8 1400,40 L1400,64 L0,64 Z" fill="rgba(196,30,58,0.02)" />
-      </svg>
-      <div className="absolute top-1/2 left-0 right-0 h-px bg-gradient-to-r from-transparent via-crimson/20 to-transparent" />
-    </div>
-  )
-}
