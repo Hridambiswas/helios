@@ -54,7 +54,11 @@ jobs:
             # Free disk space before build — stale layers accumulate and fill the volume
             docker system prune -a -f
             cd /home/ubuntu/helios/backend
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
-            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api worker beat
+            # Use -p helios to keep the same project name as before the repo
+            # restructure (previously run from root, defaulting to "helios").
+            # Without this, compose defaults to "backend" and old containers
+            # keep their ports, causing bind failures.
+            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
+            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api worker beat
             docker image prune -f
             echo "Deploy complete at $(date)"
