@@ -57,6 +57,43 @@ const STAGES = [
   { label: 'GENERATE',      sub: 'Grounded synthesis — citations, confidence scores, source attribution' },
 ]
 
+// ─── Animated typewriter placeholder ────────────────────────────────────────
+
+const PLACEHOLDER_PHRASES = [
+  'Ask anything about your data...',
+  'Enter what you want to know...',
+  'Query your documents...',
+  'What insights are you looking for...',
+  'Explore your knowledge base...',
+  'Summarise any file or topic...',
+]
+
+function useTypewriterPlaceholder() {
+  const [text, setText]       = useState('')
+  const [phraseIdx, setPhraseIdx] = useState(0)
+  const [phase, setPhase]     = useState<'typing' | 'deleting'>('typing')
+
+  useEffect(() => {
+    const phrase = PLACEHOLDER_PHRASES[phraseIdx]
+    if (phase === 'typing') {
+      if (text.length < phrase.length) {
+        const t = setTimeout(() => setText(phrase.slice(0, text.length + 1)), 52)
+        return () => clearTimeout(t)
+      }
+      const t = setTimeout(() => setPhase('deleting'), 3400)
+      return () => clearTimeout(t)
+    }
+    if (text.length > 0) {
+      const t = setTimeout(() => setText(text.slice(0, -1)), 28)
+      return () => clearTimeout(t)
+    }
+    setPhraseIdx(i => (i + 1) % PLACEHOLDER_PHRASES.length)
+    setPhase('typing')
+  }, [text, phase, phraseIdx])
+
+  return text
+}
+
 // ─── Main component ──────────────────────────────────────────────────────────
 
 interface Props {
@@ -72,6 +109,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
   const [focused, setFocused]   = useState(false)
   const [swallowing, setSwallowing] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+  const animatedPlaceholder = useTypewriterPlaceholder()
 
   // Continuous micro-vibration while input is focused
   const shakeX = useMotionValue(0)
@@ -184,7 +222,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
             marginBottom: 28,
           }}
         >
-          Distributed Multi-Agent RAG
+          Distributed Multi-Agent GenAI
         </motion.p>
 
         {/* HELIOS heading */}
@@ -227,22 +265,61 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
               transition: 'border-color 0.3s, box-shadow 0.3s',
             }}
           >
-            <input
-              ref={inputRef}
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSubmit()}
-              onFocus={() => setFocused(true)}
-              onBlur={() => setFocused(false)}
-              placeholder="Ask anything about your data..."
-              style={{
-                flex: 1, padding: '18px 22px',
-                background: 'transparent', border: 'none', outline: 'none',
-                fontFamily: '"IBM Plex Mono", monospace',
-                fontSize: 13, color: '#fff', cursor: 'none',
-                caretColor: 'rgba(255,255,255,0.6)',
-              }}
-            />
+            <div style={{ position: 'relative', flex: 1 }}>
+              <input
+                ref={inputRef}
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSubmit()}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                autoComplete="off"
+                autoCorrect="off"
+                autoCapitalize="off"
+                spellCheck={false}
+                data-1p-ignore=""
+                data-lpignore="true"
+                data-form-type="other"
+                placeholder=""
+                style={{
+                  width: '100%',
+                  padding: '18px 22px',
+                  background: 'transparent', border: 'none', outline: 'none',
+                  fontFamily: '"IBM Plex Mono", monospace',
+                  fontSize: 13, color: '#fff', cursor: 'none',
+                  caretColor: 'rgba(255,255,255,0.6)',
+                }}
+              />
+              {query === '' && (
+                <span
+                  aria-hidden
+                  style={{
+                    position: 'absolute',
+                    left: 22,
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    fontFamily: '"IBM Plex Mono", monospace',
+                    fontSize: 13,
+                    color: 'rgba(255,255,255,0.28)',
+                    pointerEvents: 'none',
+                    userSelect: 'none',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                  }}
+                >
+                  {animatedPlaceholder}
+                  <span style={{
+                    display: 'inline-block',
+                    width: 1,
+                    height: '1em',
+                    background: 'rgba(255,255,255,0.45)',
+                    marginLeft: 2,
+                    verticalAlign: 'text-bottom',
+                    animation: 'blink 1s step-end infinite',
+                  }} />
+                </span>
+              )}
+            </div>
             <Magnetic>
               <button
                 onClick={handleSubmit}

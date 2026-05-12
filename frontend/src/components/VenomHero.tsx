@@ -313,10 +313,46 @@ interface VenomHeroProps {
 
 const CHIPS = ['What is RAG?', 'Summarise this PDF', 'Multi-agent pipeline', 'Semantic search']
 
+const PLACEHOLDER_PHRASES = [
+  'Ask anything about your data...',
+  'Enter what you want to know...',
+  'Query your documents...',
+  'What insights are you looking for...',
+  'Explore your knowledge base...',
+  'Summarise any file or topic...',
+]
+
+function useTypewriterPlaceholder() {
+  const [text, setText]       = useState('')
+  const [phraseIdx, setPhraseIdx] = useState(0)
+  const [phase, setPhase]     = useState<'typing' | 'deleting'>('typing')
+
+  useEffect(() => {
+    const phrase = PLACEHOLDER_PHRASES[phraseIdx]
+    if (phase === 'typing') {
+      if (text.length < phrase.length) {
+        const t = setTimeout(() => setText(phrase.slice(0, text.length + 1)), 52)
+        return () => clearTimeout(t)
+      }
+      const t = setTimeout(() => setPhase('deleting'), 3400)
+      return () => clearTimeout(t)
+    }
+    if (text.length > 0) {
+      const t = setTimeout(() => setText(text.slice(0, -1)), 28)
+      return () => clearTimeout(t)
+    }
+    setPhraseIdx(i => (i + 1) % PLACEHOLDER_PHRASES.length)
+    setPhase('typing')
+  }, [text, phase, phraseIdx])
+
+  return text
+}
+
 export function VenomHero({ onQuerySubmit, onAuthClick, isLoggedIn }: VenomHeroProps) {
   const [query, setQuery]       = useState('')
   const [focused, setFocused]   = useState(false)
   const [hovered, setHovered]   = useState(false)
+  const animatedPlaceholder = useTypewriterPlaceholder()
   const mouseRef  = useRef({ x: 0.5, y: 0.5 })
   const scrollRef = useRef(0)
   const sectionRef = useRef<HTMLDivElement>(null)
@@ -402,7 +438,7 @@ export function VenomHero({ onQuerySubmit, onAuthClick, isLoggedIn }: VenomHeroP
                 marginBottom: 28,
               }}
             >
-              Distributed Multi-Agent RAG
+              Distributed Multi-Agent GenAI
             </motion.p>
 
             {/* Hero heading */}
@@ -441,25 +477,63 @@ export function VenomHero({ onQuerySubmit, onAuthClick, isLoggedIn }: VenomHeroP
                 transition: 'border-color 0.3s',
                 boxShadow: focused ? '0 0 0 3px rgba(139,92,246,0.08), 0 0 40px rgba(139,92,246,0.12)' : 'none',
               }}>
-                <input
-                  value={query}
-                  onChange={e => setQuery(e.target.value)}
-                  onKeyDown={handleKey}
-                  onFocus={() => setFocused(true)}
-                  onBlur={() => setFocused(false)}
-                  placeholder="Ask anything about your data..."
-                  style={{
-                    flex: 1,
-                    background: 'transparent',
-                    border: 'none',
-                    outline: 'none',
-                    padding: '16px 20px',
-                    fontFamily: '"IBM Plex Mono", monospace',
-                    fontSize: 13,
-                    color: '#fff',
-                    cursor: 'none',
-                  }}
-                />
+                <div style={{ position: 'relative', flex: 1 }}>
+                  <input
+                    value={query}
+                    onChange={e => setQuery(e.target.value)}
+                    onKeyDown={handleKey}
+                    onFocus={() => setFocused(true)}
+                    onBlur={() => setFocused(false)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    autoCapitalize="off"
+                    spellCheck={false}
+                    data-1p-ignore=""
+                    data-lpignore="true"
+                    data-form-type="other"
+                    placeholder=""
+                    style={{
+                      width: '100%',
+                      background: 'transparent',
+                      border: 'none',
+                      outline: 'none',
+                      padding: '16px 20px',
+                      fontFamily: '"IBM Plex Mono", monospace',
+                      fontSize: 13,
+                      color: '#fff',
+                      cursor: 'none',
+                    }}
+                  />
+                  {query === '' && (
+                    <span
+                      aria-hidden
+                      style={{
+                        position: 'absolute',
+                        left: 20,
+                        top: '50%',
+                        transform: 'translateY(-50%)',
+                        fontFamily: '"IBM Plex Mono", monospace',
+                        fontSize: 13,
+                        color: 'rgba(255,255,255,0.28)',
+                        pointerEvents: 'none',
+                        userSelect: 'none',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {animatedPlaceholder}
+                      <span style={{
+                        display: 'inline-block',
+                        width: 1,
+                        height: '1em',
+                        background: 'rgba(255,255,255,0.5)',
+                        marginLeft: 2,
+                        verticalAlign: 'text-bottom',
+                        animation: 'blink 1s step-end infinite',
+                      }} />
+                    </span>
+                  )}
+                </div>
                 <Magnetic strength={0.25}>
                   <button
                     onClick={() => submit(query)}
