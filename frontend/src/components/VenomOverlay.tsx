@@ -111,24 +111,8 @@ class WebGLBoundary extends Component<{ children: ReactNode }, BoundaryState> {
   }
 }
 
-// ─── Framer Motion variants ───────────────────────────────────────────────────
-
-const variants = {
-  initial: {
-    opacity: 0,
-    clipPath: 'circle(0% at 50% 50%)',
-  },
-  animate: {
-    opacity: 1,
-    clipPath: 'circle(150% at 50% 50%)',
-    transition: { duration: 0.9, ease: [0.16, 1, 0.3, 1] },
-  },
-  exit: {
-    clipPath: 'circle(0% at 50% 50%)',
-    opacity: 0,
-    transition: { duration: 0.85, ease: [0.76, 0, 0.24, 1] },
-  },
-}
+// No enter animation — render immediately so the page is never stuck at black
+// AnimatePresence only needs the exit to tear the overlay away
 
 // ─── Main export ──────────────────────────────────────────────────────────────
 
@@ -145,10 +129,8 @@ export function VenomOverlay() {
   return (
     <motion.div
       key="venom-overlay"
-      variants={variants}
-      initial="initial"
-      animate="animate"
-      exit="exit"
+      exit={{ opacity: 0, scale: 1.06 }}
+      transition={{ duration: 0.8, ease: [0.4, 0, 1, 1] }}
       style={{
         position: 'fixed', inset: 0, zIndex: 100,
         background: '#000',

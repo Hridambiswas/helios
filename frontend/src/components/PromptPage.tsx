@@ -106,8 +106,6 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
 
   return (
     <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
       exit={{ scale: 1.08, opacity: 0, filter: 'blur(8px)' }}
       transition={{ duration: 0.5, ease: [0.76, 0, 0.24, 1] }}
       style={{ background: '#000', minHeight: '100vh', position: 'relative', overflowX: 'hidden' }}
