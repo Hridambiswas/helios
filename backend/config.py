@@ -119,7 +119,7 @@ class Settings(BaseSettings):
     github_client_id: str = ""
     github_client_secret: SecretStr = SecretStr("")
     # Where to redirect after successful OAuth. Should be the frontend origin.
-    oauth_frontend_url: str = "https://frontend-omega-blush-87.vercel.app"
+    oauth_frontend_url: str = "https://helios-hridam.vercel.app"
     # Public backend URL used to build the OAuth callback URI.
     oauth_backend_url: str = "https://helios-hridam.ddns.net"
 
