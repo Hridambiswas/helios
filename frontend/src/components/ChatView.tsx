@@ -531,10 +531,23 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
       wsRef.current = ws
       ws.onopen = () => sendWSQuery(ws, q, history)
     } else {
+      // Guest / no-token path — REST only, no WS events.
+      // Simulate step progression visually so the indicator always animates.
+      const timers: ReturnType<typeof setTimeout>[] = []
+      flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: 'planning' }))
+      timers.push(setTimeout(() => flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: 'retrieving' })),  500))
+      timers.push(setTimeout(() => flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: 'executing' })),   1100))
+      timers.push(setTimeout(() => flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: 'synthesizing' })), 1800))
+
       queries.run(q, history).then(({ data: r }) => {
-        onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
-        setBusyMsgId(null)
+        timers.forEach(clearTimeout)
+        onUpdateMessage(cid, assistantMsgId, { step: 'evaluating' })
+        setTimeout(() => {
+          onUpdateMessage(cid, assistantMsgId, { content: r.answer, result: r, step: 'done' })
+          setBusyMsgId(null)
+        }, 400)
       }).catch((e: unknown) => {
+        timers.forEach(clearTimeout)
         const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Request failed'
         onUpdateMessage(cid, assistantMsgId, { error: msg, step: 'error' })
         setBusyMsgId(null)
