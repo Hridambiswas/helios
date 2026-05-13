@@ -218,7 +218,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
             fontFamily: '"IBM Plex Mono", monospace',
             fontSize: 10, letterSpacing: '0.38em',
             textTransform: 'uppercase',
-            color: 'rgba(255,255,255,0.22)',
+            color: '#fff',
             marginBottom: 28,
           }}
         >
@@ -308,7 +308,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
                     transform: 'translateY(-50%)',
                     fontFamily: '"IBM Plex Mono", monospace',
                     fontSize: 13,
-                    color: 'rgba(255,255,255,0.28)',
+                    color: 'rgba(255,255,255,0.52)',
                     pointerEvents: 'none',
                     userSelect: 'none',
                     whiteSpace: 'nowrap',
