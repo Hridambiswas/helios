@@ -111,6 +111,20 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const animatedPlaceholder = useTypewriterPlaceholder()
 
+  // Subtle micro-wiggle while input is focused
+  const shakeX = useMotionValue(0)
+  const shakeSp = useSpring(shakeX, { damping: 8, stiffness: 400 })
+  useEffect(() => {
+    if (!focused) { shakeX.set(0); return }
+    let id: number
+    const tick = () => {
+      shakeX.set(Math.sin(Date.now() * 0.007) * 0.5)
+      id = requestAnimationFrame(tick)
+    }
+    id = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(id)
+  }, [focused, shakeX])
+
   // Pipeline scroll tracking
   const pipelineRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({
@@ -240,6 +254,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
         >
           <motion.div
             style={{
+              x: shakeSp,
               display: 'flex',
               backdropFilter: 'blur(32px) saturate(180%)',
               background: 'rgba(255,255,255,0.028)',
