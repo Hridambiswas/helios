@@ -369,7 +369,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
         >
           <span style={{
             fontFamily: '"IBM Plex Mono", monospace', fontSize: 9,
-            letterSpacing: '0.45em', color: 'rgba(255,255,255,0.14)',
+            letterSpacing: '0.45em', color: '#fff',
             textTransform: 'uppercase',
           }}>Pipeline</span>
           <motion.div
@@ -396,7 +396,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
             viewport={{ once: true }}
             style={{
               fontFamily: '"IBM Plex Mono", monospace', fontSize: 9,
-              letterSpacing: '0.45em', color: 'rgba(255,255,255,0.18)',
+              letterSpacing: '0.45em', color: '#fff',
               textTransform: 'uppercase', marginBottom: 72,
             }}
           >
