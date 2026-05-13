@@ -111,20 +111,6 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
   const animatedPlaceholder = useTypewriterPlaceholder()
 
-  // Continuous micro-vibration while input is focused
-  const shakeX = useMotionValue(0)
-  const shakeSp = useSpring(shakeX, { damping: 3, stiffness: 600 })
-  useEffect(() => {
-    if (!focused) { shakeX.set(0); return }
-    let id: number
-    const tick = () => {
-      shakeX.set(Math.sin(Date.now() * 0.013) * 1.3)
-      id = requestAnimationFrame(tick)
-    }
-    id = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(id)
-  }, [focused, shakeX])
-
   // Pipeline scroll tracking
   const pipelineRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({
@@ -254,7 +240,6 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
         >
           <motion.div
             style={{
-              x: shakeSp,
               display: 'flex',
               backdropFilter: 'blur(32px) saturate(180%)',
               background: 'rgba(255,255,255,0.028)',
@@ -265,7 +250,14 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
               transition: 'border-color 0.3s, box-shadow 0.3s',
             }}
           >
-            <div style={{ position: 'relative', flex: 1 }}>
+            <form
+              autoComplete="off"
+              onSubmit={e => { e.preventDefault(); handleSubmit() }}
+              style={{ flex: 1, display: 'flex', minWidth: 0 }}
+            >
+              {/* Hidden dummy password field — stops Safari keychain from targeting the query input */}
+              <input type="password" tabIndex={-1} aria-hidden={true} style={{ position: 'absolute', width: 0, height: 0, opacity: 0, pointerEvents: 'none' }} />
+              <div style={{ position: 'relative', flex: 1 }}>
               <input
                 ref={inputRef}
                 value={query}
@@ -273,6 +265,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
                 onKeyDown={e => e.key === 'Enter' && handleSubmit()}
                 onFocus={() => setFocused(true)}
                 onBlur={() => setFocused(false)}
+                name="helios-query"
                 autoComplete="off"
                 autoCorrect="off"
                 autoCapitalize="off"
@@ -320,6 +313,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
                 </span>
               )}
             </div>
+            </form>
             <Magnetic>
               <button
                 onClick={handleSubmit}
