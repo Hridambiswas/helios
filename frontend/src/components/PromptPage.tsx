@@ -129,7 +129,7 @@ export function PromptPage({ onSubmit, user, onAuthClick }: Props) {
   const pipelineRef = useRef<HTMLDivElement>(null)
   const { scrollYProgress } = useScroll({
     target: pipelineRef,
-    offset: ['start 90%', 'end 20%'],
+    offset: ['start 90%', 'end 60%'],
   })
   const lineH    = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
   const dropTop  = useTransform(scrollYProgress, [0, 1], ['0%', '100%'])
