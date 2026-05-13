@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { flushSync } from 'react-dom'
 import { Send, Loader, Copy, Check, Zap, Search, Code, Shield, CheckCircle, XCircle, ChevronRight, Globe, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
@@ -281,6 +282,42 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
           </div>
         )}
 
+        {/* Citations */}
+        {result && !isStreaming && (result.web_sources?.length > 0 || result.retrieved_docs?.length > 0) && (
+          <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="font-mono text-[9px] tracking-[0.25em] uppercase mb-2.5" style={{ color: 'rgba(255,255,255,0.18)' }}>
+              Sources
+            </p>
+            <div className="space-y-2">
+              {result.web_sources?.map((src, i) => (
+                <div key={`w${i}`} className="flex items-start gap-2">
+                  <span className="font-mono text-[9px] shrink-0 mt-0.5" style={{ color: '#a78bfa' }}>[W{i + 1}]</span>
+                  <div className="min-w-0 flex-1">
+                    <a
+                      href={src.url} target="_blank" rel="noopener noreferrer"
+                      className="font-mono text-[10px] block truncate hover:underline"
+                      style={{ color: '#a78bfa' }}
+                    >
+                      {src.title || src.url}
+                    </a>
+                    <p className="font-mono text-[9px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                      {src.url}
+                    </p>
+                  </div>
+                </div>
+              ))}
+              {result.retrieved_docs?.length > 0 && result.retrieved_docs.map((doc, i) => (
+                <div key={`d${i}`} className="flex items-start gap-2">
+                  <span className="font-mono text-[9px] shrink-0" style={{ color: 'rgba(255,255,255,0.28)' }}>[D{i + 1}]</span>
+                  <p className="font-mono text-[9px] flex-1 truncate" style={{ color: 'rgba(255,255,255,0.28)' }}>
+                    {(doc.metadata?.filename as string) || doc.id.slice(0, 48)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Follow-ups */}
         {result?.follow_up_questions && result.follow_up_questions.length > 0 && !isStreaming && (
           <div className="mt-5">
@@ -443,15 +480,28 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
     if (token) {
       wsRef.current?.close()
       let accumulated = ''
+      let executingShown = false
       const ws = connectQueryWS(
         token,
         (event, data) => {
-          if (['planning', 'retrieving', 'executing', 'evaluating'].includes(event)) {
-            onUpdateMessage(cid, assistantMsgId, { step: event })
+          if (['planning', 'retrieving', 'evaluating'].includes(event)) {
+            // flushSync ensures each step gets its own render frame — prevents React 18
+            // automatic batching from collapsing planning+retrieving into one update
+            flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: event }))
           } else if (event === 'token') {
             const t = (data as { token?: string })?.token ?? ''
             accumulated += t
-            onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'synthesizing' })
+            if (!executingShown) {
+              // Synthesise the Execute step — backend never emits it explicitly.
+              // Show it for 300ms before switching to Writing (synthesizing).
+              executingShown = true
+              flushSync(() => onUpdateMessage(cid, assistantMsgId, { step: 'executing' }))
+              setTimeout(() => {
+                onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'synthesizing' })
+              }, 300)
+            } else {
+              onUpdateMessage(cid, assistantMsgId, { content: accumulated, step: 'synthesizing' })
+            }
           } else if (event === 'done') {
             if (!accumulated) {
               queries.run(q, history).then(({ data: r }) => {
