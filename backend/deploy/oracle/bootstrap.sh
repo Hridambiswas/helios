@@ -67,3 +67,26 @@ if ! command -v certbot >/dev/null 2>&1; then
   snap install --classic certbot
   ln -sf /snap/bin/certbot /usr/bin/certbot
 fi
+
+log "step 8/8: clone repo (if missing)"
+if [ ! -d "$CHECKOUT_DIR/.git" ]; then
+  sudo -u ubuntu git clone "$REPO_URL" "$CHECKOUT_DIR"
+else
+  log "  → repo already present, skipping clone"
+fi
+
+log "bootstrap complete."
+cat <<'EOF'
+
+next steps (do these manually, once):
+  1. populate  /home/ubuntu/helios/backend/.env   (see backend/.env.example)
+  2. populate  /etc/helios/duckdns.env            (see backend/deploy/duckdns/.env.example)
+  3. run       sudo bash /home/ubuntu/helios/backend/deploy/duckdns/install.sh
+  4. wait ~5min for DNS to propagate, then:
+     sudo certbot certonly --standalone \
+       -d $DUCKDNS_DOMAIN.duckdns.org \
+       --agree-tos -m hridambiswas2005@gmail.com --non-interactive
+  5. cd /home/ubuntu/helios/backend
+     docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml up -d
+EOF
+
