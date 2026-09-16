@@ -24,3 +24,15 @@ if already satisfied.
 3. Opens ports 80 + 443 in iptables (Oracle Ubuntu default policy blocks them).
 4. Clones `github.com/Hridambiswas/helios` into `/home/ubuntu/helios`.
 5. Reminds you to populate `backend/.env` and `/etc/helios/duckdns.env`.
+
+## After first deploy — verify
+
+Run from your laptop:
+
+```bash
+backend/deploy/oracle/verify.sh              # defaults to helios-hridam.duckdns.org
+backend/deploy/oracle/verify.sh my.host.tld  # override for testing
+```
+
+Checks `/nginx-health`, `/api/v1/stats`, `/docs`, and that `/metrics` is
+correctly locked down (403).
