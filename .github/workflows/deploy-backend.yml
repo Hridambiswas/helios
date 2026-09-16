@@ -69,4 +69,16 @@ jobs:
             docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml build api worker beat
             docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml up -d --force-recreate api worker beat
             docker image prune -f
+
+            # Post-deploy smoke test: nginx should answer /nginx-health quickly.
+            for i in 1 2 3 4 5; do
+              if curl -fsS -m 5 http://127.0.0.1/nginx-health >/dev/null; then
+                echo "smoke test: nginx OK"
+                break
+              fi
+              echo "smoke test: waiting for nginx ($i/5)"
+              sleep 6
+            done
+            curl -fsS -m 5 http://127.0.0.1/nginx-health >/dev/null
+
             echo "Deploy complete at $(date)"
