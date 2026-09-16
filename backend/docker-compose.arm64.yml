@@ -16,3 +16,5 @@ services:
     platform: linux/arm64
   worker:
     platform: linux/arm64
+  beat:
+    platform: linux/arm64
