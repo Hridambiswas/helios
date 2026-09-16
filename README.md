@@ -10,9 +10,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-OTLP-purple.svg)](https://opentelemetry.io)
 
-🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.ddns.net](https://helios-hridam.ddns.net)
+🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.duckdns.org](https://helios-hridam.duckdns.org)
 
-Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
+Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on Oracle Cloud Always-Free ARM (backend) and Vercel (frontend) with Supabase PostgreSQL.
 
 ### What's new in v1.1
 
@@ -33,11 +33,11 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
 ```
   React + Vite (Vercel)
   ├── Chat UI (sidebar + conversation history)
-  ├── REST/WebSocket → FastAPI :8000 (EC2)
+  ├── REST/WebSocket → FastAPI :8000 (Oracle Cloud A1 ARM)
   └── GitHub OAuth → /api/v1/auth/github
 
                               ┌────────────────────────────────────────────────┐
-                              │              FastAPI  :8000  (EC2)             │
+                              │        FastAPI  :8000  (Oracle A1 ARM)          │
                               │                                                 │
   Client ──REST──────────────▶│  POST /api/v1/query     (sync)                 │
   Client ──REST──────────────▶│  POST /api/v1/query/async (Celery)             │

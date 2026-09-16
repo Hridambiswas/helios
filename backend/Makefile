@@ -37,6 +37,20 @@ prod-logs:
 prod-down:
 	docker compose -f docker-compose.yml -f docker-compose.prod.yml down
 
+## ── Docker (production, ARM64 — Oracle Cloud A1) ─────────────────────────────
+
+prod-arm-up:
+	docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml up -d
+
+prod-arm-build:
+	docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml build --no-cache api worker beat
+
+prod-arm-logs:
+	docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml logs -f api worker
+
+prod-arm-down:
+	docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml down
+
 ## ── Tests ────────────────────────────────────────────────────────────────────
 
 test:

@@ -1,0 +1,15 @@
+[Unit]
+Description=DuckDNS updater for Helios
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/helios/duckdns.env
+ExecStart=/usr/local/bin/helios-duckdns-update.sh
+
+# Hardening — the script only needs outbound HTTPS + env
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

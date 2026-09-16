@@ -1,0 +1,13 @@
+[Unit]
+Description=Fire helios-duckdns updater every 5 minutes
+Requires=duckdns.service
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=5min
+AccuracySec=30s
+Persistent=true
+Unit=duckdns.service
+
+[Install]
+WantedBy=timers.target

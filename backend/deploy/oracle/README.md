@@ -1,0 +1,57 @@
+# Oracle Cloud Always-Free bootstrap
+
+Idempotent bootstrap for the Helios backend on an Oracle Cloud A1.Flex
+(ARM64) Ubuntu 22.04 VM.
+
+```bash
+# on your laptop
+scp -i ~/.ssh/id_ed25519_helios_oracle backend/deploy/oracle/bootstrap.sh \
+    ubuntu@$ORACLE_HOST:~/bootstrap.sh
+
+# on the VM
+ssh -i ~/.ssh/id_ed25519_helios_oracle ubuntu@$ORACLE_HOST
+sudo bash ~/bootstrap.sh
+```
+
+The script is safe to re-run; each step guards on the desired state and no-ops
+if already satisfied.
+
+## What it does
+
+1. `apt` update + install Docker CE, docker-compose plugin, certbot,
+   netfilter-persistent, git.
+2. Adds `ubuntu` to the `docker` group.
+3. Opens ports 80 + 443 in iptables (Oracle Ubuntu default policy blocks them).
+4. Clones `github.com/Hridambiswas/helios` into `/home/ubuntu/helios`.
+5. Reminds you to populate `backend/.env` and `/etc/helios/duckdns.env`.
+
+## After first deploy — verify
+
+Run from your laptop:
+
+```bash
+backend/deploy/oracle/verify.sh              # defaults to helios-hridam.duckdns.org
+backend/deploy/oracle/verify.sh my.host.tld  # override for testing
+```
+
+Checks `/nginx-health`, `/api/v1/stats`, `/docs`, and that `/metrics` is
+correctly locked down (403).
+
+## TL;DR — full deploy in two commands
+
+Once the Oracle VM is provisioned (reserved IP, port 22/80/443 open, SSH key
+attached) and you've grabbed a DuckDNS token:
+
+```bash
+# 1. from repo root — brings the stack up on the VM + issues SSL cert
+ORACLE_HOST=<vm-public-ip> \
+DUCKDNS_TOKEN=<duckdns-token> \
+GROQ_API_KEY=<gsk_...> \
+  backend/deploy/oracle/first-deploy.sh
+
+# 2. flip GitHub Actions over so future deploys + frontend point at the new box
+ORACLE_HOST=<vm-public-ip> \
+  backend/deploy/oracle/rotate-secrets.sh
+```
+
+That's it. `first-deploy.sh` is idempotent (safe to re-run after a failure).
