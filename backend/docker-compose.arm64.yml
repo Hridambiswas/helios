@@ -11,4 +11,6 @@
 # Each override is intentionally in its own commit so a service can be
 # reverted individually if a specific image lacks an arm64 tag.
 
-services: {}
+services:
+  api:
+    platform: linux/arm64
