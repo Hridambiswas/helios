@@ -50,3 +50,11 @@ if ! id -nG ubuntu | grep -qw docker; then
   usermod -aG docker ubuntu
   log "  → ubuntu added to docker group (log out + back in to pick up)"
 fi
+
+log "step 6/8: open ports 80 + 443 in iptables (Oracle default policy blocks)"
+for port in 80 443; do
+  if ! iptables -C INPUT -m state --state NEW -p tcp --dport "$port" -j ACCEPT 2>/dev/null; then
+    iptables -I INPUT 6 -m state --state NEW -p tcp --dport "$port" -j ACCEPT
+  fi
+done
+netfilter-persistent save
