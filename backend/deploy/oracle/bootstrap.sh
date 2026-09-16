@@ -15,3 +15,8 @@ CHECKOUT_DIR="/home/ubuntu/helios"
 log() { printf '\033[1;36m[bootstrap]\033[0m %s\n' "$*"; }
 
 log "starting Oracle bootstrap on $(hostname) — $(date -u +%FT%TZ)"
+
+log "step 1/8: apt update"
+export DEBIAN_FRONTEND=noninteractive
+apt-get update -y
+apt-get upgrade -y
