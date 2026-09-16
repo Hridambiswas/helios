@@ -67,3 +67,16 @@ sudo netfilter-persistent save
 - Auto-renewal via certbot's built-in systemd timer.
 - Nginx mounts `/etc/letsencrypt` read-only (existing pattern from
   `backend/docker-compose.prod.yml`).
+
+## Secrets rotation
+
+GitHub Actions secrets to update (via `gh secret set`):
+
+| Old            | New            | Value                             |
+| -------------- | -------------- | --------------------------------- |
+| `EC2_HOST`     | `ORACLE_HOST`  | Oracle reserved public IP         |
+| `EC2_USER`     | `ORACLE_USER`  | `ubuntu`                          |
+| `EC2_SSH_KEY`  | `ORACLE_SSH_KEY` | contents of `id_ed25519_helios_oracle` (private) |
+| `VITE_API_URL` | *(same name)*  | `https://helios-hridam.duckdns.org` |
+
+The `EC2_*` secrets can be deleted after the first successful Oracle deploy.
