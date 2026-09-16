@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   deploy:
-    name: SSH deploy to Oracle A1
+    name: SSH deploy to DigitalOcean droplet
     runs-on: ubuntu-latest
     timeout-minutes: 25
     steps:
