@@ -24,3 +24,5 @@ services:
     platform: linux/arm64
   minio:
     platform: linux/arm64
+  chroma:
+    platform: linux/arm64
