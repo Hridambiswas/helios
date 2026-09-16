@@ -14,3 +14,5 @@
 services:
   api:
     platform: linux/arm64
+  worker:
+    platform: linux/arm64
