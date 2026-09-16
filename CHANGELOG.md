@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Changed
+
+- **Backend host: EC2 → Oracle Cloud Always-Free ARM (A1.Flex).**
+  Reserved public IP replaces AWS's dynamic IP, so the API endpoint no longer
+  disappears when the instance restarts. See `docs/migration/oracle-arm.md`.
+
+- **DNS: No-IP `.ddns.net` → DuckDNS `.duckdns.org`.**
+  No-IP's free tier expires monthly; DuckDNS does not. A systemd timer on the
+  VM re-asserts the A record every 5 minutes as belt-and-braces.
+
+- **Docker: all services pinned to `linux/arm64` via
+  `backend/docker-compose.arm64.yml`** overlay.
+
+- **CI: `deploy-backend.yml`** rewritten to target Oracle host / user / key
+  secrets (`ORACLE_HOST`, `ORACLE_USER`, `ORACLE_SSH_KEY`) and to run a
+  post-deploy nginx smoke test.
+
+---
+
 ## [1.1.0] — 2026-05-12
 
 ### Added
