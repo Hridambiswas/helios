@@ -26,3 +26,5 @@ services:
     platform: linux/arm64
   chroma:
     platform: linux/arm64
+  nginx:
+    platform: linux/arm64
