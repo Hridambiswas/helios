@@ -22,3 +22,5 @@ services:
     platform: linux/arm64
   redis:
     platform: linux/arm64
+  minio:
+    platform: linux/arm64
