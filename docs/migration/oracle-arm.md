@@ -35,3 +35,15 @@ IP, DuckDNS).
 5. Under Networking, tick **Assign a public IPv4 address** and, after the
    instance is up, promote it to a **Reserved Public IP** so it never changes.
 6. Open ports 22, 80, 443 in the VCN default security list (Ingress rules).
+
+## Oracle firewall gotcha
+
+Oracle's Ubuntu images ship with an iptables policy that drops inbound traffic
+even after the VCN security list allows it. First-boot fix (baked into
+`backend/deploy/oracle/bootstrap.sh`):
+
+```bash
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
+sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
+sudo netfilter-persistent save
+```
