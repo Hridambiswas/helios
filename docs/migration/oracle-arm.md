@@ -80,3 +80,15 @@ GitHub Actions secrets to update (via `gh secret set`):
 | `VITE_API_URL` | *(same name)*  | `https://helios-hridam.duckdns.org` |
 
 The `EC2_*` secrets can be deleted after the first successful Oracle deploy.
+
+## Rollback plan
+
+Old EC2 configuration is preserved in git history (any commit on `main` before
+the merge of this branch). If the Oracle host misbehaves and you need to fall
+back:
+
+1. `git revert -m 1 <merge-sha>` on `main`.
+2. Restore the `EC2_HOST` / `EC2_USER` / `EC2_SSH_KEY` secrets in GitHub.
+3. If the EC2 instance was terminated, provision a fresh one — the compose
+   stack is host-agnostic.
+4. Point `VITE_API_URL` back at the old hostname and rebuild the frontend.
