@@ -12,7 +12,7 @@
 
 🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.duckdns.org](https://helios-hridam.duckdns.org)
 
-Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
+Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on Oracle Cloud Always-Free ARM (backend) and Vercel (frontend) with Supabase PostgreSQL.
 
 ### What's new in v1.1
 
