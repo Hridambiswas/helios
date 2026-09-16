@@ -33,7 +33,7 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
 ```
   React + Vite (Vercel)
   ├── Chat UI (sidebar + conversation history)
-  ├── REST/WebSocket → FastAPI :8000 (EC2)
+  ├── REST/WebSocket → FastAPI :8000 (Oracle Cloud A1 ARM)
   └── GitHub OAuth → /api/v1/auth/github
 
                               ┌────────────────────────────────────────────────┐
