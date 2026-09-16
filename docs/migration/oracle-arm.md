@@ -92,3 +92,26 @@ back:
 3. If the EC2 instance was terminated, provision a fresh one — the compose
    stack is host-agnostic.
 4. Point `VITE_API_URL` back at the old hostname and rebuild the frontend.
+
+## Files touched by this migration
+
+- `backend/deploy/oracle/` — new: `bootstrap.sh`, `verify.sh`, `README.md`
+- `backend/deploy/duckdns/` — new: updater script, systemd unit + timer,
+  installer, `.env.example`
+- `backend/docker-compose.arm64.yml` — new overlay pinning `linux/arm64`
+- `backend/Makefile` — new `prod-arm-*` targets
+- `backend/nginx/nginx-ssl.conf` — swap `.ddns.net` → `.duckdns.org`, add
+  `/nginx-health`, tune upstream
+- `backend/nginx/certbot-renew.sh` — new post-renew hook
+- `backend/.env.example` — document `PUBLIC_HOSTNAME`, prod `APP_ENV`,
+  `OAUTH_BACKEND_CALLBACK`
+- `.github/workflows/deploy-backend.yml` — rename to Oracle, swap secrets,
+  include arm64 overlay, add smoke test
+- `.github/workflows/deploy-frontend.yml` — annotate expected
+  `VITE_API_URL`
+- `frontend/.env.example` — default to DuckDNS URL
+- `frontend/vite.config.ts` — clarify dev proxy vs prod
+- `README.md` — swap EC2 → Oracle, update live URL
+- `CHANGELOG.md` — Unreleased entry
+- `MIGRATION.md` — new top-level pointer
+- `docs/migration/oracle-arm.md` — this document
