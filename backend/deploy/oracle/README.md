@@ -36,3 +36,22 @@ backend/deploy/oracle/verify.sh my.host.tld  # override for testing
 
 Checks `/nginx-health`, `/api/v1/stats`, `/docs`, and that `/metrics` is
 correctly locked down (403).
+
+## TL;DR — full deploy in two commands
+
+Once the Oracle VM is provisioned (reserved IP, port 22/80/443 open, SSH key
+attached) and you've grabbed a DuckDNS token:
+
+```bash
+# 1. from repo root — brings the stack up on the VM + issues SSL cert
+ORACLE_HOST=<vm-public-ip> \
+DUCKDNS_TOKEN=<duckdns-token> \
+GROQ_API_KEY=<gsk_...> \
+  backend/deploy/oracle/first-deploy.sh
+
+# 2. flip GitHub Actions over so future deploys + frontend point at the new box
+ORACLE_HOST=<vm-public-ip> \
+  backend/deploy/oracle/rotate-secrets.sh
+```
+
+That's it. `first-deploy.sh` is idempotent (safe to re-run after a failure).
