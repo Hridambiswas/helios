@@ -1,4 +1,4 @@
-name: Deploy Backend to Oracle
+name: Deploy Backend to DigitalOcean
 
 on:
   push:
