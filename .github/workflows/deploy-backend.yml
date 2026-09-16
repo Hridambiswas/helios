@@ -66,7 +66,7 @@ jobs:
             # restructure (previously run from root, defaulting to "helios").
             # Without this, compose defaults to "backend" and old containers
             # keep their ports, causing bind failures.
-            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml build api worker beat
-            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate api worker beat
+            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml build api worker beat
+            docker compose -p helios -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.arm64.yml up -d --force-recreate api worker beat
             docker image prune -f
             echo "Deploy complete at $(date)"
