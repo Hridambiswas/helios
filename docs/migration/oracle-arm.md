@@ -58,3 +58,12 @@ sudo netfilter-persistent save
 - Enable the systemd timer (`backend/deploy/duckdns/duckdns.timer`) — it pings
   DuckDNS every 5 minutes to keep the A record pointed at the current public
   IP. Belt-and-braces even though the Oracle IP is reserved.
+
+## SSL
+
+- Let's Encrypt via certbot's HTTP-01 challenge on port 80.
+- First issuance is a one-shot manual step (`bootstrap.sh` prints the exact
+  command).
+- Auto-renewal via certbot's built-in systemd timer.
+- Nginx mounts `/etc/letsencrypt` read-only (existing pattern from
+  `backend/docker-compose.prod.yml`).
