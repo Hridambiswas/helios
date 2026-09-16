@@ -20,3 +20,8 @@ log "step 1/8: apt update"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -y
 apt-get upgrade -y
+
+log "step 2/8: install base packages"
+apt-get install -y \
+  ca-certificates curl gnupg lsb-release \
+  git jq netfilter-persistent iptables-persistent
