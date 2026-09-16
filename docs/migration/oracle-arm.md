@@ -47,3 +47,14 @@ sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 80 -j ACCEPT
 sudo iptables -I INPUT 6 -m state --state NEW -p tcp --dport 443 -j ACCEPT
 sudo netfilter-persistent save
 ```
+
+## DNS: DuckDNS
+
+- Register `helios-hridam.duckdns.org` at <https://www.duckdns.org> (Google
+  login).
+- Copy the account token.
+- Populate `/etc/helios/duckdns.env` on the VM with `DUCKDNS_DOMAIN=helios-hridam`
+  and `DUCKDNS_TOKEN=<token>`.
+- Enable the systemd timer (`backend/deploy/duckdns/duckdns.timer`) — it pings
+  DuckDNS every 5 minutes to keep the A record pointed at the current public
+  IP. Belt-and-braces even though the Oracle IP is reserved.
