@@ -58,3 +58,12 @@ for port in 80 443; do
   fi
 done
 netfilter-persistent save
+
+log "step 7/8: install certbot (snap route — smaller than apt version)"
+if ! command -v certbot >/dev/null 2>&1; then
+  apt-get install -y snapd
+  snap install core
+  snap refresh core
+  snap install --classic certbot
+  ln -sf /snap/bin/certbot /usr/bin/certbot
+fi
