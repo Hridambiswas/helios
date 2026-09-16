@@ -38,3 +38,9 @@ echo \
   https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" \
   > /etc/apt/sources.list.d/docker.list
 apt-get update -y
+
+log "step 4/8: install docker-ce + compose plugin"
+apt-get install -y \
+  docker-ce docker-ce-cli containerd.io \
+  docker-buildx-plugin docker-compose-plugin
+systemctl enable --now docker
