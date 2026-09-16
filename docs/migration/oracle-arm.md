@@ -21,3 +21,17 @@ IP, DuckDNS).
 | SSL        | Let's Encrypt on `.ddns.net`    | Let's Encrypt on `.duckdns.org`          |
 | SSH key    | `helios-key.pem` (AWS)          | `id_ed25519_helios_oracle`               |
 | Deploy     | GitHub Actions → EC2 SSH        | GitHub Actions → Oracle SSH              |
+
+## Provisioning checklist (Oracle side, done in browser)
+
+1. Sign up at <https://cloud.oracle.com/free> — needs a credit card for identity
+   verification; Always-Free tier will not be charged.
+2. Region: pick one close to you where **Ampere A1 capacity is available**
+   (Mumbai `ap-mumbai-1` was full at time of writing; Hyderabad and Singapore
+   have had capacity — you may need to retry).
+3. Create instance: shape `VM.Standard.A1.Flex`, image `Canonical Ubuntu 22.04`,
+   4 OCPU, 24 GB RAM (all inside Always-Free).
+4. Paste the ed25519 public key into "Add SSH keys → Paste public keys".
+5. Under Networking, tick **Assign a public IPv4 address** and, after the
+   instance is up, promote it to a **Reserved Public IP** so it never changes.
+6. Open ports 22, 80, 443 in the VCN default security list (Ingress rules).
