@@ -44,3 +44,9 @@ apt-get install -y \
   docker-ce docker-ce-cli containerd.io \
   docker-buildx-plugin docker-compose-plugin
 systemctl enable --now docker
+
+log "step 5/8: add ubuntu to docker group"
+if ! id -nG ubuntu | grep -qw docker; then
+  usermod -aG docker ubuntu
+  log "  → ubuntu added to docker group (log out + back in to pick up)"
+fi
