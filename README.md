@@ -37,7 +37,7 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
   └── GitHub OAuth → /api/v1/auth/github
 
                               ┌────────────────────────────────────────────────┐
-                              │              FastAPI  :8000  (EC2)             │
+                              │        FastAPI  :8000  (Oracle A1 ARM)          │
                               │                                                 │
   Client ──REST──────────────▶│  POST /api/v1/query     (sync)                 │
   Client ──REST──────────────▶│  POST /api/v1/query/async (Celery)             │
