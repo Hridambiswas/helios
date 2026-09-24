@@ -62,6 +62,21 @@ critic_pass_counter = Counter(
     ["result"],   # pass / fail
 )
 
+# ── Verifier metrics (Gemini second-opinion) ─────────────────────────────────
+
+verifier_score_histogram = Histogram(
+    "helios_verifier_score",
+    "Verifier score distribution (Gemini cross-check)",
+    ["dimension"],   # groundedness / faithfulness / agreement / overall
+    buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+)
+
+verifier_pass_counter = Counter(
+    "helios_verifier_pass_total",
+    "Verifier pass/fail counts",
+    ["result"],   # pass / fail
+)
+
 # ── API metrics ───────────────────────────────────────────────────────────────
 
 http_requests_counter = Counter(
