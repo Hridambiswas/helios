@@ -5,3 +5,6 @@ from __future__ import annotations
 import json
 import logging
 from typing import Any
+
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages import HumanMessage, SystemMessage
