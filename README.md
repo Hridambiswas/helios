@@ -79,7 +79,7 @@ Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dens
                               │                                │               │
                               │                      ┌─────────▼──────┐       │
                               │                      │     Critic     │       │
-                              │                      │  Llama 3.3 70B │       │
+                              │                      │  gpt-oss 120B  │       │
                               │                      │  min score 0.5 │       │
                               │                      │  → retry once  │       │
                               │                      └────────────────┘       │
