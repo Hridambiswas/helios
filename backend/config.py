@@ -16,9 +16,10 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── LLM ───────────────────────────────────────────────────────────────────
+    # ── LLM (primary: Groq / verifier: Google Gemini) ─────────────────────────
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
+    gemini_api_key: SecretStr = SecretStr("")
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
