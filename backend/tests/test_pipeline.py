@@ -31,6 +31,13 @@ def _mock_critic_output(state):
     }, "critic_passed": True}
 
 
+def _mock_verifier_output(state):
+    return {**state, "verifier_scores": {
+        "groundedness": 0.9, "faithfulness": 0.9, "agreement": 0.85,
+        "overall": 0.88, "pass": True, "reasoning": "Independent check confirms", "flags": [],
+    }, "verifier_passed": True}
+
+
 class TestPipelineRouting:
 
     def test_full_pipeline_happy_path(self):
