@@ -119,3 +119,15 @@ class VerifierAgent(BaseAgent):
             scores["agreement"], scores["overall"], scores["pass"],
         )
         return {**state, "verifier_scores": scores, "verifier_passed": scores["pass"]}
+
+    @staticmethod
+    def _zero_scores() -> dict:
+        return {
+            "groundedness": 0.0,
+            "faithfulness": 0.0,
+            "agreement": 0.0,
+            "overall": 0.0,
+            "pass": False,
+            "reasoning": "Verification failed",
+            "flags": ["verifier_error"],
+        }
