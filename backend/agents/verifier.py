@@ -58,3 +58,11 @@ class VerifierAgent(BaseAgent):
     """Gemini-backed second-opinion judge that cross-checks the synthesizer."""
 
     name = "verifier"
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._llm = ChatGoogleGenerativeAI(
+            model=cfg.gemini_model,
+            temperature=0,
+            google_api_key=cfg.gemini_api_key.get_secret_value(),
+        )
