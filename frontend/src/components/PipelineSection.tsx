@@ -235,7 +235,7 @@ export function PipelineSection() {
           </h2>
 
           <p className="font-mono text-sm tracking-wider mt-2" style={{ color: VD }}>
-            Five agents. One answer. No query escapes.
+            Six agents. One answer. Cross-verified.
           </p>
           <div
             className="mt-4 h-px"
