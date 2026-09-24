@@ -243,11 +243,15 @@ def run_pipeline(
             status = "success" if not final_state.get("error") else "failed"
             if not final_state.get("critic_passed") and status == "success":
                 status = "critic_failed"
+            if final_state.get("verifier_passed") is False and status == "success":
+                status = "verifier_failed"
             pipeline_requests_counter.labels(status=status).inc()
 
             logger.info(
-                "Pipeline done: status=%s elapsed=%.0fms critic_passed=%s",
-                status, elapsed_ms, final_state.get("critic_passed"),
+                "Pipeline done: status=%s elapsed=%.0fms critic_passed=%s verifier_passed=%s",
+                status, elapsed_ms,
+                final_state.get("critic_passed"),
+                final_state.get("verifier_passed"),
             )
             return final_state
         except Exception as exc:
