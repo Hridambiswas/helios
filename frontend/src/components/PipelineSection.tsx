@@ -10,8 +10,8 @@ const VL = 'rgba(139,92,246,0.06)'
 const AGENTS = [
   {
     num: '01', name: 'PLANNER', role: 'Query Decomposition',
-    desc: 'Llama 3.3 70B deconstructs your query into sub-tasks — mapping every angle before the first move.',
-    tech: ['Llama 3.3 70B', 'LangGraph', 'T=0'],
+    desc: 'gpt-oss 120B deconstructs your query into sub-tasks — mapping every angle before the first move.',
+    tech: ['gpt-oss 120B', 'LangGraph', 'T=0'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
