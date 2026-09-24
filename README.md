@@ -11,16 +11,17 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-OTLP-purple.svg)](https://opentelemetry.io)
 
-🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.ddns.net](https://helios-hridam.ddns.net)
+🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.duckdns.org](https://helios-hridam.duckdns.org)
 
-Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Gemini-backed cross-verifier, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
+Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Gemini-backed cross-verifier, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on a DigitalOcean droplet (backend) behind DuckDNS + Let's Encrypt, with Vercel (frontend) and Supabase PostgreSQL.
 
-### What's new in v1.2 (unreleased)
+### What's new in v1.2
 
 | # | Feature | Summary |
 |---|---------|---------|
 | 1 | **Gemini cross-verifier** | Sixth agent runs after Critic; Gemini 2.5 Flash re-checks the answer against retrieved context and surfaces `verifier_scores` + a "Checked by" badge |
 | 2 | **Model refresh** | Groq default switched from retired `llama-3.3-70b-versatile` to `openai/gpt-oss-120b` |
+| 3 | **Backend host migration** | AWS EC2 → DigitalOcean droplet (BLR1, x86_64). DNS moved from No-IP `.ddns.net` (expires monthly) to DuckDNS `.duckdns.org` (permanent). One-shot deploy via `backend/deploy/digitalocean/first-deploy.sh` |
 
 ### What's new in v1.1
 
@@ -41,11 +42,11 @@ Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dens
 ```
   React + Vite (Vercel)
   ├── Chat UI (sidebar + conversation history)
-  ├── REST/WebSocket → FastAPI :8000 (EC2)
+  ├── REST/WebSocket → FastAPI :8000 (Oracle Cloud A1 ARM)
   └── GitHub OAuth → /api/v1/auth/github
 
                               ┌────────────────────────────────────────────────┐
-                              │              FastAPI  :8000  (EC2)             │
+                              │        FastAPI  :8000  (Oracle A1 ARM)          │
                               │                                                 │
   Client ──REST──────────────▶│  POST /api/v1/query     (sync)                 │
   Client ──REST──────────────▶│  POST /api/v1/query/async (Celery)             │

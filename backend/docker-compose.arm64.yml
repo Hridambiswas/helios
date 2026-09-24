@@ -1,0 +1,30 @@
+# Compose overlay: pins every service to linux/arm64.
+#
+# Usage on the Oracle A1 host:
+#
+#   docker compose -p helios \
+#     -f docker-compose.yml \
+#     -f docker-compose.prod.yml \
+#     -f docker-compose.arm64.yml \
+#     up -d
+#
+# Each override is intentionally in its own commit so a service can be
+# reverted individually if a specific image lacks an arm64 tag.
+
+services:
+  api:
+    platform: linux/arm64
+  worker:
+    platform: linux/arm64
+  beat:
+    platform: linux/arm64
+  postgres:
+    platform: linux/arm64
+  redis:
+    platform: linux/arm64
+  minio:
+    platform: linux/arm64
+  chroma:
+    platform: linux/arm64
+  nginx:
+    platform: linux/arm64

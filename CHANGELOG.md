@@ -25,6 +25,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `helios_verifier_pass_total{result}` counter.
 - **Config knobs** — `VERIFIER_ENABLED`, `VERIFIER_MIN_SCORE`,
   `VERIFIER_TIMEOUT_SECONDS`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
+- **DigitalOcean deploy tooling** — `backend/deploy/digitalocean/` scripts
+  (`bootstrap.sh`, `first-deploy.sh`, `rotate-secrets.sh`, `verify.sh`) for a
+  one-shot cut-over from EC2. Oracle Cloud variant kept in-tree at
+  `backend/deploy/oracle/` as a fallback path.
+- **DuckDNS integration** — `backend/deploy/duckdns/` (systemd timer +
+  `install.sh`) re-asserts the A record every 5 min so the API URL is stable.
 
 ### Changed
 
@@ -37,12 +43,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   `verifier=on/off` and the active `groq_model`.
 - **Terminal state** — the LangGraph now ends at the Verifier node instead of
   the Critic. Retry loop still lives on Critic → Synthesizer.
+- **Backend host: EC2 → DigitalOcean droplet.** Reserved (Floating) IP replaces
+  AWS's dynamic IP, so the API endpoint no longer disappears when the instance
+  restarts. Ubuntu 22.04 x86_64, region BLR1.
+- **DNS: No-IP `.ddns.net` → DuckDNS `.duckdns.org`.** No-IP's free tier
+  expires monthly; DuckDNS does not.
+- **CI: `deploy-backend.yml`** rewritten to target DO host / user / key
+  secrets (`DO_HOST`, `DO_USER`, `DO_SSH_KEY`) with a post-deploy nginx
+  smoke test.
 
 ### Docs
 
 - README architecture diagram: added Verifier node under Critic; refreshed
   all Llama 3.3 boxes to `gpt-oss 120B`; new v1.2 "What's new" table;
-  Gemini verifier badge added.
+  Gemini verifier badge added. Full migration playbook at
+  `docs/migration/oracle-arm.md`.
 
 ---
 

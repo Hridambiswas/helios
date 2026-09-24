@@ -32,6 +32,7 @@ jobs:
       - name: Build
         run: cd frontend && npm run build
         env:
+          # Should be https://helios-hridam.duckdns.org after migration.
           VITE_API_URL: ${{ secrets.VITE_API_URL }}
 
       - name: Deploy to Vercel
