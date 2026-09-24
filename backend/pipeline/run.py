@@ -169,6 +169,7 @@ def _build_graph() -> StateGraph:
     g.add_node("executor",    node_executor)     # type: ignore
     g.add_node("synthesizer", node_synthesizer)  # type: ignore
     g.add_node("critic",      node_critic)       # type: ignore
+    g.add_node("verifier",    node_verifier)     # type: ignore
 
     g.set_entry_point("planner")
 
