@@ -352,6 +352,11 @@ function ResultCard({ result }: { result: QueryResponse }) {
         </div>
       </div>
 
+      {/* Attribution badges (Ans by / Cited by / Judged by / Checked by) */}
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-[10px] font-mono text-[#777]">
+        <span><span className="text-[#555]">Ans by</span> <span className="text-white/80">gpt-oss 120B</span></span>
+      </div>
+
       {/* Tabs */}
       <div className="flex border-b border-white/5">
         {tabs.map(({ id, label }) => (
