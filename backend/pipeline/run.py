@@ -207,7 +207,8 @@ def run_pipeline(
 ) -> dict[str, Any]:
     """
     Execute the full Helios agent pipeline for a query.
-    Returns the final state dict including answer and critic_scores.
+    Returns the final state dict including answer, critic_scores, and
+    verifier_scores (Gemini cross-check).
     """
     initial_state: HeliosState = {  # type: ignore[typeddict-item]
         "query": query,
