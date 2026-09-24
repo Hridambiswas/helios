@@ -189,7 +189,8 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 git clone https://github.com/Hridambiswas/helios.git
 cd helios
 cp .env.example .env
-# Fill in GROQ_API_KEY and JWT_SECRET_KEY at minimum
+# Fill in GROQ_API_KEY, GEMINI_API_KEY, and JWT_SECRET_KEY at minimum
+# (GEMINI_API_KEY powers the Verifier; get one at https://aistudio.google.com/app/apikey)
 # Optional: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET for GitHub OAuth
 # Optional: SUPABASE_DATABASE_URL to use Supabase instead of local Postgres
 ```
