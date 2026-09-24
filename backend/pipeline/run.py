@@ -146,14 +146,15 @@ def route_after_retriever(state: HeliosState) -> str:
     return "synthesizer"
 
 
-def route_after_critic(state: HeliosState) -> Literal["synthesizer"] | str:
+def route_after_critic(state: HeliosState) -> Literal["synthesizer", "verifier"] | str:
     """
     If critic failed and we haven't hit the retry cap, re-run the synthesizer
-    with the critic's suggestions injected as extra guidance.
+    with the critic's suggestions injected as extra guidance. Otherwise send
+    the answer to the Verifier for an independent cross-check.
     """
     if not state.get("critic_passed") and (state.get("retry_count", 0) <= _MAX_RETRIES):
         return "synthesizer"
-    return END
+    return "verifier"
 
 
 # ── Build graph ───────────────────────────────────────────────────────────────
