@@ -34,7 +34,11 @@ async def lifespan(app: FastAPI):
     setup_logging()
     setup_tracing()
     cfg.validate_secrets()
-    logger.info("Helios v1.0.0 starting up (env=%s, host=%s:%s)", cfg.app_env, cfg.app_host, cfg.app_port)
+    logger.info(
+        "Helios v1.2.0 starting up (env=%s, host=%s:%s, verifier=%s, groq_model=%s)",
+        cfg.app_env, cfg.app_host, cfg.app_port,
+        "on" if cfg.verifier_enabled else "off", cfg.groq_model,
+    )
 
     await create_tables()
     ensure_bucket()
