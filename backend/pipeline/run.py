@@ -15,6 +15,7 @@ from agents.retriever import RetrieverAgent
 from agents.executor import ExecutorAgent
 from agents.synthesizer import SynthesizerAgent
 from agents.critic import CriticAgent
+from agents.verifier import VerifierAgent
 from observability.metrics import pipeline_latency_histogram, pipeline_requests_counter
 from observability.tracing import span
 
