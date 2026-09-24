@@ -362,6 +362,16 @@ function ResultCard({ result }: { result: QueryResponse }) {
             Critic {result.critic_scores ? `${Math.round((result.critic_scores.overall ?? 0) * 100)}%` : ''}
           </span>
         </span>
+        <span>
+          <span className="text-[#555]">Checked by</span>{' '}
+          <span className={
+            result.verifier_passed === null || result.verifier_passed === undefined
+              ? 'text-[#666]'
+              : result.verifier_passed ? 'text-blue-400' : 'text-orange-400'
+          }>
+            Gemini {result.verifier_scores ? `${Math.round((result.verifier_scores.overall ?? 0) * 100)}%` : '—'}
+          </span>
+        </span>
       </div>
 
       {/* Tabs */}
