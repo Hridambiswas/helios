@@ -5,6 +5,9 @@ global:
     service: helios
 
 scrape_configs:
+  # Emits helios_agent_latency, helios_critic_score, helios_critic_pass_total,
+  # helios_verifier_score, helios_verifier_pass_total, helios_pipeline_latency,
+  # and helios_pipeline_requests_total (with 'verifier_failed' status label).
   - job_name: "helios-api"
     static_configs:
       - targets: ["api:8000"]
