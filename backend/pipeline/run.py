@@ -114,6 +114,14 @@ def node_critic(state: HeliosState) -> HeliosState:
         return _critic.run(state)  # type: ignore
 
 
+def node_verifier(state: HeliosState) -> HeliosState:
+    _ensure_agents()
+    if _verifier is None:  # verifier disabled via config
+        return {**state, "verifier_scores": None, "verifier_passed": None}  # type: ignore[typeddict-item]
+    with span("helios.verifier"):
+        return _verifier.run(state)  # type: ignore
+
+
 # ── Conditional routing ───────────────────────────────────────────────────────
 
 def route_after_planner(state: HeliosState) -> str:
