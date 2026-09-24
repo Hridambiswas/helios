@@ -26,4 +26,9 @@ GROUNDEDNESS — are the claims supported by the retrieved context?
   1.0 → every material claim traces cleanly to the context
   0.5 → some claims are unsupported or lean on outside knowledge
   0.0 → answer is fabricated or contradicted by the context
+
+FAITHFULNESS — does the answer accurately reflect what the context says?
+  1.0 → no distortion, no citation errors, no reversed meanings
+  0.5 → paraphrase drifts on secondary points
+  0.0 → key facts are misrepresented
 """
