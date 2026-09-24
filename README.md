@@ -304,7 +304,13 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 | Variable | Default | Description |
 |---|---|---|
-| `GROQ_API_KEY` | — | **Required.** Groq API key for all LLM calls |
+| `GROQ_API_KEY` | — | **Required.** Groq API key for Planner / Synthesizer / Critic |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq model id (retired: `llama-3.3-70b-versatile`) |
+| `GEMINI_API_KEY` | — | **Required when `VERIFIER_ENABLED=true`.** Google AI Studio key for the Gemini Verifier |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Google Gemini model id used by the Verifier |
+| `VERIFIER_ENABLED` | `true` | Toggle the Gemini cross-verifier stage |
+| `VERIFIER_MIN_SCORE` | `0.5` | Threshold for `verifier_passed` |
+| `VERIFIER_TIMEOUT_SECONDS` | `20` | Per-request Gemini timeout |
 | `JWT_SECRET_KEY` | — | **Required.** HS256 signing key (generate with `secrets.token_hex(32)`) |
 | `SUPABASE_DATABASE_URL` | — | Supabase asyncpg DSN (falls back to local Postgres if unset) |
 | `DATABASE_URL` | `postgresql+asyncpg://helios:@localhost/helios` | Local Postgres DSN |
