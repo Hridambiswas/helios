@@ -107,3 +107,15 @@ class VerifierAgent(BaseAgent):
         scores["pass"] = scores["overall"] >= cfg.verifier_min_score
         scores.setdefault("reasoning", "")
         scores.setdefault("flags", [])
+
+        from observability.metrics import verifier_score_histogram, verifier_pass_counter
+        for dim in ("groundedness", "faithfulness", "agreement", "overall"):
+            verifier_score_histogram.labels(dimension=dim).observe(scores[dim])
+        verifier_pass_counter.labels(result="pass" if scores["pass"] else "fail").inc()
+
+        self.logger.info(
+            "Verifier scores — G=%.2f F=%.2f A=%.2f overall=%.2f pass=%s",
+            scores["groundedness"], scores["faithfulness"],
+            scores["agreement"], scores["overall"], scores["pass"],
+        )
+        return {**state, "verifier_scores": scores, "verifier_passed": scores["pass"]}
