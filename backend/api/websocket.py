@@ -60,7 +60,7 @@ async def ws_query(websocket: WebSocket):
       Server ← {"event": "executing",   "data": {}}
       Server ← {"event": "synthesizing","data": {}}
       Server ← {"event": "evaluating",  "data": {}}
-      Server ← {"event": "done",        "data": {answer, critic_scores, ...}}
+      Server ← {"event": "done",        "data": {answer, critic_scores, verifier_scores, ...}}
       Server ← {"event": "error",       "data": {"message": "..."}}
     """
     await websocket.accept()
