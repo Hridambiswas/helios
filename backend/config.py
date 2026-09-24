@@ -81,6 +81,9 @@ class Settings(BaseSettings):
     retriever_rrf_k: int = 60                # RRF rank offset (higher = smoother)
     executor_timeout_seconds: int = 15
     critic_min_score: float = 0.5
+    verifier_enabled: bool = True
+    verifier_min_score: float = 0.5
+    verifier_timeout_seconds: int = 20
 
     # ── Ingest Tuning ─────────────────────────────────────────────────────────
     ingest_chunk_size: int = 500
