@@ -88,6 +88,8 @@ class TestPipelineRouting:
             patch("agents.executor.ExecutorAgent._run", side_effect=mock_executor),
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+            patch("agents.verifier.VerifierAgent._run", side_effect=_mock_verifier_output),
+            patch("agents.verifier.ChatGoogleGenerativeAI"),
         ):
             from pipeline.run import run_pipeline
             run_pipeline("compute 2+2", code_to_run="print(2+2)")
