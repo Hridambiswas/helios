@@ -356,6 +356,12 @@ function ResultCard({ result }: { result: QueryResponse }) {
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-[10px] font-mono text-[#777]">
         <span><span className="text-[#555]">Ans by</span> <span className="text-white/80">gpt-oss 120B</span></span>
         <span><span className="text-[#555]">Cited by</span> <span className="text-white/80">Hybrid Retriever</span></span>
+        <span>
+          <span className="text-[#555]">Judged by</span>{' '}
+          <span className={result.critic_passed ? 'text-green-400' : 'text-crimson'}>
+            Critic {result.critic_scores ? `${Math.round((result.critic_scores.overall ?? 0) * 100)}%` : ''}
+          </span>
+        </span>
       </div>
 
       {/* Tabs */}
