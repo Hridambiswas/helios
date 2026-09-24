@@ -175,6 +175,7 @@ class QueryHistoryItem(BaseModel):
     query_text: str
     answer: str | None
     critic_scores: dict | None
+    verifier_scores: dict | None = None
     latency_ms: float | None
     status: str
     created_at: datetime
