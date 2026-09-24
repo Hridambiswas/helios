@@ -223,6 +223,8 @@ def run_pipeline(
         "follow_up_questions": [],
         "critic_scores": None,
         "critic_passed": None,
+        "verifier_scores": None,
+        "verifier_passed": None,
         "retry_count": 0,
         "error": None,
         "pipeline_start_ms": time.perf_counter() * 1000,
