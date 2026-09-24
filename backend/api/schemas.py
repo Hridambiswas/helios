@@ -261,4 +261,5 @@ class HealthResponse(BaseModel):
     redis: bool
     minio: bool
     chroma: bool
-    version: str = "1.1.0"
+    verifier_enabled: bool = True
+    version: str = "1.2.0"
