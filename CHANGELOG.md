@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [Unreleased]
+
+### Planned
+
+- **Second-LLM cross-verification** — Gemini-backed VerifierAgent runs after the Critic and independently double-checks the synthesizer's answer against retrieved context. Surfaces in the API as `verifier_scores` / `verifier_passed` and in the UI as an "Checked by" badge.
+- **Model refresh** — retire `llama-3.3-70b-versatile` (Groq) in favour of `openai/gpt-oss-120b`.
+
+---
+
 ## [1.1.0] — 2026-05-12
 
 ### Added
