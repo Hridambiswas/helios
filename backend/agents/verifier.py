@@ -71,3 +71,8 @@ class VerifierAgent(BaseAgent):
         query: str = state["query"]
         answer: str = state.get("answer", "")
         docs: list[dict] = state.get("retrieved_docs", [])
+
+        if not answer:
+            self.logger.warning("No answer to verify — returning zero scores")
+            scores = self._zero_scores()
+            return {**state, "verifier_scores": scores, "verifier_passed": False}
