@@ -61,8 +61,8 @@ Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dens
                               │                                                 │
                               │  ┌─────────────┐   ┌────────────────────┐     │
                               │  │   Planner   │──▶│     Retriever      │     │
-                              │  │ Llama 3.3   │   │ BAAI/bge + CLIP    │     │
-                              │  │   70B (T=0) │   │ + BM25 → fused K   │     │
+                              │  │  gpt-oss    │   │ BAAI/bge + CLIP    │     │
+                              │  │  120B (T=0) │   │ + BM25 → fused K   │     │
                               │  └─────────────┘   └──────────┬─────────┘     │
                               │        │                       │               │
                               │        │             ┌─────────▼──────┐       │
