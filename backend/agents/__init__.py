@@ -4,6 +4,7 @@ from agents.retriever import RetrieverAgent
 from agents.executor import ExecutorAgent
 from agents.synthesizer import SynthesizerAgent
 from agents.critic import CriticAgent
+from agents.verifier import VerifierAgent
 
 __all__ = [
     "BaseAgent",
@@ -12,4 +13,5 @@ __all__ = [
     "ExecutorAgent",
     "SynthesizerAgent",
     "CriticAgent",
+    "VerifierAgent",
 ]
