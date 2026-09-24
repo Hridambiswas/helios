@@ -36,4 +36,19 @@ AGREEMENT — would an independent reader reach the same conclusion?
   1.0 → answer is one you would also give from the same context
   0.5 → you would phrase it differently or add/remove qualifiers
   0.0 → you would give a materially different answer
+
+━━━ OUTPUT FORMAT ━━━
+Output ONLY valid JSON — no markdown fences, no prose before or after:
+{
+  "groundedness": 0.00,
+  "faithfulness": 0.00,
+  "agreement": 0.00,
+  "overall": 0.00,
+  "pass": true,
+  "reasoning": "one sentence: the strongest reason for the score",
+  "flags": ["short tag per red flag, if any"]
+}
+
+Compute overall = round((groundedness + faithfulness + agreement) / 3, 3).
+Set pass = true iff overall >= the threshold in the user message.
 """
