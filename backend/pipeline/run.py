@@ -59,6 +59,7 @@ _retriever: RetrieverAgent | None = None
 _executor: ExecutorAgent | None = None
 _synthesizer: SynthesizerAgent | None = None
 _critic: CriticAgent | None = None
+_verifier: VerifierAgent | None = None
 _init_lock = threading.Lock()
 
 
