@@ -1,7 +1,8 @@
 .PHONY: up down build logs restart status test test-cov lint fmt typecheck \
         migrate migrate-gen migrate-down dev worker beat \
         eval bench ingest ssl-setup frontend-dev frontend-build \
-        backup shell-api shell-db prod-restart deploy
+        backup shell-api shell-db prod-restart deploy \
+        check-gemini
 
 ## ── Docker (local dev) ────────────────────────────────────────────────────────
 
@@ -126,6 +127,11 @@ prod-restart:
 
 deploy:
 	bash scripts/deploy.sh
+
+## ── Verifier ────────────────────────────────────────────────────────────────
+
+check-gemini:
+	@python -c "from config import cfg; assert cfg.gemini_api_key.get_secret_value(), 'GEMINI_API_KEY missing'; print('gemini key OK, model=', cfg.gemini_model)"
 
 ## ── Docker cleanup ───────────────────────────────────────────────────────────
 
