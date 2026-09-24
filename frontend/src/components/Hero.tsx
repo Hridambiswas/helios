@@ -222,7 +222,7 @@ export function Hero({
             marginBottom: '3rem',
           }}
         >
-          Five agents &nbsp;&middot;&nbsp; One pipeline &nbsp;&middot;&nbsp; No query escapes
+          Six agents &nbsp;&middot;&nbsp; One pipeline &nbsp;&middot;&nbsp; No query escapes
         </motion.p>
 
         {/* Query input */}
