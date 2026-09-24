@@ -23,6 +23,8 @@ services:
       - CORS_ALLOWED_ORIGINS=https://helios-hridam.vercel.app
       - TRUSTED_PROXY_COUNT=1
       - RATE_LIMIT_PER_USER=100
+      - VERIFIER_ENABLED=true
+      - GEMINI_MODEL=gemini-2.5-flash
 
   worker:
     build:
