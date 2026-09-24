@@ -6,12 +6,43 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
-## [Unreleased]
+## [1.2.0] — 2026-09-24
 
-### Planned
+### Added
 
-- **Second-LLM cross-verification** — Gemini-backed VerifierAgent runs after the Critic and independently double-checks the synthesizer's answer against retrieved context. Surfaces in the API as `verifier_scores` / `verifier_passed` and in the UI as an "Checked by" badge.
-- **Model refresh** — retire `llama-3.3-70b-versatile` (Groq) in favour of `openai/gpt-oss-120b`.
+- **VerifierAgent** — new sixth agent (`backend/agents/verifier.py`) that runs
+  after the Critic and independently cross-checks the Synthesizer's answer.
+  Uses `langchain-google-genai` + `gemini-2.5-flash`. Emits `verifier_scores`
+  (groundedness, faithfulness, agreement, overall) and a `verifier_passed`
+  boolean; both are surfaced in `QueryResponse`, `QueryHistoryItem`, the WS
+  `done` event, and stored as a nullable JSON column on `QueryRecord`
+  (Alembic migration `0006_verifier_scores`).
+- **Attribution badges in the chat UI** — every answered query now shows
+  `Ans by gpt-oss 120B · Cited by Hybrid Retriever · Judged by Critic <N%> ·
+  Checked by Gemini <N%>` under the query header. Verifier score bars +
+  reasoning appear in the eval tab.
+- **Prometheus metrics** — `helios_verifier_score{dimension}` histogram and
+  `helios_verifier_pass_total{result}` counter.
+- **Config knobs** — `VERIFIER_ENABLED`, `VERIFIER_MIN_SCORE`,
+  `VERIFIER_TIMEOUT_SECONDS`, `GEMINI_API_KEY`, `GEMINI_MODEL`.
+
+### Changed
+
+- **Default LLM refresh** — `groq_model` default swapped from the retired
+  `llama-3.3-70b-versatile` to `openai/gpt-oss-120b`. Planner, Synthesizer,
+  and Critic all pick up the new model. `.env.example`,
+  `.env.production.example`, `docker-compose.prod.yml`, and every README /
+  PipelineSection / ChatView / Hero string were updated in lockstep.
+- **Pipeline version** bumped to `1.2.0`. Startup log now reports
+  `verifier=on/off` and the active `groq_model`.
+- **Terminal state** — the LangGraph now ends at the Verifier node instead of
+  the Critic. Retry loop still lives on Critic → Synthesizer.
+
+### Docs
+
+- README architecture diagram: added Verifier node under Critic; refreshed
+  all Llama 3.3 boxes to `gpt-oss 120B`; new v1.2 "What's new" table;
+  Gemini verifier badge added.
 
 ---
 
