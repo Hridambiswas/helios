@@ -15,6 +15,13 @@
 
 Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Gemini-backed cross-verifier, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
 
+### What's new in v1.2 (unreleased)
+
+| # | Feature | Summary |
+|---|---------|---------|
+| 1 | **Gemini cross-verifier** | Sixth agent runs after Critic; Gemini 2.5 Flash re-checks the answer against retrieved context and surfaces `verifier_scores` + a "Checked by" badge |
+| 2 | **Model refresh** | Groq default switched from retired `llama-3.3-70b-versatile` to `openai/gpt-oss-120b` |
+
 ### What's new in v1.1
 
 | # | Feature | Summary |
