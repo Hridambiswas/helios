@@ -43,6 +43,8 @@ class HeliosState(TypedDict, total=False):
     follow_up_questions: list    # 2 suggested follow-up questions from synthesizer
     critic_scores: Optional[dict]
     critic_passed: Optional[bool]
+    verifier_scores: Optional[dict]
+    verifier_passed: Optional[bool]
     retry_count: int             # how many synthesizer retries have been attempted
     _token_callback: Optional[Callable[[str], None]]  # set by websocket; not persisted
     error: Optional[str]
