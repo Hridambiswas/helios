@@ -398,7 +398,7 @@ function EmptyState({ onExample }: { onExample: (q: string) => void }) {
           HELIOS
         </h2>
         <p className="font-mono text-[10px] tracking-wider" style={{ color: 'rgba(255,255,255,0.2)' }}>
-          Distributed Multi-Agent AI · Five agents · One pipeline
+          Distributed Multi-Agent AI · Six agents · Cross-verified
         </p>
       </div>
 
