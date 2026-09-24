@@ -98,3 +98,12 @@ class VerifierAgent(BaseAgent):
         except json.JSONDecodeError:
             self.logger.warning("Verifier returned non-JSON; defaulting to zero scores")
             scores = self._zero_scores()
+
+        for dim in ("groundedness", "faithfulness", "agreement"):
+            scores.setdefault(dim, 0.0)
+        scores["overall"] = round(
+            (scores["groundedness"] + scores["faithfulness"] + scores["agreement"]) / 3, 3
+        )
+        scores["pass"] = scores["overall"] >= cfg.verifier_min_score
+        scores.setdefault("reasoning", "")
+        scores.setdefault("flags", [])
