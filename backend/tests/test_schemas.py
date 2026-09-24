@@ -149,3 +149,26 @@ class TestConversationSchemas:
         for role in ("user", "assistant"):
             msg = AppendMessageRequest(role=role, content="hello")
             assert msg.role == role
+
+
+class TestVerifierScoresSchema:
+
+    def test_verifier_scores_accepts_pass_alias(self):
+        from api.schemas import VerifierScores
+        v = VerifierScores(
+            groundedness=0.9, faithfulness=0.85, agreement=0.8,
+            overall=0.85, reasoning="ok", flags=[],
+            **{"pass": True},  # 'pass' is a keyword; use alias-friendly form
+        )
+        assert v.passed is True
+
+    def test_verifier_scores_serialises_with_alias(self):
+        from api.schemas import VerifierScores
+        v = VerifierScores(
+            groundedness=0.9, faithfulness=0.85, agreement=0.8,
+            overall=0.85, reasoning="ok",
+            **{"pass": False},
+        )
+        dumped = v.model_dump(by_alias=True)
+        assert dumped["pass"] is False
+        assert "passed" not in dumped
