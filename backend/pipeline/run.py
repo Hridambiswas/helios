@@ -186,8 +186,9 @@ def _build_graph() -> StateGraph:
     g.add_edge("synthesizer", "critic")
     g.add_conditional_edges("critic", route_after_critic, {
         "synthesizer": "synthesizer",
-        END: END,
+        "verifier":    "verifier",
     })
+    g.add_edge("verifier", END)
 
     return g
 
