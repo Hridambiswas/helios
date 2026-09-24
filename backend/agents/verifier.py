@@ -1,5 +1,10 @@
 # agents/verifier.py — Helios Gemini-backed cross-verifier
 # Author: Hridam Biswas | Project: Helios
+#
+# The Verifier is the sixth agent in the LangGraph pipeline. It runs after
+# the Critic and independently re-reads the Synthesizer's answer using a
+# different provider (Google Gemini) to catch systemic Groq failure modes.
+# Toggleable via VERIFIER_ENABLED; safe to disable in local dev.
 
 from __future__ import annotations
 import json
