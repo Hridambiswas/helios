@@ -52,3 +52,9 @@ Output ONLY valid JSON — no markdown fences, no prose before or after:
 Compute overall = round((groundedness + faithfulness + agreement) / 3, 3).
 Set pass = true iff overall >= the threshold in the user message.
 """
+
+
+class VerifierAgent(BaseAgent):
+    """Gemini-backed second-opinion judge that cross-checks the synthesizer."""
+
+    name = "verifier"
