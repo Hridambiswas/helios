@@ -55,7 +55,7 @@ const AGENTS = [
   },
   {
     num: '04', name: 'SYNTHESIZER', role: 'Streaming Answer',
-    desc: 'Token-by-token via Groq + WebSocket — knowledge delivered word by word in real time.',
+    desc: 'Token-by-token via Groq gpt-oss 120B + WebSocket — knowledge delivered word by word in real time.',
     tech: ['gpt-oss 120B', 'Groq', 'WebSocket'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
