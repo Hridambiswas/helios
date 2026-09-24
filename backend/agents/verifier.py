@@ -66,3 +66,8 @@ class VerifierAgent(BaseAgent):
             temperature=0,
             google_api_key=cfg.gemini_api_key.get_secret_value(),
         )
+
+    def _run(self, state: dict[str, Any]) -> dict[str, Any]:
+        query: str = state["query"]
+        answer: str = state.get("answer", "")
+        docs: list[dict] = state.get("retrieved_docs", [])
