@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # ── LLM ───────────────────────────────────────────────────────────────────
     groq_api_key: SecretStr = SecretStr("")
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
