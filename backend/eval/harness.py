@@ -44,6 +44,8 @@ def run_single(question: EvalQuestion) -> dict[str, Any]:
         "query": question.query,
         "answer": answer,
         "score": score,
+        "verifier_scores": state.get("verifier_scores"),
+        "verifier_passed": state.get("verifier_passed"),
         "latency_ms": round(latency_ms, 1),
         "error": state.get("error"),
     }

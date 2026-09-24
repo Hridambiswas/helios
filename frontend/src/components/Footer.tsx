@@ -53,7 +53,7 @@ export function Footer() {
               ⟡ Agents
             </h4>
             <ul className="space-y-2">
-              {['Planner', 'Hybrid Retriever', 'Sandboxed Executor', 'Synthesizer', 'Critic'].map(item => (
+              {['Planner', 'Hybrid Retriever', 'Sandboxed Executor', 'Synthesizer', 'Critic', 'Verifier (Gemini)'].map(item => (
                 <li key={item} className="font-mono text-[11px]" style={{ color: 'rgba(255,255,255,0.2)' }}>{item}</li>
               ))}
             </ul>

@@ -128,6 +128,19 @@ class CriticScores(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class VerifierScores(BaseModel):
+    """Independent Gemini cross-check of the Synthesizer's answer."""
+    groundedness: float
+    faithfulness: float
+    agreement: float
+    overall: float
+    passed: bool = Field(alias="pass")
+    reasoning: str
+    flags: list[str] = []
+
+    model_config = {"populate_by_name": True}
+
+
 class QueryResponse(BaseModel):
     query_id: str
     query: str
@@ -138,6 +151,8 @@ class QueryResponse(BaseModel):
     execution_result: ExecutionResult | None
     critic_scores: CriticScores | None
     critic_passed: bool | None
+    verifier_scores: VerifierScores | None = None
+    verifier_passed: bool | None = None
     follow_up_questions: list[str] = []
     latency_ms: float
     status: str
@@ -160,6 +175,7 @@ class QueryHistoryItem(BaseModel):
     query_text: str
     answer: str | None
     critic_scores: dict | None
+    verifier_scores: dict | None = None
     latency_ms: float | None
     status: str
     created_at: datetime
@@ -246,4 +262,5 @@ class HealthResponse(BaseModel):
     redis: bool
     minio: bool
     chroma: bool
-    version: str = "1.1.0"
+    verifier_enabled: bool = True
+    version: str = "1.2.0"

@@ -1,9 +1,16 @@
+"""Helios agent layer.
+
+Six agents run sequentially inside the LangGraph pipeline:
+Planner → Retriever → (Executor?) → Synthesizer → Critic → Verifier.
+The Verifier is Gemini-backed; every other agent runs on Groq gpt-oss 120B.
+"""
 from agents.base import BaseAgent
 from agents.planner import PlannerAgent
 from agents.retriever import RetrieverAgent
 from agents.executor import ExecutorAgent
 from agents.synthesizer import SynthesizerAgent
 from agents.critic import CriticAgent
+from agents.verifier import VerifierAgent
 
 __all__ = [
     "BaseAgent",
@@ -12,4 +19,5 @@ __all__ = [
     "ExecutorAgent",
     "SynthesizerAgent",
     "CriticAgent",
+    "VerifierAgent",
 ]

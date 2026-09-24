@@ -31,6 +31,13 @@ def _mock_critic_output(state):
     }, "critic_passed": True}
 
 
+def _mock_verifier_output(state):
+    return {**state, "verifier_scores": {
+        "groundedness": 0.9, "faithfulness": 0.9, "agreement": 0.85,
+        "overall": 0.88, "pass": True, "reasoning": "Independent check confirms", "flags": [],
+    }, "verifier_passed": True}
+
+
 class TestPipelineRouting:
 
     def test_full_pipeline_happy_path(self):
@@ -39,11 +46,14 @@ class TestPipelineRouting:
             patch("agents.retriever.RetrieverAgent._run", side_effect=_mock_retriever_output),
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+            patch("agents.verifier.VerifierAgent._run", side_effect=_mock_verifier_output),
+            patch("agents.verifier.ChatGoogleGenerativeAI"),
         ):
             from pipeline.run import run_pipeline
             result = run_pipeline("What is CARLE?")
             assert result["answer"] == "CARLE is a lossless semantic compression method."
             assert result["critic_passed"] is True
+            assert result["verifier_passed"] is True
             assert len(result["retrieved_docs"]) == 1
 
     def test_pipeline_returns_error_key_on_crash(self):
@@ -78,6 +88,8 @@ class TestPipelineRouting:
             patch("agents.executor.ExecutorAgent._run", side_effect=mock_executor),
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+            patch("agents.verifier.VerifierAgent._run", side_effect=_mock_verifier_output),
+            patch("agents.verifier.ChatGoogleGenerativeAI"),
         ):
             from pipeline.run import run_pipeline
             run_pipeline("compute 2+2", code_to_run="print(2+2)")

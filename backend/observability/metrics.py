@@ -29,7 +29,7 @@ pipeline_latency_histogram = Histogram(
 pipeline_requests_counter = Counter(
     "helios_pipeline_requests_total",
     "Total queries processed by the pipeline",
-    ["status"],   # labels: success / failed / critic_failed
+    ["status"],   # labels: success / failed / critic_failed / verifier_failed
 )
 
 # ── Retrieval metrics ─────────────────────────────────────────────────────────
@@ -59,6 +59,21 @@ critic_score_histogram = Histogram(
 critic_pass_counter = Counter(
     "helios_critic_pass_total",
     "Critic pass/fail counts",
+    ["result"],   # pass / fail
+)
+
+# ── Verifier metrics (Gemini second-opinion) ─────────────────────────────────
+
+verifier_score_histogram = Histogram(
+    "helios_verifier_score",
+    "Verifier score distribution (Gemini cross-check)",
+    ["dimension"],   # groundedness / faithfulness / agreement / overall
+    buckets=[0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+)
+
+verifier_pass_counter = Counter(
+    "helios_verifier_pass_total",
+    "Verifier pass/fail counts",
     ["result"],   # pass / fail
 )
 

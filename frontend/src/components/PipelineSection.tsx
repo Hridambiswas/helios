@@ -10,8 +10,8 @@ const VL = 'rgba(139,92,246,0.06)'
 const AGENTS = [
   {
     num: '01', name: 'PLANNER', role: 'Query Decomposition',
-    desc: 'Llama 3.3 70B deconstructs your query into sub-tasks — mapping every angle before the first move.',
-    tech: ['Llama 3.3 70B', 'LangGraph', 'T=0'],
+    desc: 'gpt-oss 120B deconstructs your query into sub-tasks — mapping every angle before the first move.',
+    tech: ['gpt-oss 120B', 'LangGraph', 'T=0'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <polygon points="16,2 30,10 30,22 16,30 2,22 2,10" stroke="currentColor" strokeWidth="1.5" fill="none"/>
@@ -55,8 +55,8 @@ const AGENTS = [
   },
   {
     num: '04', name: 'SYNTHESIZER', role: 'Streaming Answer',
-    desc: 'Token-by-token via Groq + WebSocket — knowledge delivered word by word in real time.',
-    tech: ['Llama 3.3 70B', 'Groq', 'WebSocket'],
+    desc: 'Token-by-token via Groq gpt-oss 120B + WebSocket — knowledge delivered word by word in real time.',
+    tech: ['gpt-oss 120B', 'Groq', 'WebSocket'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <path d="M3 16 Q9 6 16 16 Q23 26 29 16" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
@@ -71,13 +71,25 @@ const AGENTS = [
   {
     num: '05', name: 'CRITIC', role: 'LLM-as-Judge',
     desc: 'Scores groundedness, faithfulness & completeness — quality control at every step.',
-    tech: ['Llama 3.3 70B', 'Min score 0.5', 'Retry'],
+    tech: ['gpt-oss 120B', 'Min score 0.5', 'Retry'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <path d="M16 3 L19.5 12H29L21.5 17.5L24 27L16 22L8 27L10.5 17.5L3 12H12.5Z"
           stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
         <path d="M16 3 L19.5 12H29L21.5 17.5L24 27L16 22L8 27L10.5 17.5L3 12H12.5Z"
           fill="currentColor" fillOpacity="0.08"/>
+      </svg>
+    ),
+  },
+  {
+    num: '06', name: 'VERIFIER', role: 'Second-Opinion Cross-Check',
+    desc: 'Gemini 2.5 Flash independently re-reads the answer against the retrieved context — a different model, a different failure mode.',
+    tech: ['Gemini 2.5 Flash', 'Cross-model', 'Final judge'],
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3 L27 8 V16 C27 22 22 27 16 29 C10 27 5 22 5 16 V8 Z"
+          stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
+        <path d="M11 16 L15 20 L22 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
       </svg>
     ),
   },
@@ -223,7 +235,7 @@ export function PipelineSection() {
           </h2>
 
           <p className="font-mono text-sm tracking-wider mt-2" style={{ color: VD }}>
-            Five agents. One answer. No query escapes.
+            Six agents. One answer. Cross-verified.
           </p>
           <div
             className="mt-4 h-px"

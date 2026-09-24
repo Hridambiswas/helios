@@ -13,6 +13,8 @@ supabase>=2.3.0
 # ── LangChain / LangGraph ────────────────────────────────────────────────────
 langchain>=0.3.0
 langchain-groq>=0.2.0
+langchain-google-genai>=2.0.0     # VerifierAgent — Gemini cross-check
+google-generativeai>=0.8.0        # Gemini SDK (transitive but pinned for clarity)
 langchain-community>=0.3.0
 langgraph>=0.2.0
 

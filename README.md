@@ -6,13 +6,21 @@
 [![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115-green.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.2-orange.svg)](https://langchain-ai.github.io/langgraph/)
-[![Groq](https://img.shields.io/badge/LLM-Groq%20Llama%203.3-orange.svg)](https://groq.com)
+[![Groq](https://img.shields.io/badge/LLM-Groq%20gpt--oss--120b-orange.svg)](https://groq.com)
+[![Gemini](https://img.shields.io/badge/Verifier-Gemini%202.5%20Flash-blue.svg)](https://ai.google.dev/gemini-api)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![OpenTelemetry](https://img.shields.io/badge/OpenTelemetry-OTLP-purple.svg)](https://opentelemetry.io)
 
 🌐 **Live:** [helios-hridam.vercel.app](https://helios-hridam.vercel.app) — API: [helios-hridam.ddns.net](https://helios-hridam.ddns.net)
 
-Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
+Helios is a production-grade, six-agent RAG pipeline with hybrid retrieval (dense + CLIP + BM25), sandboxed Python execution, LLM-as-judge critic scoring, Gemini-backed cross-verifier, Celery async workers, JWT + GitHub OAuth, WebSocket streaming, and full OpenTelemetry + Prometheus observability — deployed on EC2 (backend) and Vercel (frontend) with Supabase PostgreSQL.
+
+### What's new in v1.2 (unreleased)
+
+| # | Feature | Summary |
+|---|---------|---------|
+| 1 | **Gemini cross-verifier** | Sixth agent runs after Critic; Gemini 2.5 Flash re-checks the answer against retrieved context and surfaces `verifier_scores` + a "Checked by" badge |
+| 2 | **Model refresh** | Groq default switched from retired `llama-3.3-70b-versatile` to `openai/gpt-oss-120b` |
 
 ### What's new in v1.1
 
@@ -53,8 +61,8 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
                               │                                                 │
                               │  ┌─────────────┐   ┌────────────────────┐     │
                               │  │   Planner   │──▶│     Retriever      │     │
-                              │  │ Llama 3.3   │   │ BAAI/bge + CLIP    │     │
-                              │  │   70B (T=0) │   │ + BM25 → fused K   │     │
+                              │  │  gpt-oss    │   │ BAAI/bge + CLIP    │     │
+                              │  │  120B (T=0) │   │ + BM25 → fused K   │     │
                               │  └─────────────┘   └──────────┬─────────┘     │
                               │        │                       │               │
                               │        │             ┌─────────▼──────┐       │
@@ -64,17 +72,24 @@ Helios is a production-grade, five-agent RAG pipeline with hybrid retrieval (den
                               │                                │               │
                               │                      ┌─────────▼──────────┐   │
                               │                      │    Synthesizer     │   │
-                              │                      │  Llama 3.3 70B     │   │
+                              │                      │  gpt-oss 120B      │   │
                               │                      │  streams tokens    │   │
                               │                      │  + history context │   │
                               │                      └─────────┬──────────┘   │
                               │                                │               │
                               │                      ┌─────────▼──────┐       │
                               │                      │     Critic     │       │
-                              │                      │  Llama 3.3 70B │       │
+                              │                      │  gpt-oss 120B  │       │
                               │                      │  min score 0.5 │       │
                               │                      │  → retry once  │       │
-                              │                      └────────────────┘       │
+                              │                      └────────┬───────┘       │
+                              │                               │               │
+                              │                      ┌────────▼────────┐      │
+                              │                      │    Verifier     │      │
+                              │                      │ Gemini 2.5 Flash│      │
+                              │                      │  cross-check    │      │
+                              │                      │  (final judge)  │      │
+                              │                      └─────────────────┘      │
                               └────────────────────────────────────────────────┘
                                              │
         ┌────────────────────────────────────┼──────────────────────────────┐
@@ -113,11 +128,12 @@ python graphs/critic_score_distribution.py # Groundedness, faithfulness, complet
 
 | Agent | Model | Role | Key behaviour |
 |---|---|---|---|
-| **Planner** | Groq `llama-3.3-70b-versatile` (T=0) | Query decomposition | Produces typed `subtasks[]`, `requires_retrieval`, `requires_code` JSON; caps at `PLANNER_MAX_SUBTASKS` |
+| **Planner** | Groq `openai/gpt-oss-120b` (T=0) | Query decomposition | Produces typed `subtasks[]`, `requires_retrieval`, `requires_code` JSON; caps at `PLANNER_MAX_SUBTASKS` |
 | **Retriever** | `BAAI/bge-small-en-v1.5` + CLIP `ViT-B/32` + BM25Okapi | Hybrid document retrieval | Weighted score fusion (dense 0.6 + CLIP 0.3 + BM25 0.1); deduplicates by `doc_id`; emits Prometheus histograms |
 | **Executor** | CPython 3.11 | Sandboxed code runner | AST import whitelist guard; forbidden builtins stripped; daemon thread with configurable timeout; stdout capped at 8 KB |
-| **Synthesizer** | Groq `llama-3.3-70b-versatile` (T=0.4) | Grounded answer generation | Cites local docs as [D1], web sources as [W1]; uses emojis naturally; uses `conversation_history` for multi-turn context; per-token streaming via `llm.stream()`; generates follow-up questions; injects critic suggestions on retry |
-| **Critic** | Groq `llama-3.3-70b-versatile` (T=0) | LLM-as-judge QA + retry trigger | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; if overall < `CRITIC_MIN_SCORE` (0.5) routes back to synthesizer with suggestions (max 1 retry) |
+| **Synthesizer** | Groq `openai/gpt-oss-120b` (T=0.4) | Grounded answer generation | Cites local docs as [D1], web sources as [W1]; uses emojis naturally; uses `conversation_history` for multi-turn context; per-token streaming via `llm.stream()`; generates follow-up questions; injects critic suggestions on retry |
+| **Critic** | Groq `openai/gpt-oss-120b` (T=0) | LLM-as-judge QA + retry trigger | Scores `groundedness`, `faithfulness`, `completeness` ∈ [0,1]; if overall < `CRITIC_MIN_SCORE` (0.5) routes back to synthesizer with suggestions (max 1 retry) |
+| **Verifier** | Google `gemini-2.5-flash` (T=0) | Independent cross-check | Second-LLM read of the synthesized answer against retrieved evidence; produces `verifier_scores` (groundedness/faithfulness/agreement) and a `verifier_passed` flag surfaced in the API and UI |
 
 ---
 
@@ -147,7 +163,8 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 | **Frontend** | React 18 + Vite + TypeScript, deployed on Vercel |
 | **API** | FastAPI 0.115, Pydantic v2, OAuth2 Bearer (JWT HS256) |
 | **Agent graph** | LangGraph 0.2 `StateGraph` with conditional routing |
-| **LLM** | Groq `llama-3.3-70b-versatile` (planner, synthesizer, critic) via `langchain-groq` |
+| **LLM (primary)** | Groq `openai/gpt-oss-120b` (planner, synthesizer, critic) via `langchain-groq` |
+| **LLM (verifier)** | Google `gemini-2.5-flash` via `langchain-google-genai` |
 | **Dense retrieval** | `BAAI/bge-small-en-v1.5` (HuggingFace, local) → ChromaDB HTTP |
 | **Multi-modal retrieval** | CLIP `openai/clip-vit-base-patch32` (HuggingFace, local) |
 | **Sparse retrieval** | BM25Okapi (`rank-bm25`) in-memory |
@@ -172,7 +189,8 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 git clone https://github.com/Hridambiswas/helios.git
 cd helios
 cp .env.example .env
-# Fill in GROQ_API_KEY and JWT_SECRET_KEY at minimum
+# Fill in GROQ_API_KEY, GEMINI_API_KEY, and JWT_SECRET_KEY at minimum
+# (GEMINI_API_KEY powers the Verifier; get one at https://aistudio.google.com/app/apikey)
 # Optional: GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET for GitHub OAuth
 # Optional: SUPABASE_DATABASE_URL to use Supabase instead of local Postgres
 ```
@@ -286,7 +304,13 @@ All settings are loaded from environment variables (or `.env`). See `.env.exampl
 
 | Variable | Default | Description |
 |---|---|---|
-| `GROQ_API_KEY` | — | **Required.** Groq API key for all LLM calls |
+| `GROQ_API_KEY` | — | **Required.** Groq API key for Planner / Synthesizer / Critic |
+| `GROQ_MODEL` | `openai/gpt-oss-120b` | Groq model id (retired: `llama-3.3-70b-versatile`) |
+| `GEMINI_API_KEY` | — | **Required when `VERIFIER_ENABLED=true`.** Google AI Studio key for the Gemini Verifier |
+| `GEMINI_MODEL` | `gemini-2.5-flash` | Google Gemini model id used by the Verifier |
+| `VERIFIER_ENABLED` | `true` | Toggle the Gemini cross-verifier stage |
+| `VERIFIER_MIN_SCORE` | `0.5` | Threshold for `verifier_passed` |
+| `VERIFIER_TIMEOUT_SECONDS` | `20` | Per-request Gemini timeout |
 | `JWT_SECRET_KEY` | — | **Required.** HS256 signing key (generate with `secrets.token_hex(32)`) |
 | `SUPABASE_DATABASE_URL` | — | Supabase asyncpg DSN (falls back to local Postgres if unset) |
 | `DATABASE_URL` | `postgresql+asyncpg://helios:@localhost/helios` | Local Postgres DSN |

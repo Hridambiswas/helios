@@ -190,6 +190,7 @@ async def query(body: QueryRequest, current_user: OptionalUser):
                     for d in state.get("retrieved_docs", [])
                 ]
                 rec.critic_scores = state.get("critic_scores")
+                rec.verifier_scores = state.get("verifier_scores")
                 rec.latency_ms = elapsed_ms
                 rec.status = status_str
 
@@ -224,6 +225,8 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         execution_result=state.get("execution_result"),
         critic_scores=state.get("critic_scores"),
         critic_passed=state.get("critic_passed"),
+        verifier_scores=state.get("verifier_scores"),
+        verifier_passed=state.get("verifier_passed"),
         follow_up_questions=state.get("follow_up_questions", []),
         latency_ms=round(elapsed_ms, 1),
         status=status_str,
@@ -736,7 +739,11 @@ async def health():
     mn = mn is True
     ch = ch is True
     overall = "ok" if all([pg, rd, mn, ch]) else ("degraded" if any([pg, rd]) else "down")
-    return HealthResponse(status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch)
+    from config import cfg as _cfg
+    return HealthResponse(
+        status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch,
+        verifier_enabled=_cfg.verifier_enabled,
+    )
 
 
 @router.get("/version")

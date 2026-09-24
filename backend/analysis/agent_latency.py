@@ -1,15 +1,22 @@
 """
-Agent pipeline latency breakdown for the Helios 5-agent LangGraph system.
+Agent pipeline latency breakdown for the Helios 6-agent LangGraph system.
 Shows simulated p50/p95/p99 latencies per agent stage.
 Run: python graphs/agent_latency.py
 """
 import matplotlib.pyplot as plt
 import numpy as np
 
-agents = ["Planner\n(GPT-4o)", "Retriever\n(CLIP+BM25)", "Executor\n(Sandbox)", "Synthesizer\n(GPT-4o)", "Critic\n(GPT-4o)"]
-p50 = [310, 85, 45, 420, 290]
-p95 = [580, 145, 210, 760, 510]
-p99 = [890, 220, 850, 1100, 740]
+agents = [
+    "Planner\n(gpt-oss 120B)",
+    "Retriever\n(CLIP+BM25)",
+    "Executor\n(Sandbox)",
+    "Synthesizer\n(gpt-oss 120B)",
+    "Critic\n(gpt-oss 120B)",
+    "Verifier\n(Gemini 2.5 F)",
+]
+p50 = [310, 85, 45, 420, 290, 260]
+p95 = [580, 145, 210, 760, 510, 480]
+p99 = [890, 220, 850, 1100, 740, 720]
 
 x = np.arange(len(agents))
 width = 0.26

@@ -60,7 +60,7 @@ async def ws_query(websocket: WebSocket):
       Server ← {"event": "executing",   "data": {}}
       Server ← {"event": "synthesizing","data": {}}
       Server ← {"event": "evaluating",  "data": {}}
-      Server ← {"event": "done",        "data": {answer, critic_scores, ...}}
+      Server ← {"event": "done",        "data": {answer, critic_scores, verifier_scores, ...}}
       Server ← {"event": "error",       "data": {"message": "..."}}
     """
     await websocket.accept()
@@ -179,6 +179,8 @@ async def ws_query(websocket: WebSocket):
                         "answer": state.get("answer", ""),
                         "critic_scores": state.get("critic_scores"),
                         "critic_passed": state.get("critic_passed"),
+                        "verifier_scores": state.get("verifier_scores"),
+                        "verifier_passed": state.get("verifier_passed"),
                         "retrieved_doc_count": len(state.get("retrieved_docs", [])),
                     })
             except Exception as exc:

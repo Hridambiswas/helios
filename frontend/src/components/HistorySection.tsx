@@ -133,7 +133,15 @@ export function HistorySection({ isLoggedIn, refreshTrigger }: {
                     (item.critic_scores.overall ?? 0) >= 0.7 ? 'text-green-400' :
                     (item.critic_scores.overall ?? 0) >= 0.4 ? 'text-yellow-400' : 'text-crimson'
                   }`}>
-                    {Math.round((item.critic_scores.overall ?? 0) * 100)}%
+                    Judged {Math.round((item.critic_scores.overall ?? 0) * 100)}%
+                  </div>
+                )}
+                {item.verifier_scores && (
+                  <div className={`font-mono text-[10px] ${
+                    (item.verifier_scores.overall ?? 0) >= 0.7 ? 'text-blue-400' :
+                    (item.verifier_scores.overall ?? 0) >= 0.4 ? 'text-yellow-400' : 'text-orange-400'
+                  }`}>
+                    Checked {Math.round((item.verifier_scores.overall ?? 0) * 100)}%
                   </div>
                 )}
                 {item.latency_ms && (

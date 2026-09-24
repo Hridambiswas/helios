@@ -15,11 +15,12 @@ from agents.retriever import RetrieverAgent
 from agents.executor import ExecutorAgent
 from agents.synthesizer import SynthesizerAgent
 from agents.critic import CriticAgent
+from agents.verifier import VerifierAgent
 from observability.metrics import pipeline_latency_histogram, pipeline_requests_counter
 from observability.tracing import span
 
 _PIPELINE_TIMEOUT_SECONDS = 120
-_PIPELINE_VERSION = "1.1.0"
+_PIPELINE_VERSION = "1.2.0"
 _MAX_RETRIES = 1  # one re-synthesis attempt when critic fails
 
 logger = logging.getLogger("helios.pipeline.run")
@@ -42,6 +43,8 @@ class HeliosState(TypedDict, total=False):
     follow_up_questions: list    # 2 suggested follow-up questions from synthesizer
     critic_scores: Optional[dict]
     critic_passed: Optional[bool]
+    verifier_scores: Optional[dict]
+    verifier_passed: Optional[bool]
     retry_count: int             # how many synthesizer retries have been attempted
     _token_callback: Optional[Callable[[str], None]]  # set by websocket; not persisted
     error: Optional[str]
@@ -56,11 +59,12 @@ _retriever: RetrieverAgent | None = None
 _executor: ExecutorAgent | None = None
 _synthesizer: SynthesizerAgent | None = None
 _critic: CriticAgent | None = None
+_verifier: VerifierAgent | None = None
 _init_lock = threading.Lock()
 
 
 def _ensure_agents() -> None:
-    global _planner, _retriever, _executor, _synthesizer, _critic
+    global _planner, _retriever, _executor, _synthesizer, _critic, _verifier
     if _planner is not None:
         return
     with _init_lock:
@@ -72,7 +76,10 @@ def _ensure_agents() -> None:
         _executor = ExecutorAgent()
         _synthesizer = SynthesizerAgent()
         _critic = CriticAgent()
-        logger.info("Pipeline agents ready")
+        from config import cfg as _cfg
+        if _cfg.verifier_enabled:
+            _verifier = VerifierAgent()
+        logger.info("Pipeline agents ready (verifier=%s)", "on" if _verifier else "off")
 
 
 # ── Node wrappers ─────────────────────────────────────────────────────────────
@@ -107,6 +114,14 @@ def node_critic(state: HeliosState) -> HeliosState:
         return _critic.run(state)  # type: ignore
 
 
+def node_verifier(state: HeliosState) -> HeliosState:
+    _ensure_agents()
+    if _verifier is None:  # verifier disabled via config
+        return {**state, "verifier_scores": None, "verifier_passed": None}  # type: ignore[typeddict-item]
+    with span("helios.verifier"):
+        return _verifier.run(state)  # type: ignore
+
+
 # ── Conditional routing ───────────────────────────────────────────────────────
 
 def route_after_planner(state: HeliosState) -> str:
@@ -131,14 +146,15 @@ def route_after_retriever(state: HeliosState) -> str:
     return "synthesizer"
 
 
-def route_after_critic(state: HeliosState) -> Literal["synthesizer"] | str:
+def route_after_critic(state: HeliosState) -> Literal["synthesizer", "verifier"] | str:
     """
     If critic failed and we haven't hit the retry cap, re-run the synthesizer
-    with the critic's suggestions injected as extra guidance.
+    with the critic's suggestions injected as extra guidance. Otherwise send
+    the answer to the Verifier for an independent cross-check.
     """
     if not state.get("critic_passed") and (state.get("retry_count", 0) <= _MAX_RETRIES):
         return "synthesizer"
-    return END
+    return "verifier"
 
 
 # ── Build graph ───────────────────────────────────────────────────────────────
@@ -153,6 +169,7 @@ def _build_graph() -> StateGraph:
     g.add_node("executor",    node_executor)     # type: ignore
     g.add_node("synthesizer", node_synthesizer)  # type: ignore
     g.add_node("critic",      node_critic)       # type: ignore
+    g.add_node("verifier",    node_verifier)     # type: ignore
 
     g.set_entry_point("planner")
 
@@ -169,8 +186,9 @@ def _build_graph() -> StateGraph:
     g.add_edge("synthesizer", "critic")
     g.add_conditional_edges("critic", route_after_critic, {
         "synthesizer": "synthesizer",
-        END: END,
+        "verifier":    "verifier",
     })
+    g.add_edge("verifier", END)
 
     return g
 
@@ -189,7 +207,8 @@ def run_pipeline(
 ) -> dict[str, Any]:
     """
     Execute the full Helios agent pipeline for a query.
-    Returns the final state dict including answer and critic_scores.
+    Returns the final state dict including answer, critic_scores, and
+    verifier_scores (Gemini cross-check).
     """
     initial_state: HeliosState = {  # type: ignore[typeddict-item]
         "query": query,
@@ -205,6 +224,8 @@ def run_pipeline(
         "follow_up_questions": [],
         "critic_scores": None,
         "critic_passed": None,
+        "verifier_scores": None,
+        "verifier_passed": None,
         "retry_count": 0,
         "error": None,
         "pipeline_start_ms": time.perf_counter() * 1000,
@@ -222,11 +243,15 @@ def run_pipeline(
             status = "success" if not final_state.get("error") else "failed"
             if not final_state.get("critic_passed") and status == "success":
                 status = "critic_failed"
+            if final_state.get("verifier_passed") is False and status == "success":
+                status = "verifier_failed"
             pipeline_requests_counter.labels(status=status).inc()
 
             logger.info(
-                "Pipeline done: status=%s elapsed=%.0fms critic_passed=%s",
-                status, elapsed_ms, final_state.get("critic_passed"),
+                "Pipeline done: status=%s elapsed=%.0fms critic_passed=%s verifier_passed=%s",
+                status, elapsed_ms,
+                final_state.get("critic_passed"),
+                final_state.get("verifier_passed"),
             )
             return final_state
         except Exception as exc:

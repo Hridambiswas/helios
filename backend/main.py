@@ -34,7 +34,11 @@ async def lifespan(app: FastAPI):
     setup_logging()
     setup_tracing()
     cfg.validate_secrets()
-    logger.info("Helios v1.0.0 starting up (env=%s, host=%s:%s)", cfg.app_env, cfg.app_host, cfg.app_port)
+    logger.info(
+        "Helios v1.2.0 starting up (env=%s, host=%s:%s, verifier=%s, groq_model=%s)",
+        cfg.app_env, cfg.app_host, cfg.app_port,
+        "on" if cfg.verifier_enabled else "off", cfg.groq_model,
+    )
 
     await create_tables()
     ensure_bucket()
@@ -53,7 +57,7 @@ def create_app() -> FastAPI:
     app = FastAPI(
         title="Helios",
         description="Distributed Multi-Modal Agentic GenAI Platform",
-        version="1.1.0",
+        version="1.2.0",
         docs_url="/docs" if cfg.is_development else None,
         redoc_url="/redoc" if cfg.is_development else None,
         openapi_url="/openapi.json" if cfg.is_development else None,

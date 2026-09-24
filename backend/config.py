@@ -16,9 +16,11 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # ── LLM ───────────────────────────────────────────────────────────────────
+    # ── LLM (primary: Groq / verifier: Google Gemini) ─────────────────────────
     groq_api_key: SecretStr = SecretStr("")
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
+    gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
@@ -79,6 +81,9 @@ class Settings(BaseSettings):
     retriever_rrf_k: int = 60                # RRF rank offset (higher = smoother)
     executor_timeout_seconds: int = 15
     critic_min_score: float = 0.5
+    verifier_enabled: bool = True
+    verifier_min_score: float = 0.5
+    verifier_timeout_seconds: int = 20
 
     # ── Ingest Tuning ─────────────────────────────────────────────────────────
     ingest_chunk_size: int = 500
@@ -182,6 +187,8 @@ class Settings(BaseSettings):
         missing: list[str] = []
         if not self.groq_api_key.get_secret_value():
             missing.append("GROQ_API_KEY")
+        if self.verifier_enabled and not self.gemini_api_key.get_secret_value():
+            missing.append("GEMINI_API_KEY")
         if not self.jwt_secret_key:
             missing.append("JWT_SECRET_KEY")
         if not self.postgres_password:
