@@ -81,6 +81,18 @@ const AGENTS = [
       </svg>
     ),
   },
+  {
+    num: '06', name: 'VERIFIER', role: 'Second-Opinion Cross-Check',
+    desc: 'Gemini 2.5 Flash independently re-reads the answer against the retrieved context — a different model, a different failure mode.',
+    tech: ['Gemini 2.5 Flash', 'Cross-model', 'Final judge'],
+    icon: (
+      <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+        <path d="M16 3 L27 8 V16 C27 22 22 27 16 29 C10 27 5 22 5 16 V8 Z"
+          stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinejoin="round"/>
+        <path d="M11 16 L15 20 L22 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+      </svg>
+    ),
+  },
 ]
 
 function AgentCard({ agent, index }: { agent: typeof AGENTS[0]; index: number }) {
