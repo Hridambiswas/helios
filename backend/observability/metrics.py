@@ -29,7 +29,7 @@ pipeline_latency_histogram = Histogram(
 pipeline_requests_counter = Counter(
     "helios_pipeline_requests_total",
     "Total queries processed by the pipeline",
-    ["status"],   # labels: success / failed / critic_failed
+    ["status"],   # labels: success / failed / critic_failed / verifier_failed
 )
 
 # ── Retrieval metrics ─────────────────────────────────────────────────────────
