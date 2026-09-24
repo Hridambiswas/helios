@@ -224,6 +224,8 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         execution_result=state.get("execution_result"),
         critic_scores=state.get("critic_scores"),
         critic_passed=state.get("critic_passed"),
+        verifier_scores=state.get("verifier_scores"),
+        verifier_passed=state.get("verifier_passed"),
         follow_up_questions=state.get("follow_up_questions", []),
         latency_ms=round(elapsed_ms, 1),
         status=status_str,
