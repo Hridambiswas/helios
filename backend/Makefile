@@ -49,6 +49,9 @@ test-cov:
 test-fast:
 	pytest tests/ -v --tb=short -x -q
 
+test-verifier:
+	pytest tests/test_verifier.py -v --tb=short
+
 ## ── Lint / Format / Type ────────────────────────────────────────────────────
 
 lint:
