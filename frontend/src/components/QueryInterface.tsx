@@ -542,6 +542,30 @@ function ResultCard({ result }: { result: QueryResponse }) {
                 </ul>
               </div>
             )}
+
+            {result.verifier_scores && (
+              <div className="mt-6 pt-4 border-t border-white/5">
+                <p className="font-mono text-[10px] text-blue-400 uppercase tracking-wider mb-3">Checked by Gemini (independent)</p>
+                {(['groundedness', 'faithfulness', 'agreement', 'overall'] as const).map(dim => {
+                  const score = result.verifier_scores![dim]
+                  const pct = Math.round(score * 100)
+                  return (
+                    <div key={dim} className="mb-2">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-mono text-[10px] uppercase tracking-wider text-[#888]">{dim}</span>
+                        <span className={`font-mono text-xs ${pct >= 70 ? 'text-blue-400' : pct >= 40 ? 'text-yellow-400' : 'text-orange-400'}`}>{pct}%</span>
+                      </div>
+                      <div className="h-1 bg-white/5">
+                        <div className={`h-full transition-all duration-700 ${pct >= 70 ? 'bg-blue-500' : pct >= 40 ? 'bg-yellow-500' : 'bg-orange-500'}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  )
+                })}
+                {result.verifier_scores.reasoning && (
+                  <p className="mt-2 text-[#888] text-xs italic">{result.verifier_scores.reasoning}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
