@@ -46,11 +46,14 @@ class TestPipelineRouting:
             patch("agents.retriever.RetrieverAgent._run", side_effect=_mock_retriever_output),
             patch("agents.synthesizer.SynthesizerAgent._run", side_effect=_mock_synthesizer_output),
             patch("agents.critic.CriticAgent._run", side_effect=_mock_critic_output),
+            patch("agents.verifier.VerifierAgent._run", side_effect=_mock_verifier_output),
+            patch("agents.verifier.ChatGoogleGenerativeAI"),
         ):
             from pipeline.run import run_pipeline
             result = run_pipeline("What is CARLE?")
             assert result["answer"] == "CARLE is a lossless semantic compression method."
             assert result["critic_passed"] is True
+            assert result["verifier_passed"] is True
             assert len(result["retrieved_docs"]) == 1
 
     def test_pipeline_returns_error_key_on_crash(self):
