@@ -64,7 +64,7 @@ _init_lock = threading.Lock()
 
 
 def _ensure_agents() -> None:
-    global _planner, _retriever, _executor, _synthesizer, _critic
+    global _planner, _retriever, _executor, _synthesizer, _critic, _verifier
     if _planner is not None:
         return
     with _init_lock:
@@ -76,7 +76,10 @@ def _ensure_agents() -> None:
         _executor = ExecutorAgent()
         _synthesizer = SynthesizerAgent()
         _critic = CriticAgent()
-        logger.info("Pipeline agents ready")
+        from config import cfg as _cfg
+        if _cfg.verifier_enabled:
+            _verifier = VerifierAgent()
+        logger.info("Pipeline agents ready (verifier=%s)", "on" if _verifier else "off")
 
 
 # ── Node wrappers ─────────────────────────────────────────────────────────────
