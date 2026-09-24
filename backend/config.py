@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
     gemini_api_key: SecretStr = SecretStr("")
+    gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── JWT ───────────────────────────────────────────────────────────────────
