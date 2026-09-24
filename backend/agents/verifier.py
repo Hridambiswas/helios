@@ -31,4 +31,9 @@ FAITHFULNESS — does the answer accurately reflect what the context says?
   1.0 → no distortion, no citation errors, no reversed meanings
   0.5 → paraphrase drifts on secondary points
   0.0 → key facts are misrepresented
+
+AGREEMENT — would an independent reader reach the same conclusion?
+  1.0 → answer is one you would also give from the same context
+  0.5 → you would phrase it differently or add/remove qualifiers
+  0.0 → you would give a materially different answer
 """
