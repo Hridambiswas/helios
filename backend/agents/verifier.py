@@ -92,3 +92,9 @@ class VerifierAgent(BaseAgent):
         ]
         response = self._llm.invoke(messages, timeout=cfg.verifier_timeout_seconds)
         raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
+
+        try:
+            scores = json.loads(raw)
+        except json.JSONDecodeError:
+            self.logger.warning("Verifier returned non-JSON; defaulting to zero scores")
+            scores = self._zero_scores()
