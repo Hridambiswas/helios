@@ -55,6 +55,8 @@ export type QueryResponse = {
   execution_result: { stdout: string; stderr: string; success: boolean } | null
   critic_scores: { groundedness: number; faithfulness: number; completeness: number; overall: number; pass: boolean; reasoning: string; suggestions?: string[] } | null
   critic_passed: boolean | null
+  verifier_scores: { groundedness: number; faithfulness: number; agreement: number; overall: number; pass: boolean; reasoning: string; flags?: string[] } | null
+  verifier_passed: boolean | null
   follow_up_questions: string[]
   latency_ms: number
   status: string
