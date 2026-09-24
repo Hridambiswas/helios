@@ -71,7 +71,7 @@ const AGENTS = [
   {
     num: '05', name: 'CRITIC', role: 'LLM-as-Judge',
     desc: 'Scores groundedness, faithfulness & completeness — quality control at every step.',
-    tech: ['Llama 3.3 70B', 'Min score 0.5', 'Retry'],
+    tech: ['gpt-oss 120B', 'Min score 0.5', 'Retry'],
     icon: (
       <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
         <path d="M16 3 L19.5 12H29L21.5 17.5L24 27L16 22L8 27L10.5 17.5L3 12H12.5Z"
