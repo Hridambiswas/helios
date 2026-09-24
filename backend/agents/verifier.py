@@ -76,3 +76,19 @@ class VerifierAgent(BaseAgent):
             self.logger.warning("No answer to verify — returning zero scores")
             scores = self._zero_scores()
             return {**state, "verifier_scores": scores, "verifier_passed": False}
+
+        context_snippet = "\n\n".join(
+            f"[{d['id']}]: {d['document'][:300]}" for d in docs[:5]
+        )
+        user_msg = (
+            f"Query: {query}\n\n"
+            f"Retrieved context:\n{context_snippet or 'None'}\n\n"
+            f"Synthesizer answer:\n{answer}\n\n"
+            f"Minimum passing threshold: {cfg.verifier_min_score}"
+        )
+        messages = [
+            SystemMessage(content=_SYSTEM_PROMPT),
+            HumanMessage(content=user_msg),
+        ]
+        response = self._llm.invoke(messages, timeout=cfg.verifier_timeout_seconds)
+        raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
