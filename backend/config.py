@@ -187,6 +187,8 @@ class Settings(BaseSettings):
         missing: list[str] = []
         if not self.groq_api_key.get_secret_value():
             missing.append("GROQ_API_KEY")
+        if self.verifier_enabled and not self.gemini_api_key.get_secret_value():
+            missing.append("GEMINI_API_KEY")
         if not self.jwt_secret_key:
             missing.append("JWT_SECRET_KEY")
         if not self.postgres_password:
