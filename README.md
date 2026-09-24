@@ -163,7 +163,8 @@ Tune weights via env vars: `RETRIEVER_DENSE_WEIGHT`, `RETRIEVER_CLIP_WEIGHT`, `R
 | **Frontend** | React 18 + Vite + TypeScript, deployed on Vercel |
 | **API** | FastAPI 0.115, Pydantic v2, OAuth2 Bearer (JWT HS256) |
 | **Agent graph** | LangGraph 0.2 `StateGraph` with conditional routing |
-| **LLM** | Groq `llama-3.3-70b-versatile` (planner, synthesizer, critic) via `langchain-groq` |
+| **LLM (primary)** | Groq `openai/gpt-oss-120b` (planner, synthesizer, critic) via `langchain-groq` |
+| **LLM (verifier)** | Google `gemini-2.5-flash` via `langchain-google-genai` |
 | **Dense retrieval** | `BAAI/bge-small-en-v1.5` (HuggingFace, local) → ChromaDB HTTP |
 | **Multi-modal retrieval** | CLIP `openai/clip-vit-base-patch32` (HuggingFace, local) |
 | **Sparse retrieval** | BM25Okapi (`rank-bm25`) in-memory |
