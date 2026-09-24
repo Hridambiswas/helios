@@ -151,6 +151,8 @@ class QueryResponse(BaseModel):
     execution_result: ExecutionResult | None
     critic_scores: CriticScores | None
     critic_passed: bool | None
+    verifier_scores: VerifierScores | None = None
+    verifier_passed: bool | None = None
     follow_up_questions: list[str] = []
     latency_ms: float
     status: str
