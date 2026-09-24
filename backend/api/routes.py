@@ -739,7 +739,11 @@ async def health():
     mn = mn is True
     ch = ch is True
     overall = "ok" if all([pg, rd, mn, ch]) else ("degraded" if any([pg, rd]) else "down")
-    return HealthResponse(status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch)
+    from config import cfg as _cfg
+    return HealthResponse(
+        status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch,
+        verifier_enabled=_cfg.verifier_enabled,
+    )
 
 
 @router.get("/version")
