@@ -52,6 +52,7 @@ class QueryRecord(Base):
     plan: Mapped[dict | None] = mapped_column(JSON)
     retrieved_docs: Mapped[list | None] = mapped_column(JSON)
     critic_scores: Mapped[dict | None] = mapped_column(JSON)
+    verifier_scores: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     latency_ms: Mapped[float | None] = mapped_column(Float)
     status: Mapped[str] = mapped_column(String(32), default="pending", index=True)
     ip_address: Mapped[str | None] = mapped_column(String(45))  # IPv4 or IPv6
