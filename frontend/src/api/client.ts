@@ -70,6 +70,7 @@ export type HistoryItem = {
   latency_ms: number | null
   created_at: string
   critic_scores: QueryResponse['critic_scores']
+  verifier_scores: QueryResponse['verifier_scores']
 }
 
 export const auth = {
