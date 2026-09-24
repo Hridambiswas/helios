@@ -8,3 +8,8 @@ from typing import Any
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
+
+from config import cfg
+from agents.base import BaseAgent
+
+logger = logging.getLogger("helios.agents.verifier")
