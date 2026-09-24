@@ -190,6 +190,7 @@ async def query(body: QueryRequest, current_user: OptionalUser):
                     for d in state.get("retrieved_docs", [])
                 ]
                 rec.critic_scores = state.get("critic_scores")
+                rec.verifier_scores = state.get("verifier_scores")
                 rec.latency_ms = elapsed_ms
                 rec.status = status_str
 
