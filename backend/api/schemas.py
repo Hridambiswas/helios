@@ -128,6 +128,19 @@ class CriticScores(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class VerifierScores(BaseModel):
+    """Independent Gemini cross-check of the Synthesizer's answer."""
+    groundedness: float
+    faithfulness: float
+    agreement: float
+    overall: float
+    passed: bool = Field(alias="pass")
+    reasoning: str
+    flags: list[str] = []
+
+    model_config = {"populate_by_name": True}
+
+
 class QueryResponse(BaseModel):
     query_id: str
     query: str
