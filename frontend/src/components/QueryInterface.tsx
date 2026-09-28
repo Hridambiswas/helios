@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { Send, Zap, Search, Code, Shield, CheckCircle, XCircle, Loader, Copy, Check, Share2, Globe, MessageSquare } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { queries, connectQueryWS, type QueryResponse } from '../api/client'
+import { queries, connectQueryWS, humanReadableError, type QueryResponse } from '../api/client'
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false)
@@ -141,8 +141,7 @@ export function QueryInterface({ initialQuery, onNewResult, isLoggedIn, onAuthRe
         if (!isLoggedIn && GUEST_QUERY_LIMIT >= 0) incGuestCount()
         onNewResult?.(data)
       } catch (e: unknown) {
-        const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail
-        setErrorMsg(msg ?? 'Request failed')
+        setErrorMsg(humanReadableError(e))
         setStep('error')
       }
     }

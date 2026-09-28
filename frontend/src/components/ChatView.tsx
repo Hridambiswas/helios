@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { flushSync } from 'react-dom'
 import { Send, Loader, Copy, Check, Zap, Search, Code, Shield, CheckCircle, XCircle, ChevronRight, Globe, Sparkles } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
-import { queries, connectQueryWS, sendWSQuery, type QueryResponse, type HistoryMessage } from '../api/client'
+import { queries, connectQueryWS, sendWSQuery, humanReadableError, type QueryResponse, type HistoryMessage } from '../api/client'
 import type { ChatMessage, Conversation } from '../hooks/useConversations'
 
 // ── Floating particles ────────────────────────────────────────────────────────
@@ -548,8 +548,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
         }, 400)
       }).catch((e: unknown) => {
         timers.forEach(clearTimeout)
-        const msg = (e as { response?: { data?: { detail?: string } } })?.response?.data?.detail ?? 'Request failed'
-        onUpdateMessage(cid, assistantMsgId, { error: msg, step: 'error' })
+        onUpdateMessage(cid, assistantMsgId, { error: humanReadableError(e), step: 'error' })
         setBusyMsgId(null)
       })
     }
