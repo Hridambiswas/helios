@@ -374,6 +374,19 @@ async def ingest(file: Annotated[UploadFile, File()], current_user: CurrentUser)
     """
     from config import cfg
 
+    # Object storage is required for /ingest. When MinIO is disabled (e.g.
+    # in an HF Space where the container cannot reach an S3-compatible
+    # backend), fail fast with 503 rather than silently corrupting the
+    # saga midway.
+    if not cfg.minio_enabled:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Ingest is disabled on this deployment (MINIO_ENABLED=false). "
+                "Query existing documents via /api/v1/query."
+            ),
+        )
+
     # ── Filename sanitization (path traversal prevention) ─────────────────────
     raw_name = pathlib.Path(file.filename or "upload").name
     safe_name = re.sub(r"[^\w\-.]", "_", raw_name)[:255] or "upload"
@@ -727,10 +740,18 @@ async def stats():
 
 @router.get("/health", response_model=HealthResponse)
 async def health():
+    from config import cfg as _cfg
+    # MinIO is optional. When disabled we skip the ping and mark it as
+    # "not required" (reported as True so it doesn't flip overall status).
+    minio_task = (
+        asyncio.to_thread(minio_ping)
+        if _cfg.minio_enabled
+        else asyncio.sleep(0, result=True)
+    )
     pg, rd, mn, ch = await asyncio.gather(
         db_ping(),
         redis_ping(),
-        asyncio.to_thread(minio_ping),
+        minio_task,
         asyncio.to_thread(chroma_ping),
         return_exceptions=True,
     )
@@ -739,7 +760,6 @@ async def health():
     mn = mn is True
     ch = ch is True
     overall = "ok" if all([pg, rd, mn, ch]) else ("degraded" if any([pg, rd]) else "down")
-    from config import cfg as _cfg
     return HealthResponse(
         status=overall, postgres=pg, redis=rd, minio=mn, chroma=ch,
         verifier_enabled=_cfg.verifier_enabled,

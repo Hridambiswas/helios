@@ -41,8 +41,14 @@ async def lifespan(app: FastAPI):
     )
 
     await create_tables()
-    ensure_bucket()
-    logger.info("Storage layer ready")
+    if cfg.minio_enabled:
+        ensure_bucket()
+        logger.info("Storage layer ready (MinIO enabled)")
+    else:
+        logger.warning(
+            "MinIO disabled — /ingest will return 503. "
+            "Set MINIO_ENABLED=true and configure MINIO_* to enable uploads."
+        )
 
     yield  # ← app runs here
 
