@@ -8,8 +8,9 @@
 # by default.
 #
 # Env vars (all optional):
-#   REPO_URL      upstream repo (default: https://github.com/Hridambiswas/helios.git)
-#   CHECKOUT_DIR  where to clone (default: $HOME/helios)
+#   REPO_URL       upstream repo (default: https://github.com/Hridambiswas/helios.git)
+#   DEPLOY_BRANCH  branch to check out (default: fix/request-failed)
+#   CHECKOUT_DIR   where to clone (default: $HOME/helios)
 #
 # Usage on the VM:
 #   bash bootstrap.sh              # never as root, never with sudo bash
@@ -17,6 +18,7 @@
 set -euo pipefail
 
 REPO_URL="${REPO_URL:-https://github.com/Hridambiswas/helios.git}"
+DEPLOY_BRANCH="${DEPLOY_BRANCH:-fix/request-failed}"
 CHECKOUT_DIR="${CHECKOUT_DIR:-$HOME/helios}"
 
 log() { printf '\033[1;36m[bootstrap]\033[0m %s\n' "$*"; }
@@ -80,11 +82,14 @@ if ! command -v certbot >/dev/null 2>&1; then
   sudo ln -sf /snap/bin/certbot /usr/bin/certbot
 fi
 
-log "step 6/6: clone repo (if missing)"
+log "step 6/6: clone repo on branch '$DEPLOY_BRANCH'"
 if [ ! -d "$CHECKOUT_DIR/.git" ]; then
-  git clone "$REPO_URL" "$CHECKOUT_DIR"
+  git clone --branch "$DEPLOY_BRANCH" "$REPO_URL" "$CHECKOUT_DIR"
 else
-  log "  → repo already present, skipping clone"
+  log "  → repo already present, syncing $CHECKOUT_DIR to origin/$DEPLOY_BRANCH"
+  git -C "$CHECKOUT_DIR" fetch origin "$DEPLOY_BRANCH"
+  git -C "$CHECKOUT_DIR" checkout "$DEPLOY_BRANCH"
+  git -C "$CHECKOUT_DIR" reset --hard "origin/$DEPLOY_BRANCH"
 fi
 
 log "bootstrap complete."
