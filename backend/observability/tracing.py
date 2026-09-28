@@ -21,17 +21,29 @@ _tracer: trace.Tracer | None = None
 
 
 def setup_tracing() -> None:
-    """Initialise the OTEL tracer and wire it to the OTLP gRPC exporter."""
+    """Initialise the OTEL tracer and wire it to the OTLP gRPC exporter.
+
+    When OTEL_EXPORTER_OTLP_ENDPOINT is empty, install a no-op tracer:
+    no BatchSpanProcessor is registered, so spans are dropped locally
+    without any background thread trying (and failing) to connect to a
+    collector. Required for the HF Space deploy where there is no OTel
+    collector reachable inside the container.
+    """
     global _tracer
 
     resource = Resource(attributes={SERVICE_NAME: cfg.otel_service_name})
-    exporter = OTLPSpanExporter(endpoint=cfg.otel_exporter_otlp_endpoint, insecure=True)
     provider = TracerProvider(resource=resource)
-    provider.add_span_processor(BatchSpanProcessor(exporter))
-    trace.set_tracer_provider(provider)
 
-    _tracer = trace.get_tracer(cfg.otel_service_name)
-    logger.info("OpenTelemetry tracing initialised → %s", cfg.otel_exporter_otlp_endpoint)
+    if cfg.otel_exporter_otlp_endpoint:
+        exporter = OTLPSpanExporter(endpoint=cfg.otel_exporter_otlp_endpoint, insecure=True)
+        provider.add_span_processor(BatchSpanProcessor(exporter))
+        trace.set_tracer_provider(provider)
+        _tracer = trace.get_tracer(cfg.otel_service_name)
+        logger.info("OpenTelemetry tracing initialised → %s", cfg.otel_exporter_otlp_endpoint)
+    else:
+        trace.set_tracer_provider(provider)
+        _tracer = trace.get_tracer(cfg.otel_service_name)
+        logger.info("OpenTelemetry tracing in no-op mode (OTEL_EXPORTER_OTLP_ENDPOINT empty)")
 
 
 def get_tracer() -> trace.Tracer:
