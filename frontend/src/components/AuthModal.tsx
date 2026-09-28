@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { X, Eye, EyeOff } from 'lucide-react'
-
-const API_BASE = import.meta.env.VITE_API_URL ?? 'https://helios-hridam.ddns.net'
+import { BASE as API_BASE } from '../api/client'
 
 type Props = {
   onClose: () => void
