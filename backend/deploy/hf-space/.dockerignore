@@ -1,0 +1,39 @@
+# Never let secrets, dev caches, or non-backend trees enter the Space
+# build context. The Part C export script also strips these, but this
+# file is the second line of defence if the export ever misses them.
+.git/
+.gitignore
+.github/
+.secrets/
+.venv/
+venv/
+env/
+*.env
+.env
+.env.*
+node_modules/
+frontend/
+docs/
+tests/
+**/__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+# Deploy trees for other providers — the Space only needs its own.
+deploy/digitalocean/
+deploy/oracle/
+deploy/vm/
+deploy/k8s/
+deploy/render.yaml
+deploy/otel-config.yaml
+# The Space uses in-memory Redis and embedded Chroma — no compose files
+# needed inside.
+docker-compose*.yml
+Dockerfile.prod
+Dockerfile
+nginx/
+scripts/
