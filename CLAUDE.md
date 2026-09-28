@@ -46,3 +46,13 @@ push, and resume from it next cycle.
 - One commit per logical change, conventional commit messages.
 - Run the relevant tests (`cd backend && pytest -q`, `cd frontend && npm run build`)
   before pushing code changes.
+
+## Local secrets
+- Hugging Face token ("huggingface token", Write scope, user `Hridam`) is stored at
+  `.secrets/huggingface_token` (gitignored, chmod 600). Use it without asking the human:
+  `export HF_TOKEN="$(cat .secrets/huggingface_token)"`, or `hf auth login --token "$HF_TOKEN"`.
+- Never print it, echo it, commit it, copy it into the repo, a Dockerfile, a Space, or a report.
+  Exclude `.secrets/` from any Docker build context and any Space upload.
+- `frontend/node_modules/` is (wrongly) tracked in git. Never stage changes under it; use
+  explicit paths with `git add`, never `git add -A` or `git add .`. Untracking it is a
+  separate cleanup the director will schedule.
