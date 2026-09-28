@@ -12,28 +12,51 @@ from config import cfg
 
 logger = logging.getLogger("helios.retrieval.vector_store")
 
-_client: chromadb.HttpClient | None = None
+_client: Any = None
 _collection: chromadb.Collection | None = None
 
 
 def _get_collection() -> chromadb.Collection:
+    """Return the singleton Chroma collection.
+
+    When CHROMA_PATH is set, use an embedded PersistentClient rooted at
+    that directory (required inside HF Spaces, which only expose one
+    inbound port). Otherwise use the HttpClient against the sidecar
+    Chroma container defined in docker-compose.yml.
+    """
     global _client, _collection
     if _collection is None:
-        _client = chromadb.HttpClient(
-            host=cfg.chroma_host,
-            port=cfg.chroma_port,
-            settings=ChromaSettings(anonymized_telemetry=False),
-        )
+        if cfg.chroma_path:
+            _client = chromadb.PersistentClient(
+                path=cfg.chroma_path,
+                settings=ChromaSettings(anonymized_telemetry=False),
+            )
+            mode = f"persistent @ {cfg.chroma_path}"
+        else:
+            _client = chromadb.HttpClient(
+                host=cfg.chroma_host,
+                port=cfg.chroma_port,
+                settings=ChromaSettings(anonymized_telemetry=False),
+            )
+            mode = f"http @ {cfg.chroma_host}:{cfg.chroma_port}"
         _collection = _client.get_or_create_collection(
             name=cfg.chroma_collection,
             metadata={"hnsw:space": "cosine"},
         )
         logger.info(
-            "ChromaDB collection '%s' ready (%d docs)",
+            "ChromaDB collection '%s' ready (%d docs, %s)",
             cfg.chroma_collection,
             _collection.count(),
+            mode,
         )
     return _collection
+
+
+def _reset_for_tests() -> None:
+    """Clear cached client/collection so tests can swap CHROMA_PATH per case."""
+    global _client, _collection
+    _client = None
+    _collection = None
 
 
 # ── Write ops ─────────────────────────────────────────────────────────────────

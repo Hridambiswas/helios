@@ -55,11 +55,18 @@ class Settings(BaseSettings):
     minio_secret_key: str = ""
     minio_bucket: str = "helios-docs"
     minio_secure: bool = False
+    # When false, /ingest returns 503 and startup skips ensure_bucket().
+    # HF Spaces cannot reach MinIO — we run without object storage there.
+    minio_enabled: bool = True
 
     # ── ChromaDB ──────────────────────────────────────────────────────────────
     chroma_host: str = "localhost"
     chroma_port: int = 8001
     chroma_collection: str = "helios"
+    # When set, retrieval uses chromadb.PersistentClient at this path
+    # instead of an HTTP client — required inside Hugging Face Spaces
+    # where only one inbound port (7860) is exposed.
+    chroma_path: str = ""
 
     # ── OpenTelemetry ─────────────────────────────────────────────────────────
     otel_exporter_otlp_endpoint: str = "http://localhost:4317"
@@ -126,8 +133,8 @@ class Settings(BaseSettings):
     # Where to redirect after successful OAuth. Should be the frontend origin.
     oauth_frontend_url: str = "https://helios-hridam.vercel.app"
     # Public backend URL used to build the OAuth callback URI.
-    # ddns.net no longer resolves — see 001_report.md.
-    oauth_backend_url: str = "https://helios-hridam.duckdns.org"
+    # Director decision in 004: HF Space is the primary backend host.
+    oauth_backend_url: str = "https://hridam-helios.hf.space"
 
     # ── Security ──────────────────────────────────────────────────────────────
     cors_allowed_origins: str = ""
@@ -192,9 +199,11 @@ class Settings(BaseSettings):
             missing.append("GEMINI_API_KEY")
         if not self.jwt_secret_key:
             missing.append("JWT_SECRET_KEY")
-        if not self.postgres_password:
+        # Supabase-backed Postgres does not use the local password field.
+        if not self.supabase_database_url and not self.postgres_password:
             missing.append("POSTGRES_PASSWORD")
-        if not self.minio_access_key or not self.minio_secret_key:
+        # MinIO keys are only required when MinIO is enabled.
+        if self.minio_enabled and (not self.minio_access_key or not self.minio_secret_key):
             missing.append("MINIO_ACCESS_KEY / MINIO_SECRET_KEY")
         if missing:
             raise ValueError(
