@@ -19,7 +19,7 @@ from api.websocket import ws_router
 from api.middleware import RequestIDMiddleware, RateLimitMiddleware
 from api.security import SecurityHeadersMiddleware, AuthBruteForceMiddleware
 from gateway.router import GatewayMiddleware
-from storage.database import create_tables, close_engine
+from storage.database import create_tables, close_engine, wait_for_db
 from storage.object_store import ensure_bucket
 from storage.read_replica import close_read_engine
 
@@ -40,6 +40,8 @@ async def lifespan(app: FastAPI):
         "on" if cfg.verifier_enabled else "off", cfg.groq_model,
     )
 
+    # Supabase's pooler can cold-start when the project is idle — retry.
+    await wait_for_db()
     await create_tables()
     if cfg.minio_enabled:
         ensure_bucket()

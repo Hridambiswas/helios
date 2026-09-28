@@ -102,6 +102,47 @@ async def ping() -> bool:
         return False
 
 
+async def wait_for_db(retries: int = 5, delay: float = 2.0) -> None:
+    """Block until the database is reachable, with exponential backoff.
+
+    Supabase's free-tier pooler can take several seconds to warm up when
+    a project first receives traffic after being idle; without a retry
+    loop, uvicorn's first request handler races the DB and 500s.
+    """
+    import asyncio
+    for attempt in range(1, retries + 1):
+        if await ping():
+            return
+        if attempt < retries:
+            wait = delay * (2 ** (attempt - 1))
+            logger.warning(
+                "DB not ready (attempt %d/%d), retrying in %.0fs",
+                attempt, retries, wait,
+            )
+            await asyncio.sleep(wait)
+    raise RuntimeError("Database unreachable after %d attempts" % retries)
+
+
+def connection_info() -> dict:
+    """Return non-sensitive connection metadata for health/debug endpoints."""
+    url, _ = _effective_database_url()
+    engine = _engine
+    pool_status: dict = {}
+    if engine is not None:
+        pool = engine.pool
+        pool_status = {
+            "size": pool.size(),
+            "checked_in": pool.checkedin(),
+            "checked_out": pool.checkedout(),
+            "overflow": pool.overflow(),
+        }
+    from urllib.parse import urlparse
+    parsed = urlparse(url)
+    safe_url = f"{parsed.scheme}://***@{parsed.hostname}:{parsed.port}{parsed.path}"
+    backend = "supabase" if cfg.supabase_database_url else "local"
+    return {"backend": backend, "url": safe_url, "pool": pool_status}
+
+
 async def close_engine() -> None:
     global _engine
     if _engine:
