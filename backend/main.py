@@ -40,8 +40,12 @@ async def lifespan(app: FastAPI):
         "on" if cfg.verifier_enabled else "off", cfg.groq_model,
     )
 
-    # Supabase's pooler can cold-start when the project is idle — retry.
-    await wait_for_db()
+    # Supabase's pooler can cold-start when the project is idle — retry
+    # only when we know we're pointing at a Supabase URL. Local Postgres
+    # and the SQLite test DB come up synchronously; a retry loop there
+    # would just multiply setup failures.
+    if cfg.supabase_database_url:
+        await wait_for_db()
     await create_tables()
     if cfg.minio_enabled:
         ensure_bucket()
