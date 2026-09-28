@@ -126,7 +126,8 @@ class Settings(BaseSettings):
     # Where to redirect after successful OAuth. Should be the frontend origin.
     oauth_frontend_url: str = "https://helios-hridam.vercel.app"
     # Public backend URL used to build the OAuth callback URI.
-    oauth_backend_url: str = "https://helios-hridam.ddns.net"
+    # ddns.net no longer resolves — see 001_report.md.
+    oauth_backend_url: str = "https://helios-hridam.duckdns.org"
 
     # ── Security ──────────────────────────────────────────────────────────────
     cors_allowed_origins: str = ""
