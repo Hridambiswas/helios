@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "defaultMode": "acceptEdits",
+    "allow": [
+      "Bash(git:*)", "Bash(gh:*)", "Bash(python:*)", "Bash(python3:*)",
+      "Bash(.venv/bin/python:*)", "Bash(pytest:*)", "Bash(pip:*)",
+      "Bash(npm:*)", "Bash(npx:*)", "Bash(node:*)", "Bash(curl:*)",
+      "Bash(ls:*)", "Bash(cat:*)", "Bash(head:*)", "Bash(tail:*)",
+      "Bash(grep:*)", "Bash(find:*)", "Bash(mkdir:*)", "Bash(docker:*)",
+      "Bash(dig:*)", "Bash(nslookup:*)"
+    ],
+    "deny": [
+      "Bash(git push origin main:*)", "Bash(git push -f:*)", "Bash(git push --force:*)"
+    ]
+  }
+}
