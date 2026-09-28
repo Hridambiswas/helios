@@ -36,6 +36,52 @@ GROQ_API_KEY=<gsk_...>                 \
   backend/deploy/vm/first-deploy.sh
 ```
 
+## Azure networking (must-do before first-deploy)
+
+Ubuntu's `ufw` alone is not enough on Azure — the VM sits behind a
+Network Security Group (NSG) that blocks inbound by default. Open the
+same three ports at both layers:
+
+1. In the Azure portal → VM → Networking → **Add inbound port rule**, or
+   `az network nsg rule create ...`:
+   - allow `TCP 22` (SSH — usually already there via the "SSH" default rule)
+   - allow `TCP 80` (Let's Encrypt HTTP-01 challenge + nginx redirect)
+   - allow `TCP 443` (HTTPS)
+2. `bootstrap.sh` runs `ufw allow 22/80/443` on the guest — the two
+   layers must agree, or requests are dropped at the NSG even though
+   ufw is open.
+
+Same idea for GCP (firewall rules under VPC networks) and Oracle Cloud
+(security lists under the VCN's subnet).
+
+## Deploying without pushing to main
+
+The GitHub Actions backend workflow (`.github/workflows/deploy-backend.yml`)
+triggers on pushes to `fix/request-failed` and `main`, plus manual
+`workflow_dispatch`. To deploy the current `fix/request-failed` tip
+without a merge:
+
+```bash
+gh workflow run deploy-backend.yml \
+  --repo Hridambiswas/helios \
+  --ref fix/request-failed
+```
+
+The frontend workflow (`.github/workflows/deploy-frontend.yml`) currently
+triggers only on pushes to `main` under `frontend/**`, but it also
+declares `workflow_dispatch:`, which — per GitHub's docs — ignores the
+push `branches`/`paths` filter and can dispatch any ref that contains
+the workflow file. To rebuild the Vercel bundle from `fix/request-failed`:
+
+```bash
+gh workflow run deploy-frontend.yml \
+  --repo Hridambiswas/helios \
+  --ref fix/request-failed
+```
+
+`rotate-secrets.sh` runs the same command automatically after updating
+`VITE_API_URL`.
+
 ## Files
 
 | File                | Purpose                                                    |
