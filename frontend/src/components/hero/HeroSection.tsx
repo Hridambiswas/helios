@@ -53,8 +53,28 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
         </Suspense>
       </div>
 
+      {/* Copy protection: a soft gradient behind the top-left copy block so
+          the subtitle keeps AA contrast even if the snow crest sits close.
+          --polar-night → transparent, fading right and down. */}
+      <div
+        aria-hidden
+        style={{
+          position: 'absolute',
+          inset: 0,
+          zIndex: 0,
+          pointerEvents: 'none',
+          background:
+            'linear-gradient(150deg,' +
+              ' color-mix(in oklab, var(--polar-night) 62%, transparent) 0%,' +
+              ' color-mix(in oklab, var(--polar-night) 32%, transparent) 30%,' +
+              ' transparent 55%)',
+        }}
+      />
+
       {/* Content: left-aligned copy + input, anchored inside a max-width grid.
-          Scene reads through the deliberate whitespace on the right. */}
+          Copy sits ABOVE the horizon (top-aligned with generous padding) so
+          it never overlaps the snowfield — --snow-shadow on --polar-night is
+          5.4:1 (AA), which fails against --snow. */}
       <div
         style={{
           position: 'relative',
@@ -66,7 +86,8 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
           gridTemplateColumns: 'minmax(0, 1fr)',
           gap: 40,
           minHeight: 'calc(100vh - 132px)',
-          alignItems: 'center',
+          alignItems: 'start',
+          paddingTop: 'clamp(48px, 8vh, 120px)',
         }}
       >
         <div style={{ maxWidth: 580 }}>
