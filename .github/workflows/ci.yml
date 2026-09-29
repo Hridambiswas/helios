@@ -75,7 +75,7 @@ jobs:
             -p 9000:9000 \
             -e MINIO_ROOT_USER=minioadmin \
             -e MINIO_ROOT_PASSWORD=minioadmin \
-            minio/minio server /data
+            quay.io/minio/minio server /data
           timeout 60 bash -c 'until curl -sf http://localhost:9000/minio/health/live; do sleep 2; done'
       - name: Start ChromaDB
         run: |
