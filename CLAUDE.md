@@ -68,3 +68,15 @@ push, and resume from it next cycle.
 - 004 and 005 are done (reports restored). 006 was interrupted part way on
   `chore/repo-hygiene` (node_modules untrack and director edits are committed there);
   resume 006 from where it stopped, then 007.
+
+## Commits and usage limits (human's rules)
+- Commit early and often: every small, working, logical step is its own commit (a component,
+  a shader, a test, a style pass), pushed right after. If a session is cut off by a usage
+  limit, nothing uncommitted should be lost. Target for 007: roughly 80 to 216 commits in
+  total, but every commit must be real work; never empty, whitespace-only or split
+  artificially line by line.
+- Branch merges into main must use a merge commit (not squash) when the human merges, so
+  the individual commits count.
+- Before stopping for any reason, commit and push what exists with a WIP message.
+- Idle backoff: if a cycle finds nothing new, wait 10 minutes (not 1) before the next check.
+  If you hit a usage limit, stop the loop entirely; the human restarts it after the reset.
