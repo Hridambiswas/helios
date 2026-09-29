@@ -102,7 +102,7 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
           </motion.h1>
 
           <motion.p
-            className="text"
+            className="text hero-subtitle"
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
@@ -123,12 +123,15 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
             onSubmit={e => { e.preventDefault(); onSubmit() }}
             style={{
               display: 'flex',
-              gap: 10,
+              gap: 8,
               background: 'var(--frost)',
               padding: 8,
               borderRadius: 'var(--radius-lg)',
               border: '1px solid var(--frost-hairline)',
               alignItems: 'stretch',
+              width: '100%',
+              minWidth: 0,
+              boxSizing: 'border-box',
             }}
           >
             <label htmlFor="helios-query" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>
@@ -139,12 +142,14 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
               ref={inputRef}
               value={query}
               onChange={e => setQuery(e.target.value)}
-              placeholder="What would you like to know?"
+              placeholder="Ask a question…"
               autoComplete="off"
               spellCheck={false}
               className="text helios-focus"
               style={{
-                flex: 1,
+                flex: '1 1 0',
+                minWidth: 0,
+                width: '100%',
                 background: 'transparent',
                 border: 'none',
                 outline: 'none',
@@ -157,6 +162,8 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
               type="submit"
               className="helios-focus"
               style={{
+                flex: '0 0 auto',
+                minHeight: 44,
                 background: 'var(--sun)',
                 color: '#1B1305',
                 fontFamily: 'var(--font-text)',
