@@ -65,3 +65,22 @@
 .numeric        { font-family: var(--font-text); font-variant-numeric: tabular-nums; }
 
 .helios-focus:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }
+
+/* Pulse (loading dots) */
+@keyframes heliosPulse {
+  0%, 100% { opacity: 0.25; transform: translateY(0); }
+  50%      { opacity: 1;    transform: translateY(-2px); }
+}
+
+/* Markdown answer defaults inside the winter-sun answer card */
+.markdown-answer p         { margin: 0 0 12px 0; }
+.markdown-answer h1,
+.markdown-answer h2,
+.markdown-answer h3        { font-family: var(--font-display); margin: 20px 0 10px; letter-spacing: -0.01em; }
+.markdown-answer ul,
+.markdown-answer ol        { padding-left: 1.4rem; margin: 0 0 14px; }
+.markdown-answer li        { margin: 4px 0; }
+.markdown-answer strong    { color: var(--sun); font-weight: 600; }
+.markdown-answer em        { color: var(--snow-shadow); }
+.markdown-answer a         { color: var(--sun); text-decoration: underline; text-underline-offset: 3px; }
+.markdown-answer code      { background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 0.9em; }

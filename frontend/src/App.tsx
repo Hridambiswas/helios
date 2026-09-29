@@ -8,8 +8,17 @@ import { MobileBottomNav } from './components/MobileBottomNav'
 import { useAuth } from './hooks/useAuth'
 import { useToast } from './hooks/useToast'
 import { useConversations } from './hooks/useConversations'
+import { PipelineProvider } from './pipeline/PipelineProvider'
 
 export default function App() {
+  return (
+    <PipelineProvider>
+      <AppInner />
+    </PipelineProvider>
+  )
+}
+
+function AppInner() {
   const { user, loading, login, register, logout } = useAuth()
   const { toasts, add: addToast, remove: removeToast } = useToast()
   const {
