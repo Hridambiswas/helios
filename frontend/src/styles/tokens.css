@@ -1,0 +1,67 @@
+/* Helios redesign tokens — "Winter sun"
+ * Source: docs/redesign/DESIGN_BRIEF.md
+ * These override the venom-era :root vars in globals.css. Import this
+ * file AFTER globals.css so the new palette wins.
+ */
+
+:root {
+  /* Palette (base) */
+  --polar-night:  #141D33;  /* page background, deep winter blue */
+  --frost:        #2A365A;  /* raised surfaces, input, cards */
+  --snow-shadow:  #6F86B3;  /* secondary text, borders, snow shade */
+  --snow:         #EEF2F8;  /* primary text, Sol's fur, lit crest */
+  --sun:          #F4B942;  /* the one warm accent */
+  --corona:       #E86A8A;  /* sun-limb glow + failed-check state */
+
+  /* Palette (derived — kept minimal per brief) */
+  --sun-soft:     rgba(244, 185, 66, 0.18);   /* focus/hover halo */
+  --corona-soft:  rgba(232, 106, 138, 0.16);
+  --frost-hairline: rgba(111, 134, 179, 0.28); /* card border */
+
+  /* Semantic (bridge for existing components mid-migration) */
+  --text-primary:   var(--snow);
+  --text-secondary: var(--snow-shadow);
+  --text-muted:     rgba(238, 242, 248, 0.36);
+  --card-bg:        var(--frost);
+  --card-border:    var(--frost-hairline);
+
+  /* Type scale (1.25 ratio) — px values are the source of truth */
+  --step--1: 14px;   /* meta, captions */
+  --step-0:  17px;   /* body, buttons */
+  --step-1:  21px;
+  --step-2:  26px;
+  --step-3:  33px;
+  --step-4:  41px;
+  --step-5:  64px;
+  /* Hero wordmark uses a clamp — see .display--hero */
+
+  /* Fonts */
+  --font-display: 'Unbounded', system-ui, sans-serif;
+  --font-text:    'Atkinson Hyperlegible Next', 'Atkinson Hyperlegible',
+                  system-ui, sans-serif;
+
+  /* Radii, elevation, spacing */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 18px;
+  --focus-ring: 2px solid var(--sun);
+  --answer-column: 68ch;
+}
+
+/* Reduced-motion honoured everywhere via a single variable so components
+   can gate transitions without repeating the media query. */
+@media (prefers-reduced-motion: reduce) {
+  :root { --motion-scale: 0; }
+}
+@media (prefers-reduced-motion: no-preference) {
+  :root { --motion-scale: 1; }
+}
+
+/* Utility hooks (opt-in, not global) */
+.display        { font-family: var(--font-display); letter-spacing: -0.01em; }
+.display--hero  { font-family: var(--font-display); font-size: clamp(48px, 6vw, 96px); letter-spacing: -0.02em; line-height: 1.02; }
+.text           { font-family: var(--font-text); font-size: var(--step-0); line-height: 1.6; }
+.text--meta     { font-family: var(--font-text); font-size: var(--step--1); color: var(--snow-shadow); }
+.numeric        { font-family: var(--font-text); font-variant-numeric: tabular-nums; }
+
+.helios-focus:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }

@@ -2,6 +2,7 @@ import { StrictMode, Component } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App'
 import './styles/globals.css'
+import './styles/tokens.css'
 
 // Catch any crash and display the error so we can see what's wrong
 class RootBoundary extends Component<
