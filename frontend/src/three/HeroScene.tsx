@@ -318,6 +318,7 @@ function Snow({ count }: { count: number }) {
 // ────────────────────────────────────────────────────────────────────────────
 // Rise-in orchestrator — animates a normalized "rise" value 0→1 on mount.
 function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
+  const { viewport } = useThree()
   const { state } = usePipeline()
   const critic = state.result?.critic_scores
   const verifier = state.result?.verifier_scores
@@ -336,8 +337,7 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
     let frame = 0
     const tick = (now: number) => {
       const t = Math.min(1, (now - start) / dur)
-      // easeOutCubic
-      const eased = 1 - Math.pow(1 - t, 3)
+      const eased = 1 - Math.pow(1 - t, 3) // easeOutCubic
       setRise(eased)
       if (t < 1) frame = requestAnimationFrame(tick)
     }
@@ -348,18 +348,28 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
   const snowCount = isMobile ? 60 : 140
 
+  // Sol placement — everything else in this scene works in
+  // pixel-scaled world units (ortho zoom=1), so Sol must scale with
+  // the viewport too or he ends up ~1px tall.
+  //   Desktop: to the right of centre, on the crest, sun-side.
+  //   Mobile:  a hair right of centre, slightly smaller.
+  const solScale = Math.min(viewport.width, viewport.height) * (isMobile ? 0.14 : 0.18)
+  // Sit Sol just above the snow crest. Crest sits around y ≈ -0.01·H
+  // (see Horizon()), so lift Sol by half his body length.
+  const crestY = -0.01 * viewport.height
+  const solPos: [number, number, number] = [
+    isMobile ? viewport.width * 0.06 : viewport.width * 0.14,
+    crestY + solScale * 0.10,
+    0.05,
+  ]
+
   return (
     <>
       <Sky />
       <Horizon />
       <Sun rise={rise} />
       <Snow count={snowCount} />
-      {/* Sol sits on the snow crest, sun-facing (positive X → warm rim). */}
-      <group position={[
-        (isMobile ? 0.0 : 0.35),
-        HORIZON_Y * 2.5,
-        0,
-      ]} scale={isMobile ? 0.85 : 1}>
+      <group position={solPos} scale={solScale}>
         <Sol
           prefersReducedMotion={prefersReducedMotion}
           phase={state.phase}
