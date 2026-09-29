@@ -2,6 +2,15 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
+
+# Populate env before anything imports config/agents so cfg picks up dummy
+# secrets and agent __init__ calls (ChatGroq, ChatGoogleGenerativeAI) don't
+# reject empty API keys during test collection.
+import os
+os.environ.setdefault("GROQ_API_KEY", "gsk_test_000")
+os.environ.setdefault("GEMINI_API_KEY", "gm_test_000")
+os.environ.setdefault("JWT_SECRET_KEY", "ci-test-secret-key-000")
+
 import pytest
 from unittest.mock import AsyncMock, MagicMock
 
