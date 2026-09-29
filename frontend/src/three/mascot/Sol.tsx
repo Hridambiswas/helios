@@ -2,6 +2,7 @@ import { useMemo, useRef, useEffect } from 'react'
 import { useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { solConfig } from './config'
+import type { PipelinePhase } from '../../pipeline/events'
 
 /**
  * Sol — procedural ermine mascot.
@@ -16,12 +17,23 @@ import { solConfig } from './config'
  *   • blinking          — timed eye pinch
  *   • tail swish        — sinusoidal rotation of the tail rig
  *   • cursor-follow eyes — pupils rotate to track the pointer
+ *
+ * Pipeline-driven states (mapped to phase):
+ *   planning     → alert pose: stands up slightly, head tilt
+ *   retrieving   → nose down: head tilts forward, small nod
+ *   executing    → focused: extra still (breath amp × 0.4)
+ *   synthesizing → glow: rim colour intensifies (uRim brighter)
+ *   evaluating   → watching: head tilts up toward the arc
+ *   done         → happy hop: quick vertical hop then rest
+ *   error        → sad loaf: sinks slightly, ears down (tail hangs low)
  */
 
 interface Props {
   position?: [number, number, number]
   scale?: number
   prefersReducedMotion?: boolean
+  phase?: PipelinePhase
+  passed?: boolean
 }
 
 // Fresnel + rim-light material. The uniform `uSunDir` points at the
@@ -78,15 +90,28 @@ export function Sol({
   position = [0, 0, 0],
   scale = 1,
   prefersReducedMotion = false,
+  phase = 'idle',
+  passed,
 }: Props) {
   const cfg = solConfig
   const group     = useRef<THREE.Group>(null!)
   const body      = useRef<THREE.Mesh>(null!)
+  const head      = useRef<THREE.Group>(null!)
   const tailPivot = useRef<THREE.Group>(null!)
   const leftEyeInner  = useRef<THREE.Group>(null!)
   const rightEyeInner = useRef<THREE.Group>(null!)
   const leftEyeLid    = useRef<THREE.Mesh>(null!)
   const rightEyeLid   = useRef<THREE.Mesh>(null!)
+
+  // Persistent per-phase timers.
+  const phaseStart = useRef<number>(0)
+  const prevPhase  = useRef<PipelinePhase>('idle')
+  useEffect(() => {
+    if (prevPhase.current !== phase) {
+      prevPhase.current = phase
+      phaseStart.current = performance.now()
+    }
+  }, [phase])
 
   // Cursor tracking — updated from a window-level pointermove listener so
   // the pupils follow the real page cursor rather than the canvas.
@@ -122,17 +147,58 @@ export function Sol({
   useFrame((state, dt) => {
     const t = state.clock.elapsedTime
     const motion = prefersReducedMotion ? 0 : 1
+    const sincePhase = (performance.now() - phaseStart.current) / 1000
+
+    // Per-phase mask — some behaviours attenuate or intensify under certain phases.
+    const breathScale =
+      phase === 'executing' ? 0.4 :
+      phase === 'error'     ? 0.3 :
+      1
+    const tailScale =
+      phase === 'planning' ? 1.4 :
+      phase === 'done' && passed !== false ? 1.6 :
+      phase === 'error' ? 0.2 :
+      1
 
     // ── Breathing ─────────────────────────────────────────────────────────
     if (body.current) {
-      const s = 1 + Math.sin(t * cfg.breathHz * Math.PI * 2) * cfg.breathAmp * motion
+      const s = 1 + Math.sin(t * cfg.breathHz * Math.PI * 2) * cfg.breathAmp * motion * breathScale
       body.current.scale.set(1, s, 1)
     }
 
     // ── Tail swish ────────────────────────────────────────────────────────
     if (tailPivot.current) {
       tailPivot.current.rotation.z =
-        Math.sin(t * cfg.tailSwishHz * Math.PI * 2) * cfg.tailSwishAmp * motion
+        Math.sin(t * cfg.tailSwishHz * Math.PI * 2) * cfg.tailSwishAmp * motion * tailScale
+        + (phase === 'error' ? -0.35 : 0)
+    }
+
+    // ── Phase-driven pose (group Y + head tilt + happy hop) ────────────────
+    if (group.current) {
+      let poseY = 0
+      let headTilt = 0
+      // hop timing on 'done' + pass
+      if (phase === 'done' && passed !== false && motion === 1 && sincePhase < 0.9) {
+        // easeOutQuad hop up over 0.3s, back down by 0.6s
+        const hop = sincePhase < 0.3
+          ? Math.sin((sincePhase / 0.3) * Math.PI) * 0.18
+          : sincePhase < 0.6
+            ? Math.sin(((sincePhase - 0.3) / 0.3 + 1) * Math.PI) * 0.09
+            : 0
+        poseY += hop
+      }
+      if (phase === 'error') poseY -= 0.05  // sad slump
+      if (phase === 'planning')     headTilt = 0.20
+      if (phase === 'retrieving')   headTilt = -0.25   // nose down
+      if (phase === 'synthesizing') headTilt = 0.05
+      if (phase === 'evaluating')   headTilt = 0.30    // looking up at arc
+      if (phase === 'error')        headTilt = -0.35   // eyes down
+      // Smoothly ease group + head toward targets.
+      const gy = position[1] + poseY
+      group.current.position.y += (gy - group.current.position.y) * 0.15
+      if (head.current) {
+        head.current.rotation.x += (headTilt - head.current.rotation.x) * 0.10
+      }
     }
 
     // ── Blink ─────────────────────────────────────────────────────────────
@@ -164,6 +230,14 @@ export function Sol({
       const targetY = cursor.current.nx * 0.06 * motion
       group.current.rotation.y += (targetY - group.current.rotation.y) * 0.08
     }
+
+    // Synthesizing intensifies the rim glow — pulse the uRim colour up.
+    const rimBoost = phase === 'synthesizing' ? 0.35 + 0.15 * Math.sin(t * 3.0) : 0
+    ;[furBody.uniforms.uRim.value].forEach((c: THREE.Color) => {
+      const target = new THREE.Color(cfg.furRim).lerp(new THREE.Color('#FFEED0'), rimBoost)
+      c.lerp(target, 0.10)
+    })
+
     // Camera hint used so the material's viewDir stays sensible even under
     // an orthographic camera (no perspective divide in shader inputs).
     void camera
@@ -181,7 +255,7 @@ export function Sol({
       </mesh>
 
       {/* ── Head ──────────────────────────────────────────────────────── */}
-      <group position={cfg.headOffset as [number, number, number]}>
+      <group ref={head} position={cfg.headOffset as [number, number, number]}>
         <mesh material={furBody}>
           <sphereGeometry args={[cfg.headRadius, 32, 24]} />
         </mesh>

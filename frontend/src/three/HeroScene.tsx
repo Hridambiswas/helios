@@ -2,6 +2,7 @@ import { Suspense, useMemo, useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { Sol } from './mascot/Sol'
+import { usePipeline } from '../pipeline/PipelineProvider'
 
 /**
  * HeroScene — winter-sun R3F canvas.
@@ -317,6 +318,15 @@ function Snow({ count }: { count: number }) {
 // ────────────────────────────────────────────────────────────────────────────
 // Rise-in orchestrator — animates a normalized "rise" value 0→1 on mount.
 function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean }) {
+  const { state } = usePipeline()
+  const critic = state.result?.critic_scores
+  const verifier = state.result?.verifier_scores
+  const passed = critic ? (critic.pass ?? undefined) : undefined
+  const verifierPassed = verifier ? (verifier.pass ?? undefined) : undefined
+  const finalPass =
+    passed === undefined && verifierPassed === undefined
+      ? undefined
+      : (passed !== false && verifierPassed !== false)
   const [rise, setRise] = useState(prefersReducedMotion ? 1 : 0)
 
   useEffect(() => {
@@ -350,7 +360,11 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
         HORIZON_Y * 2.5,
         0,
       ]} scale={isMobile ? 0.85 : 1}>
-        <Sol prefersReducedMotion={prefersReducedMotion} />
+        <Sol
+          prefersReducedMotion={prefersReducedMotion}
+          phase={state.phase}
+          passed={finalPass}
+        />
       </group>
     </>
   )
