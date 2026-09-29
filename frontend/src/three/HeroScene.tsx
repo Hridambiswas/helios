@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useRef, useEffect, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
+import { Sol } from './mascot/Sol'
 
 /**
  * HeroScene — winter-sun R3F canvas.
@@ -343,6 +344,14 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
       <Horizon />
       <Sun rise={rise} />
       <Snow count={snowCount} />
+      {/* Sol sits on the snow crest, sun-facing (positive X → warm rim). */}
+      <group position={[
+        (isMobile ? 0.0 : 0.35),
+        HORIZON_Y * 2.5,
+        0,
+      ]} scale={isMobile ? 0.85 : 1}>
+        <Sol prefersReducedMotion={prefersReducedMotion} />
+      </group>
     </>
   )
 }
