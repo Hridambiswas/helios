@@ -106,14 +106,18 @@ class TestConversationRoutes:
         assert resp.status_code == 401
 
     def test_list_conversations_returns_empty_list(self, client):
+        from contextlib import asynccontextmanager
+
         self._set_auth(client, self._mock_user())
         try:
-            with patch("storage.database.get_session_factory") as mock_sf:
-                mock_session = AsyncMock()
-                mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-                mock_session.__aexit__ = AsyncMock(return_value=False)
-                mock_session.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))))
-                mock_sf.return_value.return_value = mock_session
+            mock_session = AsyncMock()
+            mock_session.execute = AsyncMock(return_value=MagicMock(scalars=MagicMock(return_value=MagicMock(all=MagicMock(return_value=[])))))
+
+            @asynccontextmanager
+            async def fake_get_read_session():
+                yield mock_session
+
+            with patch("api.routes.get_read_session", fake_get_read_session):
                 resp = client.get("/api/v1/conversations", headers={"Authorization": "Bearer tok"})
             assert resp.status_code == 200
             assert isinstance(resp.json(), list)
