@@ -33,9 +33,10 @@ const COLORS = {
 }
 
 // Screen-space anchor for the sun. x,y in [-1,+1] view coords (right/up).
-const SUN_ANCHOR = { x: 0.62, y: 0.05 }
+// The sun sits low so the horizon clips its bottom half — the winter-sun rig.
+const SUN_ANCHOR = { x: 0.62, y: -0.08 }
 const SUN_RADIUS = 0.36
-const HORIZON_Y  = -0.15 // just below the sun so it "rises" into view
+const HORIZON_Y  = -0.15
 
 // ────────────────────────────────────────────────────────────────────────────
 // Sky — full-screen plane, custom gradient shader.
@@ -159,16 +160,41 @@ function Sun({ rise }: { rise: number }) {
           void main() {
             vec2 c = vUv - 0.5;
             float d = length(c);
-            float core   = smoothstep(uRadius + 0.010, uRadius - 0.005, d);
-            float rim    = smoothstep(uRadius + 0.045, uRadius + 0.005, d);
-            float halo   = smoothstep(0.50, uRadius + 0.020, d);
-            // Very slow shimmer on the rim (breathing).
-            float breathe = 0.02 * sin(uTime * 1.2);
-            vec3 color = uSun * core
-                       + uCorona * (rim - core) * 0.8
-                       + uCorona * halo * (0.12 + breathe);
-            float alpha = core + (rim - core) * 0.8 + halo * (0.35 + breathe);
-            if (alpha < 0.005) discard;
+
+            // Soft core: wide smoothstep so the edge isn't a hard clipart circle.
+            // Falls off from full sun colour to zero over ~0.02 units.
+            float core = smoothstep(uRadius + 0.020, uRadius - 0.005, d);
+
+            // Warm inner glow that bleeds outward from the disc (uSun tint).
+            float innerGlow = smoothstep(uRadius + 0.14, uRadius + 0.002, d);
+
+            // Corona is a *very* faint limb tint just outside the disc.
+            // Was a hard red ring — now a whisper.
+            float limb = smoothstep(uRadius + 0.045, uRadius + 0.008, d)
+                        - smoothstep(uRadius + 0.008, uRadius - 0.005, d);
+            limb = max(limb, 0.0);
+
+            // Wide halo that fades into the sky (long tail so no hard edge).
+            float halo = pow(smoothstep(0.50, uRadius + 0.010, d), 1.6);
+
+            // Slow breathing so it feels alive without shimmering.
+            float breathe = 0.015 * sin(uTime * 0.8);
+
+            // Colour build:
+            //   core       full uSun
+            //   innerGlow  uSun at 55%, added on top of the halo
+            //   limb       uCorona at 22% only (a whisper)
+            //   halo       uSun at 22% + breathe
+            vec3 color = uSun    * core
+                       + uSun    * innerGlow * 0.55
+                       + uCorona * limb      * 0.22
+                       + uSun    * halo      * (0.22 + breathe);
+
+            float alpha = core
+                        + innerGlow * 0.55
+                        + limb      * 0.22
+                        + halo      * (0.40 + breathe);
+            if (alpha < 0.004) discard;
             gl_FragColor = vec4(color, alpha);
           }
         `}
