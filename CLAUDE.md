@@ -56,3 +56,15 @@ push, and resume from it next cycle.
 - `frontend/node_modules/` is (wrongly) tracked in git. Never stage changes under it; use
   explicit paths with `git add`, never `git add -A` or `git add .`. Untracking it is a
   separate cleanup the director will schedule.
+
+## Mailbox and branches (updated by director)
+- The mailbox (`docs/mailbox/`) is tracked on `fix/request-failed` only. Keep the main
+  checkout at `~/helios` on `fix/request-failed`; write and commit every report there.
+- Do code work for other branches in a git worktree, not by switching the main checkout:
+  `git worktree add ../helios-wt/<branch> <branch>` (create the branch first if needed),
+  work, commit and push from that worktree. This keeps the inbox/outbox visible at all times.
+- Before picking the next prompt, a prompt counts as done if its report exists in the working
+  tree OR in `git ls-tree fix/request-failed docs/mailbox/outbox/`.
+- 004 and 005 are done (reports restored). 006 was interrupted part way on
+  `chore/repo-hygiene` (node_modules untrack and director edits are committed there);
+  resume 006 from where it stopped, then 007.
