@@ -5,11 +5,12 @@ import { AgentId } from '../../pipeline/events'
 /**
  * The Sun Path — six agents along the day's arc.
  *
- * Idle: static SVG arc + six labelled stops with a one-line description.
+ * Idle: static SVG arc + six labelled stops with a one-line description
+ *       for each label (no separate grid — H8 minimalist).
  * Live (during a query): the sun moves along the arc as each agent's
- * phase arrives; the active agent's label brightens and its elapsed
- * time counts up in tabular figures below the label. Done agents keep
- * their final elapsed time; the sun rests at the last active stop.
+ *       phase arrives. The traversal samples the same cubic Bézier
+ *       used to draw the path, so the marker is always exactly on the
+ *       curve.
  */
 
 export const AGENTS: Array<{
@@ -23,25 +24,44 @@ export const AGENTS: Array<{
   { id: 'verifier',    name: 'Verifier',    line: 'Cross-checks against a second model (Gemini).', position: 'sunset' },
 ]
 
-// Approximate positions along a shallow arc y = 100 - sin(x·π)·62,
-// x in [0..1]. Six evenly-spaced stops.
-function stopFor(i: number, total: number) {
-  const t = (i + 0.5) / total
+// ── Bézier control points (must match the <path d=…> below) ────────────────
+const ARC_HEIGHT = 62
+const P0X = 0,  P0Y = 100
+const P1X = 100, P1Y = 100
+const C1X = 25,  C1Y = 100 - ARC_HEIGHT * 1.3
+const C2X = 75,  C2Y = 100 - ARC_HEIGHT * 1.3
+const ARC_PATH = `M ${P0X},${P0Y} C ${C1X},${C1Y} ${C2X},${C2Y} ${P1X},${P1Y}`
+
+function bezierAt(t: number): { x: number; y: number } {
+  const inv = 1 - t
+  const inv2 = inv * inv
+  const inv3 = inv2 * inv
+  const t2 = t * t
+  const t3 = t2 * t
   return {
-    x: t * 100,
-    y: 100 - Math.sin(t * Math.PI) * 62,
+    x: inv3 * P0X + 3 * inv2 * t * C1X + 3 * inv * t2 * C2X + t3 * P1X,
+    y: inv3 * P0Y + 3 * inv2 * t * C1Y + 3 * inv * t2 * C2Y + t3 * P1Y,
   }
+}
+
+// t-values for each agent stop: evenly spaced, biased inward so the
+// first/last labels sit inside the visible arc rather than at the
+// endpoints where the curve is flat.
+function stopT(i: number, total: number) {
+  return (i + 0.5) / total
+}
+
+function stopFor(i: number, total: number) {
+  return bezierAt(stopT(i, total))
 }
 
 export function ArcSection() {
   const { state } = usePipeline()
 
-  // Which agents are ACTIVE (currently working) and which are DONE (already ran).
   const isActive = (id: AgentId) => state.activeAgents.includes(id)
   const isDone   = (id: AgentId) => state.finishedAt[id] !== undefined
   const isFailed = (id: AgentId) => state.phase === 'error' && (isActive(id) || isDone(id))
 
-  // Sun follows the highest-index active agent so it always moves forward.
   const sunIndex = (() => {
     const activeIdx = AGENTS
       .map((a, i) => (isActive(a.id) ? i : -1))
@@ -55,7 +75,6 @@ export function ArcSection() {
     return doneIdx ?? -1
   })()
   const sunPos = sunIndex >= 0 ? stopFor(sunIndex, AGENTS.length) : null
-
   const isIdle = state.phase === 'idle'
 
   return (
@@ -98,7 +117,7 @@ export function ArcSection() {
           the sun travels the arc as each agent finishes its work.
         </motion.p>
 
-        <div style={{ position: 'relative', height: 260 }}>
+        <div style={{ position: 'relative', height: 320 }}>
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
@@ -111,7 +130,7 @@ export function ArcSection() {
             aria-hidden
           >
             <path
-              d={arcPath(0, 100, 62)}
+              d={ARC_PATH}
               stroke="var(--frost-hairline)"
               strokeWidth="0.4"
               fill="none"
@@ -119,12 +138,10 @@ export function ArcSection() {
             />
           </svg>
 
-          {/* Travelling sun — animates along the arc as sunIndex updates. */}
           {sunPos && !isIdle && (
             <motion.div
-              layout
               animate={{ left: `${sunPos.x}%`, top: `${sunPos.y}%` }}
-              transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+              transition={{ type: 'spring', stiffness: 140, damping: 24 }}
               style={{
                 position: 'absolute',
                 width: 22, height: 22,
@@ -169,7 +186,7 @@ export function ArcSection() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 6,
-                  width: 130,
+                  width: 150,
                   textAlign: 'center',
                   zIndex: 1,
                 }}
@@ -191,8 +208,18 @@ export function ArcSection() {
                   fontWeight: active ? 600 : 400,
                   transition: 'color 0.3s',
                 }}>{a.name}</span>
+                {/* One-line description under each label — replaces the
+                    redundant grid the director flagged (Sev 3.7). Kept
+                    quiet so it never fights the label for attention. */}
+                <span className="text--meta" style={{
+                  color: 'var(--snow-shadow)',
+                  fontSize: 11,
+                  lineHeight: 1.35,
+                }}>
+                  {a.line}
+                </span>
                 {(active || done) && ms !== undefined && (
-                  <span className="text--meta numeric" style={{ color: 'var(--snow-shadow)' }}>
+                  <span className="text--meta numeric" style={{ color: 'var(--snow)', marginTop: 2 }}>
                     {(ms / 1000).toFixed(1)}s
                   </span>
                 )}
@@ -200,38 +227,7 @@ export function ArcSection() {
             )
           })}
         </div>
-
-        {/* One-liners below the arc — always visible so the page reads well while idle. */}
-        <ul
-          style={{
-            listStyle: 'none',
-            padding: 0,
-            marginTop: 48,
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-            gap: 20,
-          }}
-        >
-          {AGENTS.map(a => (
-            <li key={a.id}>
-              <span className="text" style={{ color: 'var(--snow)', display: 'block' }}>
-                {a.name}
-              </span>
-              <span className="text--meta" style={{ display: 'block', marginTop: 2 }}>
-                {a.line}
-              </span>
-            </li>
-          ))}
-        </ul>
       </div>
     </section>
   )
-}
-
-function arcPath(xStart: number, xEnd: number, height: number) {
-  const c1x = xStart + (xEnd - xStart) * 0.25
-  const c1y = 100 - height * 1.3
-  const c2x = xStart + (xEnd - xStart) * 0.75
-  const c2y = c1y
-  return `M ${xStart},100 C ${c1x},${c1y} ${c2x},${c2y} ${xEnd},100`
 }
