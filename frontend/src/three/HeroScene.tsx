@@ -50,9 +50,11 @@ function Sky() {
 
   const uniforms = useMemo(() => ({
     uTime: { value: 0 },
+    uDeepSky:    { value: new THREE.Color('#0B1224') },      // deeper blue at zenith (not pure black)
     uPolarNight: { value: new THREE.Color(COLORS.polarNight) },
     uFrost:      { value: new THREE.Color(COLORS.frost) },
     uWarm:       { value: new THREE.Color('#7A5A6E') },      // pre-sunset blush at the horizon
+    uHorizonWarm:{ value: new THREE.Color('#B87A5A') },      // warm glow band right above horizon
     uHorizon:    { value: HORIZON_Y },
   }), [])
 
@@ -72,22 +74,34 @@ function Sky() {
         fragmentShader={/* glsl */`
           precision highp float;
           uniform float uTime;
+          uniform vec3  uDeepSky;
           uniform vec3  uPolarNight;
           uniform vec3  uFrost;
           uniform vec3  uWarm;
+          uniform vec3  uHorizonWarm;
           uniform float uHorizon;
           varying vec2 vUv;
           void main() {
-            // vUv.y = 0 at bottom, 1 at top; horizon sits around vUv.y ≈ 0.42
             float y = vUv.y;
             float horizonUv = 0.5 + uHorizon * 0.5; // convert [-1,+1] to [0,1]
-            // Sky (above horizon): polarNight at top, frost mid, warm blush right above horizon.
-            vec3 sky = mix(uFrost, uPolarNight, smoothstep(horizonUv, 1.0, y));
-            sky = mix(uWarm, sky, smoothstep(horizonUv, horizonUv + 0.20, y));
-            // Below horizon: darken with a slow drift (aurora-ish, very faint).
+
+            // Sky (above horizon): deeperSky at zenith → polarNight mid → frost near horizon
+            // → warm blush right above the sun.
+            float toZenith = smoothstep(horizonUv, 1.0, y);
+            vec3 sky = mix(uPolarNight, uDeepSky, toZenith);
+            sky = mix(uFrost, sky, smoothstep(horizonUv - 0.02, horizonUv + 0.30, y));
+            // Warm band just above the horizon, brighter on the sun-facing right.
+            float warmBand = smoothstep(horizonUv + 0.14, horizonUv, y);
+            float warmSide = smoothstep(0.4, 1.0, vUv.x);
+            sky = mix(sky, uHorizonWarm, warmBand * (0.30 + 0.45 * warmSide));
+            sky = mix(uWarm, sky, smoothstep(horizonUv, horizonUv + 0.22, y));
+
+            // Below horizon: gently drifting polar-night — snow/horizon plane will cover this,
+            // but a faint reflected warmth helps sell continuity.
             float pulse = 0.5 + 0.5 * sin(uTime * 0.35 + vUv.x * 3.0);
-            vec3 belowHorizon = mix(uPolarNight, uFrost * 0.6, y / horizonUv);
-            belowHorizon += 0.02 * pulse * vec3(0.6, 0.7, 1.0);
+            vec3 belowHorizon = mix(uPolarNight, uFrost * 0.55, y / max(horizonUv, 0.001));
+            belowHorizon += 0.015 * pulse * vec3(0.6, 0.7, 1.0);
+
             vec3 color = mix(belowHorizon, sky, step(horizonUv, y));
             gl_FragColor = vec4(color, 1.0);
           }
@@ -164,7 +178,11 @@ function Sun({ rise }: { rise: number }) {
 }
 
 // ────────────────────────────────────────────────────────────────────────────
-// Horizon — a soft snow crest across the lower third of the screen.
+// Horizon — a soft snow crest across the lower half of the screen.
+// The plane runs from just above the crest down to the bottom of the
+// canvas so there's no hard mid-page seam. The bottom of the plane
+// fades into --polar-night so the scene reads as continuous with the
+// page background below.
 function Horizon() {
   const { viewport } = useThree()
   const mat = useRef<THREE.ShaderMaterial>(null!)
@@ -174,13 +192,18 @@ function Horizon() {
     uTime:       { value: 0 },
     uSnow:       { value: new THREE.Color(COLORS.snow) },
     uSnowShadow: { value: new THREE.Color(COLORS.snowShadow) },
+    uPolarNight: { value: new THREE.Color(COLORS.polarNight) },
   }), [])
 
-  const y = HORIZON_Y * viewport.height * 0.5
+  // Position centred so the crest lands slightly above the mid-line
+  // and the plane runs to the bottom of the frustum. Height covers
+  // 90% of the viewport so there's no gap at the bottom.
+  const planeHeight = viewport.height * 0.9
+  const yCentre = HORIZON_Y * viewport.height * 0.5 - planeHeight * 0.30
 
   return (
-    <mesh position={[0, y, -1]}>
-      <planeGeometry args={[viewport.width * 1.1, viewport.height * 0.55, 1, 1]} />
+    <mesh position={[0, yCentre, -1]}>
+      <planeGeometry args={[viewport.width * 1.1, planeHeight, 1, 1]} />
       <shaderMaterial
         ref={mat}
         uniforms={uniforms}
@@ -198,9 +221,10 @@ function Horizon() {
           uniform float uTime;
           uniform vec3 uSnow;
           uniform vec3 uSnowShadow;
+          uniform vec3 uPolarNight;
           varying vec2 vUv;
 
-          // hash + fBm for the crest silhouette
+          // hash + fBm for the crest silhouette and micro-texture
           float h(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
           float n(vec2 p) {
             vec2 i = floor(p);
@@ -212,24 +236,49 @@ function Horizon() {
               f.y
             );
           }
+          float fbm(vec2 p) {
+            float v = 0.0;
+            float a = 0.5;
+            for (int i = 0; i < 4; i++) {
+              v += a * n(p);
+              p *= 2.1;
+              a *= 0.55;
+            }
+            return v;
+          }
 
           void main() {
-            // Crest baseline at vUv.y ≈ 0.62 (top of the plane), gently undulating.
-            float crest = 0.62
-                        + 0.06  * n(vec2(vUv.x * 2.0, 0.0))
-                        + 0.025 * n(vec2(vUv.x * 6.0 + 12.0, 0.0));
-            float aboveCrest = step(crest, vUv.y);
-            if (aboveCrest > 0.5) discard;  // sky reads through
+            // Crest baseline at vUv.y ≈ 0.86 (near top of the plane),
+            // gently undulating at multiple frequencies to soften the
+            // stair-step aliasing that a single-frequency crest gave.
+            float crest = 0.86
+                        + 0.030 * n(vec2(vUv.x * 2.0, 0.0))
+                        + 0.015 * n(vec2(vUv.x * 6.0 + 12.0, 0.0))
+                        + 0.006 * n(vec2(vUv.x * 18.0 + 41.0, 0.0));
+            // Soft AA around the crest: fade the top edge over ~2 pixels
+            // instead of a hard alpha step.
+            float crestAA = smoothstep(crest + 0.006, crest - 0.006, vUv.y);
+            if (crestAA < 0.001) discard;
 
             // Snow field colour: brighter near the crest (sun-hit), cooler shadow below.
-            float depth = smoothstep(crest, 0.0, vUv.y);
-            vec3 color = mix(uSnow, uSnowShadow, depth);
+            float depth = smoothstep(crest, crest - 0.5, vUv.y);
+            vec3 base = mix(uSnow, uSnowShadow, depth * 0.85);
 
-            // Sun-side warmth: sun sits at x≈0.81, so blend a subtle warm tint on the right.
+            // Micro-texture so the field doesn't read as a flat grey slab.
+            float micro = fbm(vec2(vUv.x * 12.0, vUv.y * 24.0));
+            base = mix(base, base * vec3(0.94, 0.96, 1.02), micro * 0.18);
+
+            // Sun-side warmth: gentle warm tint on the right where the sun sits.
             float warmSide = smoothstep(0.4, 1.0, vUv.x);
-            color = mix(color, color * vec3(1.15, 1.02, 0.90), 0.25 * warmSide);
+            base = mix(base, base * vec3(1.12, 1.02, 0.90), 0.20 * warmSide);
 
-            gl_FragColor = vec4(color, 0.92);
+            // Fade the bottom of the plane into --polar-night so the
+            // scene has no hard bottom seam against the page. The fade
+            // spans the lower ~25% of the plane.
+            float bottomFade = smoothstep(0.05, 0.35, vUv.y);
+            vec3 color = mix(uPolarNight, base, bottomFade);
+
+            gl_FragColor = vec4(color, crestAA);
           }
         `}
       />
@@ -407,9 +456,9 @@ export function HeroScene() {
       <Canvas
         orthographic
         camera={{ position: [0, 0, 5], zoom: 1, near: 0.1, far: 100 }}
-        dpr={isMobile ? [1, 1] : [1, 1.5]}
+        dpr={isMobile ? [1, 1.5] : [1.5, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
-        style={{ display: 'block' }}
+        style={{ display: 'block', width: '100%', height: '100%' }}
       >
         <Suspense fallback={null}>
           <SceneContents prefersReducedMotion={reduced} />
