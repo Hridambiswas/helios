@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
-import { CustomCursor } from './components/CustomCursor'
 import { PromptPage } from './components/PromptPage'
 import { ChatPage } from './components/ChatPage'
 import { AuthModal } from './components/AuthModal'
@@ -56,11 +55,10 @@ function AppInner() {
     window.scrollTo(0, 0)
   }
 
-  // Auth loading state — cursor still renders, quiet winter-sun placeholder
+  // Auth loading state — quiet winter-sun placeholder
   if (loading) {
     return (
       <>
-        <CustomCursor />
         <div style={{
           position: 'fixed', inset: 0,
           background: 'var(--polar-night)',
@@ -77,9 +75,6 @@ function AppInner() {
 
   return (
     <>
-      {/* Custom metaball cursor — always on top */}
-      <CustomCursor />
-
       <AnimatePresence mode="wait">
         {!chatMode ? (
           <PromptPage
