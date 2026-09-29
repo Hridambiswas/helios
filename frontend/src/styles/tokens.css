@@ -66,6 +66,11 @@
 
 .helios-focus:focus-visible { outline: var(--focus-ring); outline-offset: 3px; }
 
+/* Mobile bottom nav visibility: only on narrow viewports */
+@media (min-width: 640px) {
+  .mobile-bottom-nav { display: none !important; }
+}
+
 /* Pulse (loading dots) */
 @keyframes heliosPulse {
   0%, 100% { opacity: 0.25; transform: translateY(0); }

@@ -14,23 +14,46 @@ export function MobileBottomNav({ chatMode, onHome, onChat, onUpload, user, onAu
   const btn = (icon: React.ReactNode, label: string, onClick: () => void, active = false) => (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors ${
-        active ? 'text-crimson' : 'text-[#555] hover:text-white'
-      }`}
+      className="text--meta helios-focus"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 4,
+        flex: 1,
+        padding: '10px 4px',
+        background: 'transparent',
+        border: 'none',
+        color: active ? 'var(--sun)' : 'var(--snow-shadow)',
+        cursor: 'pointer',
+        transition: 'color 0.2s',
+        fontSize: 10,
+      }}
     >
       {icon}
-      <span className="font-mono text-[8px] tracking-wider uppercase">{label}</span>
+      <span style={{ letterSpacing: 0.3 }}>{label}</span>
     </button>
   )
 
   return (
-    <div className="bottom-nav sm:hidden fixed bottom-0 left-0 right-0 z-40 flex items-center bg-[#0d0d0d] border-t border-white/8">
+    <nav
+      aria-label="Primary"
+      className="mobile-bottom-nav"
+      style={{
+        position: 'fixed', bottom: 0, left: 0, right: 0,
+        zIndex: 40,
+        display: 'flex', alignItems: 'center',
+        background: 'var(--frost)',
+        borderTop: '1px solid var(--frost-hairline)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+      }}
+    >
       {btn(<Home size={16} />, 'Home', onHome, !chatMode)}
       {btn(<MessageSquare size={16} />, 'Chat', onChat, chatMode)}
       {btn(<Upload size={16} />, 'Upload', onUpload)}
       {user
         ? btn(<LogOut size={16} />, 'Sign out', onLogout)
         : btn(<LogIn size={16} />, 'Sign in', onAuthClick)}
-    </div>
+    </nav>
   )
 }
