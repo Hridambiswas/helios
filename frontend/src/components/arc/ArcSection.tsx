@@ -1,23 +1,30 @@
 import { motion } from 'framer-motion'
+import { usePipeline } from '../../pipeline/PipelineProvider'
+import { AgentId } from '../../pipeline/events'
 
 /**
  * The Sun Path — six agents along the day's arc.
- * Idle state (this file, first pass): a static SVG arc + six labelled
- * stops. The live variant that reacts to pipeline events lands in a
- * follow-up commit alongside the demo mode.
+ *
+ * Idle: static SVG arc + six labelled stops with a one-line description.
+ * Live (during a query): the sun moves along the arc as each agent's
+ * phase arrives; the active agent's label brightens and its elapsed
+ * time counts up in tabular figures below the label. Done agents keep
+ * their final elapsed time; the sun rests at the last active stop.
  */
 
-export const AGENTS = [
+export const AGENTS: Array<{
+  id: AgentId; name: string; line: string; position: string;
+}> = [
   { id: 'planner',     name: 'Planner',     line: 'Breaks the question into subtasks.',           position: 'sunrise' },
   { id: 'retriever',   name: 'Retriever',   line: 'Pulls relevant chunks: dense + BM25 + CLIP.',   position: 'morning' },
   { id: 'executor',    name: 'Executor',    line: 'Runs sandboxed Python if the plan needs code.', position: 'late morning' },
   { id: 'synthesizer', name: 'Synthesizer', line: 'Writes the grounded answer with citations.',    position: 'noon' },
   { id: 'critic',      name: 'Critic',      line: 'Scores groundedness, faithfulness, coverage.',  position: 'afternoon' },
   { id: 'verifier',    name: 'Verifier',    line: 'Cross-checks against a second model (Gemini).', position: 'sunset' },
-] as const
+]
 
-// Approximate positions along a shallow arc y = -sin(x·π), x in [0,1].
-// Six evenly-spaced stops give the sun-path shape without a real curve solver.
+// Approximate positions along a shallow arc y = 100 - sin(x·π)·62,
+// x in [0..1]. Six evenly-spaced stops.
 function stopFor(i: number, total: number) {
   const t = (i + 0.5) / total
   return {
@@ -27,6 +34,30 @@ function stopFor(i: number, total: number) {
 }
 
 export function ArcSection() {
+  const { state } = usePipeline()
+
+  // Which agents are ACTIVE (currently working) and which are DONE (already ran).
+  const isActive = (id: AgentId) => state.activeAgents.includes(id)
+  const isDone   = (id: AgentId) => state.finishedAt[id] !== undefined
+  const isFailed = (id: AgentId) => state.phase === 'error' && (isActive(id) || isDone(id))
+
+  // Sun follows the highest-index active agent so it always moves forward.
+  const sunIndex = (() => {
+    const activeIdx = AGENTS
+      .map((a, i) => (isActive(a.id) ? i : -1))
+      .filter(i => i >= 0)
+      .pop()
+    if (activeIdx !== undefined) return activeIdx
+    const doneIdx = AGENTS
+      .map((a, i) => (isDone(a.id) ? i : -1))
+      .filter(i => i >= 0)
+      .pop()
+    return doneIdx ?? -1
+  })()
+  const sunPos = sunIndex >= 0 ? stopFor(sunIndex, AGENTS.length) : null
+
+  const isIdle = state.phase === 'idle'
+
   return (
     <section
       aria-label="The six agents"
@@ -68,7 +99,6 @@ export function ArcSection() {
         </motion.p>
 
         <div style={{ position: 'relative', height: 260 }}>
-          {/* Arc line (SVG for crispness) */}
           <svg
             viewBox="0 0 100 100"
             preserveAspectRatio="none"
@@ -89,16 +119,47 @@ export function ArcSection() {
             />
           </svg>
 
-          {/* Agent stops */}
+          {/* Travelling sun — animates along the arc as sunIndex updates. */}
+          {sunPos && !isIdle && (
+            <motion.div
+              layout
+              animate={{ left: `${sunPos.x}%`, top: `${sunPos.y}%` }}
+              transition={{ type: 'spring', stiffness: 120, damping: 22 }}
+              style={{
+                position: 'absolute',
+                width: 22, height: 22,
+                borderRadius: '50%',
+                background: state.phase === 'error' ? 'var(--corona)' : 'var(--sun)',
+                boxShadow: state.phase === 'error'
+                  ? '0 0 0 8px var(--corona-soft), 0 0 32px var(--corona-soft)'
+                  : '0 0 0 8px var(--sun-soft), 0 0 32px var(--sun-soft)',
+                transform: 'translate(-50%, -50%)',
+                pointerEvents: 'none',
+                zIndex: 2,
+              }}
+            />
+          )}
+
           {AGENTS.map((a, i) => {
             const { x, y } = stopFor(i, AGENTS.length)
+            const active = isActive(a.id)
+            const done   = isDone(a.id) && !active
+            const failed = isFailed(a.id)
+            const dotColor = failed
+              ? 'var(--corona)'
+              : active
+                ? 'var(--sun)'
+                : done
+                  ? 'var(--snow)'
+                  : 'var(--snow-shadow)'
+            const labelColor = active || done ? 'var(--snow)' : 'var(--snow-shadow)'
+            const ms = state.timings[a.id]
             return (
               <motion.div
                 key={a.id}
                 initial={{ opacity: 0, y: 8 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: '-80px' }}
-                transition={{ duration: 0.5, delay: 0.08 * i }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4, delay: 0.08 * i }}
                 style={{
                   position: 'absolute',
                   left: `${x}%`,
@@ -110,26 +171,37 @@ export function ArcSection() {
                   gap: 6,
                   width: 130,
                   textAlign: 'center',
+                  zIndex: 1,
                 }}
               >
                 <span
                   aria-hidden
                   style={{
                     width: 10, height: 10, borderRadius: '50%',
-                    background: 'var(--snow)',
-                    boxShadow: '0 0 0 3px rgba(238,242,248,0.08)',
+                    background: dotColor,
+                    boxShadow: active
+                      ? '0 0 0 4px var(--sun-soft)'
+                      : '0 0 0 3px rgba(238,242,248,0.06)',
+                    transition: 'background 0.3s',
                   }}
                 />
                 <span className="text" style={{
-                  color: 'var(--snow)',
+                  color: labelColor,
                   fontSize: 'var(--step-0)',
+                  fontWeight: active ? 600 : 400,
+                  transition: 'color 0.3s',
                 }}>{a.name}</span>
+                {(active || done) && ms !== undefined && (
+                  <span className="text--meta numeric" style={{ color: 'var(--snow-shadow)' }}>
+                    {(ms / 1000).toFixed(1)}s
+                  </span>
+                )}
               </motion.div>
             )
           })}
         </div>
 
-        {/* One-liners below the arc — meta only, no card grid. */}
+        {/* One-liners below the arc — always visible so the page reads well while idle. */}
         <ul
           style={{
             listStyle: 'none',
@@ -156,8 +228,6 @@ export function ArcSection() {
   )
 }
 
-// Cubic-approximation of y = h·sin(πx / xEnd) over [xStart, xEnd].
-// Just precise enough for a decorative curve; not used for hit-testing.
 function arcPath(xStart: number, xEnd: number, height: number) {
   const c1x = xStart + (xEnd - xStart) * 0.25
   const c1y = 100 - height * 1.3
