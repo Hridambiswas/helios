@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { CustomCursor } from './components/CustomCursor'
-import { VenomOverlay } from './components/VenomOverlay'
 import { PromptPage } from './components/PromptPage'
 import { ChatPage } from './components/ChatPage'
 import { AuthModal } from './components/AuthModal'
@@ -19,15 +18,8 @@ export default function App() {
     addUserMessage, addAssistantPlaceholder, updateMessage,
   } = useConversations(!!user)
 
-  const [overlayDone, setOverlayDone] = useState(false)
-  const [chatMode, setChatMode]       = useState(false)
-  const [showAuth, setShowAuth]       = useState(false)
-
-  // Timer fires once — empty deps, no dependency on any prop/state
-  useEffect(() => {
-    const t = setTimeout(() => setOverlayDone(true), 3200)
-    return () => clearTimeout(t)
-  }, [])
+  const [chatMode, setChatMode] = useState(false)
+  const [showAuth, setShowAuth] = useState(false)
 
   // OAuth token from query string
   useEffect(() => {
@@ -55,20 +47,20 @@ export default function App() {
     window.scrollTo(0, 0)
   }
 
-  // Auth loading state — cursor still renders
+  // Auth loading state — cursor still renders, quiet winter-sun placeholder
   if (loading) {
     return (
       <>
         <CustomCursor />
         <div style={{
           position: 'fixed', inset: 0,
-          background: '#000',
+          background: 'var(--polar-night)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          <h1 style={{
-            fontFamily: '"Montserrat", sans-serif', fontWeight: 900,
-            fontSize: 'clamp(72px, 16vw, 200px)', letterSpacing: '-0.045em', color: '#fff',
-          }}>HELIOS</h1>
+          <h1 className="display" style={{
+            fontSize: 'clamp(48px, 6vw, 96px)', letterSpacing: '-0.02em',
+            color: 'var(--snow)',
+          }}>Helios</h1>
         </div>
       </>
     )
@@ -79,12 +71,8 @@ export default function App() {
       {/* Custom metaball cursor — always on top */}
       <CustomCursor />
 
-      <div className="scanline" />
-
       <AnimatePresence mode="wait">
-        {!overlayDone ? (
-          <VenomOverlay key="overlay" />
-        ) : !chatMode ? (
+        {!chatMode ? (
           <PromptPage
             key="prompt"
             onSubmit={q => openChat(q)}
