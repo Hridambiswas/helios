@@ -207,7 +207,7 @@ class TestBackpressure:
         from resilience import backpressure as bp
         bp._active_pipelines = 0
         with patch("config.cfg.backpressure_active_pipelines_threshold", 20):
-            asyncio.get_event_loop().run_until_complete(bp.check_backpressure())  # must not raise
+            asyncio.run(bp.check_backpressure())  # must not raise
 
     def test_raises_when_pipeline_limit_reached(self):
         from resilience import backpressure as bp
@@ -215,7 +215,7 @@ class TestBackpressure:
         bp._active_pipelines = 20
         with patch("config.cfg.backpressure_active_pipelines_threshold", 20):
             with pytest.raises(BackpressureError):
-                asyncio.get_event_loop().run_until_complete(bp.check_backpressure())
+                asyncio.run(bp.check_backpressure())
         bp._active_pipelines = 0
 
     @pytest.mark.asyncio
