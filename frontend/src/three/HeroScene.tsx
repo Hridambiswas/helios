@@ -439,7 +439,7 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
   const solPos: [number, number, number] = [
     isMobile ? viewport.width * 0.06 : viewport.width * 0.14,
     solY,
-    1.5,   // well in front of horizon (-1) and sun (-2) so nothing occludes Sol
+    0.4,   // sits just in front of horizon (z=-1) and sun (z=-2)
   ]
 
   return (
@@ -448,7 +448,13 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
       <Horizon />
       <Sun rise={rise} />
       <Snow count={snowCount} />
-      <group position={solPos} scale={solScale}>
+      {/* IMPORTANT: scale x and y only. Uniform scale on Sol makes his
+          Z-extent = ±solScale·bodyRadius (roughly ±30 world units at
+          the 216-scale desktop viewport), which pushes his front faces
+          past the camera's near plane and hollows him out to a
+          cross-section ring. Z is left at 1 — Sol's model already
+          has appropriate depth in local units. */}
+      <group position={solPos} scale={[solScale, solScale, 1]}>
         <Sol
           prefersReducedMotion={prefersReducedMotion}
           phase={state.phase}
@@ -485,7 +491,7 @@ export function HeroScene() {
     <div style={{ position: 'absolute', inset: 0 }}>
       <Canvas
         orthographic
-        camera={{ position: [0, 0, 5], zoom: 1, near: 0.1, far: 100 }}
+        camera={{ position: [0, 0, 500], zoom: 1, near: 0.1, far: 2000 }}
         dpr={isMobile ? [1, 1.5] : [1.5, 2]}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
         style={{ display: 'block', width: '100%', height: '100%' }}
