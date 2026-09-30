@@ -36,54 +36,25 @@ interface Props {
   passed?: boolean
 }
 
-// Fresnel + rim-light material. The uniform `uSunDir` points at the
-// sun (in world space) so the rim always lights the correct side.
+// Fur material — MeshStandardMaterial reacts to the scene's directional
+// lights so shading is correct under any renderer (native or SwiftShader).
+// The old custom fresnel shader produced near-white output under an
+// orthographic camera where most visible normals faced the camera, making
+// Sol invisible against the snow crest.
 function useFurMaterial({
-  base, shadow, rim,
+  base, shadow: _shadow, rim,
 }: { base: string; shadow: string; rim: string }) {
   return useMemo(() => {
-    return new THREE.ShaderMaterial({
-      uniforms: {
-        uBase:   { value: new THREE.Color(base) },
-        uShadow: { value: new THREE.Color(shadow) },
-        uRim:    { value: new THREE.Color(rim) },
-        uSunDir: { value: new THREE.Vector3(1.0, 0.2, 0.4).normalize() },
-      },
-      vertexShader: /* glsl */`
-        varying vec3 vNormalW;
-        varying vec3 vViewDir;
-        void main() {
-          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-          vNormalW = normalize(mat3(modelMatrix) * normal);
-          vViewDir = normalize(-mvPosition.xyz);
-          gl_Position = projectionMatrix * mvPosition;
-        }
-      `,
-      fragmentShader: /* glsl */`
-        precision highp float;
-        uniform vec3 uBase;
-        uniform vec3 uShadow;
-        uniform vec3 uRim;
-        uniform vec3 uSunDir;
-        varying vec3 vNormalW;
-        varying vec3 vViewDir;
-        void main() {
-          // Sun-side amount and shadow-side amount
-          float sunDot   = clamp(dot(vNormalW, uSunDir), -1.0, 1.0);
-          float sunMix   = smoothstep(-0.1, 0.9, sunDot);
-          float shadeMix = smoothstep(0.4, -0.6, sunDot);
-
-          // Fresnel term: falls off at grazing angles → creamy edge glow.
-          float fres = pow(1.0 - clamp(dot(vNormalW, vViewDir), 0.0, 1.0), 2.2);
-
-          // Base fur → mixed with cool shadow, then warm rim added on the sun side.
-          vec3 body = mix(uBase, uShadow, shadeMix * 0.65);
-          vec3 rim  = uRim * fres * (0.35 + 0.65 * sunMix);
-          gl_FragColor = vec4(body + rim, 1.0);
-        }
-      `,
+    // MeshLambertMaterial + high emissive: renders correctly on real
+    // GPUs (the ambient + directional lights sculpt Sol nicely) and
+    // stays visible under low-quality fallbacks (the emissive term
+    // paints the surface even when normals barely respond).
+    return new THREE.MeshLambertMaterial({
+      color:             new THREE.Color(base),
+      emissive:          new THREE.Color(rim),
+      emissiveIntensity: 0.20,
     })
-  }, [base, shadow, rim])
+  }, [base, _shadow, rim])
 }
 
 export function Sol({
@@ -231,15 +202,10 @@ export function Sol({
       group.current.rotation.y += (targetY - group.current.rotation.y) * 0.08
     }
 
-    // Synthesizing intensifies the rim glow — pulse the uRim colour up.
-    const rimBoost = phase === 'synthesizing' ? 0.35 + 0.15 * Math.sin(t * 3.0) : 0
-    ;[furBody.uniforms.uRim.value].forEach((c: THREE.Color) => {
-      const target = new THREE.Color(cfg.furRim).lerp(new THREE.Color('#FFEED0'), rimBoost)
-      c.lerp(target, 0.10)
-    })
-
-    // Camera hint used so the material's viewDir stays sensible even under
-    // an orthographic camera (no perspective divide in shader inputs).
+    // Synthesizing warms Sol's fur toward a cream tint.
+    const rimBoost = phase === 'synthesizing' ? 0.30 + 0.15 * Math.sin(t * 3.0) : 0
+    const target = new THREE.Color(cfg.fur).lerp(new THREE.Color(cfg.furRim), rimBoost)
+    furBody.color.lerp(target, 0.10)
     void camera
   })
 
@@ -249,9 +215,9 @@ export function Sol({
 
   return (
     <group ref={group} position={position} scale={scale}>
-      {/* ── Body (capsule) ────────────────────────────────────────────── */}
-      <mesh ref={body} material={furBody}>
-        <capsuleGeometry args={[cfg.bodyRadius, cfg.bodyLength * 2, 8, 20]} />
+      {/* ── Body (capsule, laid horizontal — ermines are long and low). ── */}
+      <mesh ref={body} material={furBody} rotation={[0, 0, Math.PI / 2]}>
+        <capsuleGeometry args={[cfg.bodyRadius, cfg.bodyLength * 2, 12, 24]} />
       </mesh>
 
       {/* ── Head ──────────────────────────────────────────────────────── */}
@@ -326,11 +292,14 @@ export function Sol({
         </mesh>
       </group>
 
-      {/* A soft key light so the fresnel material has something to react
-          to under the orthographic camera. */}
-      <ambientLight intensity={0.5} />
-      <directionalLight position={[1, 0.4, 1.6]} intensity={0.9} color="#FFF6E5" />
-      <directionalLight position={[-1.2, -0.1, -0.8]} intensity={0.35} color="#B8C6E2" />
+      {/* Warm key light on the sun-facing side, cool fill from the
+          shadow side, and a lot of ambient — ortho cameras only give
+          the shader a small number of visible normals so we make sure
+          Sol reads solid regardless of which face is showing. */}
+      <ambientLight intensity={1.0} />
+      <directionalLight position={[1, 0.4, 1.6]} intensity={0.8} color="#FFF6E5" />
+      <directionalLight position={[-1.2, 0.6, 0.8]} intensity={0.6} color="#B8C6E2" />
+      <directionalLight position={[0, 1, 0.2]}  intensity={0.35} color="#FFFFFF" />
     </group>
   )
 }

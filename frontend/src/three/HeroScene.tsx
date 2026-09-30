@@ -428,7 +428,7 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
   // the viewport too or he ends up ~1px tall.
   //   Desktop: to the right of centre, on the crest, sun-side.
   //   Mobile:  a hair right of centre, slightly smaller.
-  const solScale = Math.min(viewport.width, viewport.height) * (isMobile ? 0.14 : 0.18)
+  const solScale = Math.min(viewport.width, viewport.height) * (isMobile ? 0.20 : 0.24)
   const crestY = -0.01 * viewport.height
   // Sequential load moment: sun rises first, then Sol pops up out of
   // the snow. Sol's rise starts at rise=0.55 (roughly 0.55·1.2s ≈ 660ms
@@ -439,7 +439,7 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
   const solPos: [number, number, number] = [
     isMobile ? viewport.width * 0.06 : viewport.width * 0.14,
     solY,
-    0.05,
+    1.5,   // well in front of horizon (-1) and sun (-2) so nothing occludes Sol
   ]
 
   return (

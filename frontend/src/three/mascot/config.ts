@@ -6,9 +6,12 @@
  */
 
 export const solConfig = {
-  // Colours
-  fur:          '#EEF2F8',   // --snow
-  furShadow:    '#B8C6E2',   // cool shadow tint on the away-from-sun side
+  // Colours — Sol reads "snow-white" but is actually a hair cooler
+  // than the snowfield (--snow) so he doesn't disappear into the
+  // crest. Roughly matches a real ermine's slightly-bluer winter coat
+  // under a warm-lit horizon.
+  fur:          '#EEF2F8',   // --snow (pure white per DESIGN_BRIEF)
+  furShadow:    '#3E4E7A',   // deep cool shadow (between --frost and --polar-night)
   furRim:       '#F4B942',   // --sun; warm amber rim on the sun-facing side
   earInner:     '#F2C4CC',   // soft pink
   eye:          '#0E1526',   // near-black, glossy
