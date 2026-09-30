@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { AnimatePresence } from 'framer-motion'
+import { AnimatePresence, MotionConfig } from 'framer-motion'
 import { PromptPage } from './components/PromptPage'
 import { ChatPage } from './components/ChatPage'
 import { AuthModal } from './components/AuthModal'
@@ -11,9 +11,11 @@ import { PipelineProvider } from './pipeline/PipelineProvider'
 
 export default function App() {
   return (
-    <PipelineProvider>
-      <AppInner />
-    </PipelineProvider>
+    <MotionConfig reducedMotion="user">
+      <PipelineProvider>
+        <AppInner />
+      </PipelineProvider>
+    </MotionConfig>
   )
 }
 
