@@ -429,12 +429,16 @@ function SceneContents({ prefersReducedMotion }: { prefersReducedMotion: boolean
   //   Desktop: to the right of centre, on the crest, sun-side.
   //   Mobile:  a hair right of centre, slightly smaller.
   const solScale = Math.min(viewport.width, viewport.height) * (isMobile ? 0.14 : 0.18)
-  // Sit Sol just above the snow crest. Crest sits around y ≈ -0.01·H
-  // (see Horizon()), so lift Sol by half his body length.
   const crestY = -0.01 * viewport.height
+  // Sequential load moment: sun rises first, then Sol pops up out of
+  // the snow. Sol's rise starts at rise=0.55 (roughly 0.55·1.2s ≈ 660ms
+  // into the sun rise) so the two beats feel intentional.
+  const solRise = Math.max(0, (rise - 0.55) / 0.45)
+  const solRiseEased = 1 - Math.pow(1 - solRise, 2)
+  const solY = crestY + solScale * 0.10 - (1 - solRiseEased) * solScale * 0.9
   const solPos: [number, number, number] = [
     isMobile ? viewport.width * 0.06 : viewport.width * 0.14,
-    crestY + solScale * 0.10,
+    solY,
     0.05,
   ]
 
