@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import ReactMarkdown from 'react-markdown'
 import { PipelineState, Score } from '../../pipeline/events'
+import { SolIcon } from './SolIcon'
 
 /**
  * DemoAnswer — the answer view rendered under the arc in demo mode.
@@ -40,14 +41,20 @@ export function DemoAnswer({ state, onReset }: Props) {
           padding: '28px 32px',
         }}
       >
-        {/* Status line */}
+        {/* Status line — Sol reacts to the outcome next to the label. */}
         <div style={{
           display: 'flex', justifyContent: 'space-between', alignItems: 'center',
           marginBottom: 20,
+          gap: 12,
         }}>
-          <span className="text--meta" style={{ letterSpacing: 0.2 }}>
-            {isRunning ? statusLabel(state.phase) : isError ? 'Something went wrong.' : 'Answer'}
-          </span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            {!isRunning && (
+              <SolIcon variant={isError ? 'fail' : 'pass'} size={44} />
+            )}
+            <span className="text--meta" style={{ letterSpacing: 0.2 }}>
+              {isRunning ? statusLabel(state.phase) : isError ? 'Something went wrong.' : 'Answer'}
+            </span>
+          </div>
           {!isRunning && (
             <button
               onClick={onReset}
