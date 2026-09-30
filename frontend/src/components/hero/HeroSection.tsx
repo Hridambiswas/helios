@@ -1,5 +1,4 @@
 import { Suspense, lazy, RefObject } from 'react'
-import { motion } from 'framer-motion'
 
 // The R3F canvas is a lazy chunk so the hero renders text-first.
 // Poster placeholder (a CSS gradient) covers the same box while the
@@ -90,22 +89,19 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
           paddingTop: 'clamp(48px, 8vh, 120px)',
         }}
       >
+        {/* Copy is present from the first frame. The brief specifies ONE
+            orchestrated load moment (sun rises → Sol pops up); no
+            per-element fade-ins on the hero text. */}
         <div style={{ maxWidth: 580 }}>
-          <motion.h1
+          <h1
             className="display--hero"
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
             style={{ color: 'var(--snow)', marginBottom: 20 }}
           >
             Ask a hard question.
-          </motion.h1>
+          </h1>
 
-          <motion.p
+          <p
             className="text hero-subtitle"
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.35, ease: [0.16, 1, 0.3, 1] }}
             style={{
               color: 'var(--snow-shadow)',
               fontSize: 'var(--step-1)',
@@ -114,12 +110,9 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
             }}
           >
             Six agents plan, search, compute, write and check each other&rsquo;s work.
-          </motion.p>
+          </p>
 
-          <motion.form
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          <form
             onSubmit={e => { e.preventDefault(); onSubmit() }}
             style={{
               display: 'flex',
@@ -180,12 +173,9 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
             >
               Ask
             </button>
-          </motion.form>
+          </form>
 
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.7, delay: 0.75 }}
+          <div
             style={{
               display: 'flex',
               flexWrap: 'wrap',
@@ -226,7 +216,7 @@ export function HeroSection({ query, setQuery, onSubmit, inputRef }: Props) {
                 {chip}
               </button>
             ))}
-          </motion.div>
+          </div>
         </div>
       </div>
     </section>
