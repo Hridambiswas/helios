@@ -29,3 +29,19 @@ echo "Helios local demo starting…"
 echo "  script dir  : $SCRIPT_DIR"
 echo "  log dir     : $LOG_DIR"
 echo "  venv python : $VENV_PY"
+
+# ── Pre-flight: ports must be free ────────────────────────────────────────
+echo ""
+echo "[1/8] Checking required ports…"
+port_busy=0
+for port in 3000 8000 5432 6379 9000 9001 8001; do
+  if ! "$SCRIPT_DIR/scripts/port_check.sh" "$port"; then
+    port_busy=1
+  fi
+done
+if [ "$port_busy" -ne 0 ]; then
+  echo ""
+  echo "❌ One or more ports are busy. Run ./stop_helios.command or quit"
+  echo "   whatever is using them, then try again."
+  exit 1
+fi
