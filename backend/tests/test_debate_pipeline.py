@@ -37,18 +37,34 @@ def state_with_draft():
 
 class TestAnswerer:
 
-    def test_empty_llm_output_yields_empty_draft(self, monkeypatch):
+    def test_both_llms_empty_yields_empty_draft(self):
+        """Primary + fallback both return empty → empty draft (not a crash)."""
         from agents.answerer import AnswererAgent
 
-        with patch("agents.answerer.ChatGoogleGenerativeAI"):
+        with patch("agents.answerer.ChatGoogleGenerativeAI"), patch("agents.answerer.ChatGroq"):
             agent = AnswererAgent()
             agent._llm = MagicMock()
-            # Simulate the Gemini call returning empty content
+            agent._fallback = MagicMock()
             agent._llm.invoke.return_value.content = ""
+            agent._fallback.invoke.return_value.content = ""
 
             out = agent._run({"query": "hi", "retrieved_docs": [], "web_sources": []})
             assert out["draft_answer"] == ""
-            assert out["answerer_provider"] == "gemini"
+
+    def test_fallback_runs_when_primary_fails(self):
+        """Gemini raises → Groq fallback supplies the draft."""
+        from agents.answerer import AnswererAgent
+
+        with patch("agents.answerer.ChatGoogleGenerativeAI"), patch("agents.answerer.ChatGroq"):
+            agent = AnswererAgent()
+            agent._llm = MagicMock()
+            agent._fallback = MagicMock()
+            agent._llm.invoke.side_effect = RuntimeError("gemini overloaded")
+            agent._fallback.invoke.return_value.content = "Fallback draft."
+
+            out = agent._run({"query": "hi", "retrieved_docs": [], "web_sources": []})
+            assert out["draft_answer"] == "Fallback draft."
+            assert out["answerer_provider"] == "groq"
 
 
 # ── Debate critics: parallel, JSON output ─────────────────────────────────────

@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeou
 from typing import Any
 
 from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_groq import ChatGroq
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
@@ -51,7 +52,17 @@ class AnswererAgent(BaseAgent):
             temperature=0.3,
             google_api_key=cfg.gemini_api_key.get_secret_value(),
         )
-        self.logger.info("answerer initialised: provider=gemini model=%s", cfg.answerer_model)
+        # Fallback: a Groq model (advocate's) so the primary path keeps
+        # producing a draft when the Gemini free tier is overloaded.
+        self._fallback = ChatGroq(
+            model=cfg.advocate_model,
+            temperature=0.3,
+            api_key=cfg.groq_api_key,
+        )
+        self.logger.info(
+            "answerer initialised: primary=gemini:%s, fallback=groq:%s",
+            cfg.answerer_model, cfg.advocate_model,
+        )
 
     def _run(self, state: dict[str, Any]) -> dict[str, Any]:
         query: str = state["query"]
@@ -78,30 +89,43 @@ class AnswererAgent(BaseAgent):
             HumanMessage(content=user_msg),
         ]
 
+        provider = "gemini"
+        model = cfg.answerer_model
         try:
-            draft = self._invoke_with_timeout(messages, 30.0)
+            draft = self._invoke_with_timeout(self._llm, messages, 30.0)
         except Exception as exc:
-            self.logger.warning("answerer failed (%s); using empty draft", exc)
+            self.logger.warning("answerer: gemini failed (%s); falling back to groq", exc)
             draft = ""
 
         if not draft:
-            # Non-fatal: the judge can still rescue the pipeline from the
-            # research context alone. Surface the empty state in logs.
-            self.logger.warning("answerer produced empty draft")
+            # Primary (Gemini) empty or timed out — try the Groq fallback so
+            # the pipeline still produces a draft.
+            try:
+                draft = self._invoke_with_timeout(self._fallback, messages, 30.0)
+                provider = "groq"
+                model = cfg.advocate_model
+                self.logger.info("answerer: groq fallback produced %d chars", len(draft))
+            except Exception as exc:
+                self.logger.warning("answerer: groq fallback also failed: %s", exc)
+                draft = ""
+
+        if not draft:
+            self.logger.warning("answerer produced empty draft after fallback")
 
         self.logger.info(
-            "answerer draft: %d chars, provider=gemini model=%s", len(draft), cfg.answerer_model
+            "answerer draft: %d chars, provider=%s model=%s", len(draft), provider, model
         )
         return {
             **state,
             "draft_answer": draft,
-            "answerer_provider": "gemini",
-            "answerer_model": cfg.answerer_model,
+            "answerer_provider": provider,
+            "answerer_model": model,
         }
 
-    def _invoke_with_timeout(self, messages, timeout_seconds: float) -> str:
+    @staticmethod
+    def _invoke_with_timeout(llm, messages, timeout_seconds: float) -> str:
         def _call() -> str:
-            resp = self._llm.invoke(messages, timeout=timeout_seconds)
+            resp = llm.invoke(messages, timeout=timeout_seconds)
             return (
                 resp.content if isinstance(resp.content, str) else str(resp.content)
             ).strip()
