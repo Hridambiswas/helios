@@ -25,40 +25,32 @@ You are the JUDGE in Helios's debate pipeline. A draft answer was produced
 by the answerer, then one Advocate argued FOR it and one Skeptic argued
 AGAINST it. You must now:
 
-1. Weigh each disputed claim, side with the evidence (web [W#] or local
-   [D#]) when it's available, and your own reasoning when it's not.
-2. WRITE THE FINAL ANSWER the user will see. Use the same inline citations
-   ([W#], [D#]) for every fact that has a supporting source. Be concrete
-   and direct — no "I" / "we", no meta commentary about the debate itself.
-3. End the final answer with a "Sources" section listing every web source
-   you actually cited, as:
-       **Sources:**
-       - [W1] Title — URL
-       - [W2] Title — URL
-   Only include sources you actually cited in the body. If none were
-   cited, omit the Sources section.
-4. Score the final answer on three dimensions, each 0.00–1.00:
-     - groundedness  : are claims supported by the sources you cited?
-                       If no sources were available, use 1.0 (n/a).
-     - faithfulness  : do the cited sources actually say what the answer
-                       says they say? If no citations, 1.0.
-     - completeness  : does the answer fully address the question?
-5. Give a one-line verdict: what changed vs the draft (or "confirmed draft").
+1. Weigh each disputed claim. Side with the evidence (web [W#] or local
+   [D#]) when it's available; use your own reasoning when it's not.
+2. WRITE THE FINAL ANSWER the user will see. Hard rules:
+   - If the Web results list is NON-EMPTY, you MUST cite at least two
+     distinct web sources as [W#] in the body. Pick the most relevant
+     web results for this specific question. Never invent URLs.
+   - If the Web results list is EMPTY, open the answer with one sentence
+     that says so plainly, e.g. "Web search returned no usable results,
+     so this is based on model knowledge." Then answer from your own
+     knowledge without inventing citations.
+   - Cite local docs as [D#] for every fact backed by one.
+   - Be concrete and direct. No "I" / "we", no meta commentary about
+     the debate itself.
+3. End the final answer with a "Sources" section listing EVERY web
+   source you cited (title + url). If the Web results list was empty,
+   omit the Sources section.
+4. Give a one-line verdict: what changed vs the draft (or "confirmed draft").
 
 Output VALID JSON only — no markdown fences, no prose before or after:
 {
-  "final_answer": "<the answer the user sees, markdown, with [W#]/[D#] citations and a Sources section if any were cited>",
-  "scores": {
-    "groundedness": 0.00,
-    "faithfulness":  0.00,
-    "completeness":  0.00,
-    "overall":       0.00
-  },
+  "final_answer": "<the answer the user sees, markdown, with [W#]/[D#] citations and a Sources section if web results were available>",
   "verdict": "<one sentence>",
   "cited_web_indices": [1, 2, ...],
   "cited_doc_indices": [1, ...]
 }
-Compute overall = round((g + f + c) / 3, 3).
+Do NOT include scores — a separate scoring step runs afterwards.
 """
 
 
@@ -119,25 +111,46 @@ class JudgeAgent(BaseAgent):
             return self._fallback_payload(state, draft, web, docs, reason="empty_judge_output")
 
         final = str(parsed.get("final_answer", "")).strip()
-        scores = self._sanitize_scores(parsed.get("scores") or {})
         verdict = (parsed.get("verdict") or "").strip()[:280]
 
         # Figure out which web/doc sources were actually cited in the body.
         cited_web = sorted({int(x) for x in re.findall(r"\[W(\d+)\]", final)})
         cited_docs = sorted({int(x) for x in re.findall(r"\[D(\d+)\]", final)})
+
+        # Enforce the "if web_sources exist, cite ≥2 of them" rule.
+        if web and len(cited_web) < 2:
+            self.logger.warning(
+                "judge cited only %d web sources (web_sources=%d available); "
+                "forcing citation repair",
+                len(cited_web), len(web),
+            )
+            final, cited_web = self._force_citations(final, web, cited_web)
+            verdict = (verdict + " [citations auto-added]")[:280]
+
+        # If any [W#] was cited, make sure the answer ends with a Sources block.
+        if cited_web and "**Sources:**" not in final and "Sources:" not in final[-400:]:
+            final = self._append_sources_block(final, web, cited_web)
+
+        # If search returned nothing, make the first sentence say so.
+        if not web and not cited_web:
+            opener = "Web search returned no usable results, so this is based on model knowledge. "
+            if not final.lower().startswith("web search"):
+                final = opener + final
+
         sources = [
             {"index": i, "title": web[i-1].get("title",""), "url": web[i-1].get("url","")}
             for i in cited_web if 1 <= i <= len(web)
         ]
 
         self.logger.info(
-            "judge wrote final: %d chars, scores=%s, cited_web=%s cited_docs=%s, model=%s",
-            len(final), scores, cited_web, cited_docs, self._model,
+            "judge wrote final: %d chars, cited_web=%s cited_docs=%s, model=%s "
+            "(web_sources_in=%d)",
+            len(final), cited_web, cited_docs, self._model, len(web),
         )
         return {
             **state,
             "answer": final,
-            "final_scores": scores,
+            # final_scores intentionally omitted here — ScorerAgent fills it.
             "judge_verdict": verdict,
             "judge_sources": sources,
             "cited_doc_ids": [str(i) for i in cited_docs],
@@ -145,6 +158,40 @@ class JudgeAgent(BaseAgent):
             "judge_provider": "groq",
             "judge_model": self._model,
         }
+
+    @staticmethod
+    def _force_citations(
+        final: str, web: list[dict], already_cited: list[int]
+    ) -> tuple[str, list[int]]:
+        """
+        If the judge failed to cite ≥2 web sources, append a short
+        "**Supporting sources (added):**" section pointing at the top
+        two uncited results. Keeps the pipeline honest without
+        fabricating claims.
+        """
+        wanted = 2
+        picked: list[int] = list(already_cited)
+        for i, _ in enumerate(web, 1):
+            if len(picked) >= wanted:
+                break
+            if i in picked:
+                continue
+            picked.append(i)
+        tail_lines = ["", "**Supporting sources (added):**"]
+        for i in picked:
+            if 1 <= i <= len(web):
+                w = web[i-1]
+                tail_lines.append(f"- [W{i}] {w.get('title','') or w.get('url','')} — {w.get('url','')}")
+        return final.rstrip() + "\n\n" + "\n".join(tail_lines), sorted(picked)
+
+    @staticmethod
+    def _append_sources_block(final: str, web: list[dict], cited: list[int]) -> str:
+        lines = ["", "**Sources:**"]
+        for i in cited:
+            if 1 <= i <= len(web):
+                w = web[i-1]
+                lines.append(f"- [W{i}] {w.get('title','') or w.get('url','')} — {w.get('url','')}")
+        return final.rstrip() + "\n\n" + "\n".join(lines)
 
     # ── helpers ───────────────────────────────────────────────────────────────
 
@@ -178,20 +225,6 @@ class JudgeAgent(BaseAgent):
                 return None
 
     @staticmethod
-    def _sanitize_scores(raw: dict) -> dict:
-        def _f(k: str, default: float = 0.0) -> float:
-            try:
-                v = float(raw.get(k, default))
-                return max(0.0, min(1.0, v))
-            except (TypeError, ValueError):
-                return default
-        g = _f("groundedness")
-        f = _f("faithfulness")
-        c = _f("completeness")
-        overall = round((g + f + c) / 3, 3)
-        return {"groundedness": g, "faithfulness": f, "completeness": c, "overall": overall}
-
-    @staticmethod
     def _fallback_payload(
         state: dict[str, Any],
         draft: str,
@@ -204,23 +237,23 @@ class JudgeAgent(BaseAgent):
             final = draft
             verdict = f"judge unavailable ({reason}); surfaced draft unchanged"
         else:
-            # Extremely rare: no draft and no judge. Give the research links.
-            lines = [
-                "I couldn't produce a final answer right now. "
-                "Here are the top web results I found:",
-            ]
-            for i, w in enumerate(web[:5], 1):
-                lines.append(f"- [W{i}] [{w.get('title','')}]({w.get('url','')})")
-            final = "\n".join(lines)
+            if web:
+                lines = [
+                    "Web search returned results, but the final writer was "
+                    "unavailable. Here are the top web results that matched "
+                    "the query:"
+                ]
+                for i, w in enumerate(web[:5], 1):
+                    lines.append(f"- [W{i}] [{w.get('title','')}]({w.get('url','')})")
+                final = "\n".join(lines)
+            else:
+                final = (
+                    "Web search returned no usable results, so this is based "
+                    "on model knowledge — but the final writer was "
+                    "unavailable. Please retry in a moment."
+                )
             verdict = f"judge+answerer unavailable ({reason}); showing research only"
 
-        # Minimal scores so the UI still renders.
-        scores = {
-            "groundedness": 0.5,
-            "faithfulness": 0.5,
-            "completeness": 0.5,
-            "overall": 0.5,
-        }
         cited_web = sorted({int(x) for x in re.findall(r"\[W(\d+)\]", final)})
         cited_docs = sorted({int(x) for x in re.findall(r"\[D(\d+)\]", final)})
         sources = [
@@ -230,7 +263,7 @@ class JudgeAgent(BaseAgent):
         return {
             **state,
             "answer": final,
-            "final_scores": scores,
+            # scorer will still run on this and produce proper scores.
             "judge_verdict": verdict,
             "judge_sources": sources,
             "cited_doc_ids": [str(i) for i in cited_docs],
