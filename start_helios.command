@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # start_helios.command — one-click local Helios demo for macOS.
 #
-# Double-click from Finder (or run from Terminal). Launches the Docker
-# infra services (Postgres, Redis, MinIO, ChromaDB), the FastAPI API,
-# the Celery worker, the Vite dev server, and `caffeinate` so the Mac
-# never sleeps mid-demo. Every process writes its log and pid to
-# demo/logs/<name>.{log,pid}. Polls the API health endpoint, then opens
-# http://localhost:3000 in the default browser.
+# Double-click from Finder (or run from Terminal). Launches the native
+# infra services (Postgres 16 + Redis via brew services, MinIO on :9000,
+# ChromaDB on :8001), the FastAPI API, the Celery worker, the Vite dev
+# server, and `caffeinate` so the Mac never sleeps mid-demo. Every
+# process writes its log and pid to demo/logs/<name>.{log,pid}. Polls
+# the API health endpoint, then opens http://localhost:3000 in the
+# default browser.
 #
-# Intentionally written as pure bash + the already-installed tooling
-# (docker, python venv, node) so there is nothing to install first.
+# No Docker. Uses brew services + the main checkout's python venv +
+# a local node_modules in the worktree.
 
 set -Eeuo pipefail
 
@@ -46,23 +47,25 @@ if [ "$port_busy" -ne 0 ]; then
   exit 1
 fi
 
-# ── Pre-flight: Docker Desktop must be running ────────────────────────────
+# ── Pre-flight: brew services (Postgres + Redis) ──────────────────────────
 echo ""
-echo "[2/8] Checking Docker Desktop…"
-if ! docker info >/dev/null 2>&1; then
-  echo "Docker Desktop is not running. Starting it now…"
-  open -a Docker
-  for i in $(seq 1 60); do
-    if docker info >/dev/null 2>&1; then
-      echo "Docker Desktop is up."
-      break
-    fi
-    sleep 2
-  done
-  if ! docker info >/dev/null 2>&1; then
-    echo "❌ Docker Desktop did not start within 120s. Open it manually and retry."
-    exit 1
-  fi
-else
-  echo "Docker Desktop already running."
+echo "[2/8] Checking brew services (Postgres 16, Redis)…"
+if ! command -v brew >/dev/null 2>&1; then
+  echo "❌ Homebrew is not installed. Install from https://brew.sh and retry."
+  exit 1
 fi
+
+brew_svc_status() {
+  # Prints "started" / "stopped" / "none" for a service name.
+  brew services list | awk -v s="$1" '$1==s {print $2}'
+}
+
+for svc in postgresql@16 redis; do
+  st="$(brew_svc_status "$svc")"
+  if [ "$st" != "started" ]; then
+    echo "  starting $svc (was: ${st:-missing})…"
+    brew services start "$svc" >/dev/null
+  else
+    echo "  $svc already started."
+  fi
+done
