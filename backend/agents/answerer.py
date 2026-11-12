@@ -92,7 +92,7 @@ class AnswererAgent(BaseAgent):
         provider = "gemini"
         model = cfg.answerer_model
         try:
-            draft = self._invoke_with_timeout(self._llm, messages, 30.0)
+            draft = self._invoke_with_timeout(self._llm, messages, 12.0)
         except Exception as exc:
             self.logger.warning("answerer: gemini failed (%s); falling back to groq", exc)
             draft = ""
@@ -101,7 +101,7 @@ class AnswererAgent(BaseAgent):
             # Primary (Gemini) empty or timed out — try the Groq fallback so
             # the pipeline still produces a draft.
             try:
-                draft = self._invoke_with_timeout(self._fallback, messages, 30.0)
+                draft = self._invoke_with_timeout(self._fallback, messages, 12.0)
                 provider = "groq"
                 model = cfg.advocate_model
                 self.logger.info("answerer: groq fallback produced %d chars", len(draft))
