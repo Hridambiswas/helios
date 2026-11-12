@@ -83,6 +83,79 @@ promptly.
 
 Raw payloads: `demo/logs/rev2-q{1,2,3}-*.json`.
 
+## Revision 3 — Gemini root cause + judge back on gpt-oss
+
+Three targeted fixes, no test loops (free-tier quota is precious):
+
+### 1. `GEMINI_MODEL=gemini-flash-lite-latest` (`d055f7d`)
+
+The user confirmed with a direct `curl` against
+`generativelanguage.googleapis.com` that `gemini-3.8-flash` was returning
+`429 RESOURCE_EXHAUSTED` almost immediately, while
+`gemini-flash-lite-latest` responds in ~2 s. The rev-2 pipeline was
+burning the full 12 s answerer budget on every query because the SDK
+wraps the 429 in an internal retry chain that doesn't respect our
+timeout until it's too late. Switch the model (and the backend/`cfg`
+default) accordingly.
+
+### 2. Answerer fast-fails on 429/503 (`ed6ad46`)
+
+Even on the new model, any transient 429/503 shouldn't waste ~12 s of
+the query budget. New in `agents/answerer.py`:
+
+- `_extract_status(exc)` fishes an HTTP status out of `.code`,
+  `.status_code`, or the exception message.
+- When a Gemini call raises with status ∈ {429, 503, 502, 504},
+  the answerer **logs the status** and jumps straight to the Groq
+  fallback — no second Gemini attempt, no backoff wait. Other errors
+  keep the "fall back after timeout" behaviour.
+
+### 3. Judge back on `openai/gpt-oss-120b` (`1200fa6`)
+
+The Qwen judge was observed citing 0 of 6 available web sources on
+ETH-deadline-style queries — fidelity to the retrieved evidence
+matters more here than family-diversity with the advocate. Scoring
+still runs on the skeptic model (Qwen) with its own prompt, so the
+judge never grades its own work.
+
+### Single-shot evidence (cache cleared, one query each)
+
+| Query                  | Total wall | Answerer provider / model              | Citations in body  | Final scores (G/F/C → overall) |
+|---                     |---:        |---                                     |---                 |---                               |
+| "who was albert einstein" | **11.5 s** | `gemini-flash-lite-latest` (Gemini)   | `[W6]` (1)         | 0.50 / 1.00 / 1.00 → **0.833** |
+| "ETH Zurich MSc CS deadline" | **13.9 s** | `gemini-flash-lite-latest` (Gemini) | `[W3, W5]` (2)     | 1.00 / 0.40 / 0.70 → **0.700** |
+
+Per-stage latency on Einstein was planner 1.0 s / researcher 0.9 s /
+**answerer 4.4 s** / debate 1.7 s (parallel) / judge 2.7 s / scorer
+0.5 s. On ETH: planner 1.2 s / **researcher 4.7 s** (DDG was slower)
+/ **answerer 2.6 s** / debate 1.8 s / judge 3.1 s / scorer 0.5 s.
+
+Key observations:
+
+- Gemini-flash-lite served BOTH queries directly — no fallback was
+  needed. The answerer provider/model fields show
+  `gemini-flash-lite-latest`.
+- Einstein's judge returned an empty JSON (`gpt-oss-120b` glitch on
+  that specific run); the judge's fallback surfaced the Gemini draft
+  unchanged, which had cited `[W6]`. Scorer then capped groundedness
+  0.70 → 0.50 because the surfaced answer cited <2 of 6 — the rev-2
+  honesty rule in action.
+- ETH's judge cited **two real URLs** (`[W3]` + `[W5]`) and the scorer
+  did not cap groundedness. Faithfulness 0.4 is a judgement call from
+  the scorer (Qwen) about how faithfully the answer summarised what
+  the sources actually said; that's exactly the signal the independent
+  scoring step exists to produce.
+
+### Rev-3 commits (3)
+
+```
+1200fa6 feat(config): judge back to openai/gpt-oss-120b for citation fidelity
+ed6ad46 fix(answerer): immediate Groq fallback on Gemini 429/503 (no retries)
+d055f7d feat(config): default Gemini to gemini-flash-lite-latest
+```
+
+Raw payloads: `demo/logs/rev3-q{1,2}-*.json`.
+
 STATUS: DEBATE PIPELINE RUNNING** (PDF upload acceptance deferred to 014;
 see "What's left" below.)
 
@@ -424,5 +497,78 @@ promptly.
 ```
 
 Raw payloads: `demo/logs/rev2-q{1,2,3}-*.json`.
+
+## Revision 3 — Gemini root cause + judge back on gpt-oss
+
+Three targeted fixes, no test loops (free-tier quota is precious):
+
+### 1. `GEMINI_MODEL=gemini-flash-lite-latest` (`d055f7d`)
+
+The user confirmed with a direct `curl` against
+`generativelanguage.googleapis.com` that `gemini-3.8-flash` was returning
+`429 RESOURCE_EXHAUSTED` almost immediately, while
+`gemini-flash-lite-latest` responds in ~2 s. The rev-2 pipeline was
+burning the full 12 s answerer budget on every query because the SDK
+wraps the 429 in an internal retry chain that doesn't respect our
+timeout until it's too late. Switch the model (and the backend/`cfg`
+default) accordingly.
+
+### 2. Answerer fast-fails on 429/503 (`ed6ad46`)
+
+Even on the new model, any transient 429/503 shouldn't waste ~12 s of
+the query budget. New in `agents/answerer.py`:
+
+- `_extract_status(exc)` fishes an HTTP status out of `.code`,
+  `.status_code`, or the exception message.
+- When a Gemini call raises with status ∈ {429, 503, 502, 504},
+  the answerer **logs the status** and jumps straight to the Groq
+  fallback — no second Gemini attempt, no backoff wait. Other errors
+  keep the "fall back after timeout" behaviour.
+
+### 3. Judge back on `openai/gpt-oss-120b` (`1200fa6`)
+
+The Qwen judge was observed citing 0 of 6 available web sources on
+ETH-deadline-style queries — fidelity to the retrieved evidence
+matters more here than family-diversity with the advocate. Scoring
+still runs on the skeptic model (Qwen) with its own prompt, so the
+judge never grades its own work.
+
+### Single-shot evidence (cache cleared, one query each)
+
+| Query                  | Total wall | Answerer provider / model              | Citations in body  | Final scores (G/F/C → overall) |
+|---                     |---:        |---                                     |---                 |---                               |
+| "who was albert einstein" | **11.5 s** | `gemini-flash-lite-latest` (Gemini)   | `[W6]` (1)         | 0.50 / 1.00 / 1.00 → **0.833** |
+| "ETH Zurich MSc CS deadline" | **13.9 s** | `gemini-flash-lite-latest` (Gemini) | `[W3, W5]` (2)     | 1.00 / 0.40 / 0.70 → **0.700** |
+
+Per-stage latency on Einstein was planner 1.0 s / researcher 0.9 s /
+**answerer 4.4 s** / debate 1.7 s (parallel) / judge 2.7 s / scorer
+0.5 s. On ETH: planner 1.2 s / **researcher 4.7 s** (DDG was slower)
+/ **answerer 2.6 s** / debate 1.8 s / judge 3.1 s / scorer 0.5 s.
+
+Key observations:
+
+- Gemini-flash-lite served BOTH queries directly — no fallback was
+  needed. The answerer provider/model fields show
+  `gemini-flash-lite-latest`.
+- Einstein's judge returned an empty JSON (`gpt-oss-120b` glitch on
+  that specific run); the judge's fallback surfaced the Gemini draft
+  unchanged, which had cited `[W6]`. Scorer then capped groundedness
+  0.70 → 0.50 because the surfaced answer cited <2 of 6 — the rev-2
+  honesty rule in action.
+- ETH's judge cited **two real URLs** (`[W3]` + `[W5]`) and the scorer
+  did not cap groundedness. Faithfulness 0.4 is a judgement call from
+  the scorer (Qwen) about how faithfully the answer summarised what
+  the sources actually said; that's exactly the signal the independent
+  scoring step exists to produce.
+
+### Rev-3 commits (3)
+
+```
+1200fa6 feat(config): judge back to openai/gpt-oss-120b for citation fidelity
+ed6ad46 fix(answerer): immediate Groq fallback on Gemini 429/503 (no retries)
+d055f7d feat(config): default Gemini to gemini-flash-lite-latest
+```
+
+Raw payloads: `demo/logs/rev3-q{1,2}-*.json`.
 
 STATUS: DEBATE PIPELINE RUNNING
