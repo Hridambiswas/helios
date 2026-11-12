@@ -141,6 +141,30 @@ class VerifierScores(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class JudgeSource(BaseModel):
+    index: int
+    title: str
+    url: str
+
+
+class FinalScores(BaseModel):
+    """Three scores from the Judge — primary UI scorecard in the debate pipeline."""
+    groundedness: float
+    faithfulness: float
+    completeness: float
+    overall: float
+
+
+class DebatePayload(BaseModel):
+    """What the UI's 'Debate' expander shows."""
+    draft_answer: str | None = None
+    answerer_model: str | None = None
+    advocate: dict | None = None
+    skeptic: dict | None = None
+    judge_model: str | None = None
+    judge_verdict: str | None = None
+
+
 class QueryResponse(BaseModel):
     query_id: str
     query: str
@@ -149,8 +173,13 @@ class QueryResponse(BaseModel):
     retrieved_docs: list[RetrievedDoc]
     web_sources: list[WebSource] = []
     execution_result: ExecutionResult | None
-    critic_scores: CriticScores | None
-    critic_passed: bool | None
+    # Legacy critic — nullable while the debate pipeline is primary.
+    critic_scores: CriticScores | None = None
+    critic_passed: bool | None = None
+    # ── Debate pipeline (013) ──
+    final_scores: FinalScores | None = None
+    judge_sources: list[JudgeSource] = []
+    debate: DebatePayload | None = None
     verifier_scores: VerifierScores | None = None
     verifier_passed: bool | None = None
     follow_up_questions: list[str] = []

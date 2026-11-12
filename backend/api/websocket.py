@@ -146,14 +146,28 @@ async def ws_query(websocket: WebSocket):
                             await _send(websocket, "synthesizing", {})
                         elif event == "retrying":
                             await _send(websocket, "retrying", {"attempt": item.get("attempt", 1)})
+                        elif event == "stage":
+                            await _send(
+                                websocket,
+                                item.get("stage", "stage"),
+                                item.get("extra") or {},
+                            )
                     else:
                         await _send(websocket, "token", {"token": item})
+
+            def _stage_cb(stage: str, extra: dict) -> None:
+                """Fired from inside the pipeline threads when a debate stage begins."""
+                loop.call_soon_threadsafe(
+                    token_queue.put_nowait,
+                    {"event": "stage", "stage": stage, "extra": extra},
+                )
 
             def _run() -> dict:
                 result = run_pipeline(
                     query, user_id=user_id,
                     conversation_history=history,
                     token_callback=_token_cb,
+                    stage_callback=_stage_cb,
                 )
                 if result.get("retry_count", 0) > 1:
                     loop.call_soon_threadsafe(
@@ -179,6 +193,17 @@ async def ws_query(websocket: WebSocket):
                         "answer": state.get("answer", ""),
                         "critic_scores": state.get("critic_scores"),
                         "critic_passed": state.get("critic_passed"),
+                        "final_scores": state.get("final_scores"),
+                        "judge_sources": state.get("judge_sources"),
+                        "judge_verdict": state.get("judge_verdict"),
+                        "debate": {
+                            "draft_answer": state.get("draft_answer"),
+                            "answerer_model": state.get("answerer_model"),
+                            "advocate": state.get("advocate_critique"),
+                            "skeptic": state.get("skeptic_critique"),
+                            "judge_model": state.get("judge_model"),
+                            "judge_verdict": state.get("judge_verdict"),
+                        },
                         "verifier_scores": state.get("verifier_scores"),
                         "verifier_passed": state.get("verifier_passed"),
                         "retrieved_doc_count": len(state.get("retrieved_docs", [])),

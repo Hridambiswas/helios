@@ -216,6 +216,17 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         if w.get("url")
     ]
 
+    # ── Debate pipeline fields (013) ───────────────────────────────────────
+    debate_payload = {
+        "draft_answer": state.get("draft_answer"),
+        "answerer_model": state.get("answerer_model"),
+        "advocate": state.get("advocate_critique"),
+        "skeptic": state.get("skeptic_critique"),
+        "judge_model": state.get("judge_model"),
+        "judge_verdict": state.get("judge_verdict"),
+    }
+    judge_sources = state.get("judge_sources") or []
+
     response = QueryResponse(
         query_id=query_id, query=body.query,
         answer=state.get("answer", ""),
@@ -225,6 +236,9 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         execution_result=state.get("execution_result"),
         critic_scores=state.get("critic_scores"),
         critic_passed=state.get("critic_passed"),
+        final_scores=state.get("final_scores"),
+        judge_sources=judge_sources,  # type: ignore[arg-type]
+        debate=debate_payload,  # type: ignore[arg-type]
         verifier_scores=state.get("verifier_scores"),
         verifier_passed=state.get("verifier_passed"),
         follow_up_questions=state.get("follow_up_questions", []),
