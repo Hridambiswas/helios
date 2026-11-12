@@ -23,6 +23,21 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
+    # ── Debate pipeline models (013) ──────────────────────────────────────────
+    # answerer: Gemini — drafts the initial answer from its own knowledge
+    #   plus research context.
+    # advocate / skeptic: two Groq models from DIFFERENT families when
+    #   available (OpenAI-style vs Qwen). They argue for and against the
+    #   draft in parallel.
+    # judge: a third family if available, otherwise the advocate model
+    #   with a judge prompt. Writes the final user-facing answer.
+    answerer_model: str = "gemini-3.8-flash"
+    advocate_model: str = "openai/gpt-oss-120b"
+    skeptic_model: str = "qwen/qwen3.8-27b"
+    judge_model: str = "openai/gpt-oss-120b"
+    debate_web_top_k: int = 6
+    judge_timeout_seconds: int = 60
+
     # ── JWT ───────────────────────────────────────────────────────────────────
     # Must be set to a strong random value in production:
     #   python -c "import secrets; print(secrets.token_hex(32))"
