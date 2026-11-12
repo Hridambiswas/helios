@@ -1,6 +1,89 @@
 # 013 report — Debate pipeline (answer, 2 critics, judge)
 
-**STATUS: DEBATE PIPELINE RUNNING** (PDF upload acceptance deferred to 014;
+**## Revision 2 — honest citations + <25 s latency
+
+Two more fixes on `local-backup-test`:
+
+### 1. "Related search results" are no longer citations
+
+The old `_force_citations` was quietly padding `cited_web` and
+`judge_sources` with top uncited results whenever the judge cited <2 — so
+a half-grounded answer looked identical to a fully-cited one in the UI.
+
+New behaviour (`030e1bf`):
+
+- Judge keeps `judge_cited_count` on state (what the LLM itself cited).
+- When web results exist but the judge cited <2, the judge appends up to
+  three **bare-bullet** entries under `**Related search results (not used
+  in the answer):**`. They are NOT added to `cited_web_indices` or
+  `judge_sources`, and they carry no `[W#]` marker so the regex can never
+  pick them up.
+- Scorer now caps `groundedness` at **0.5** whenever the judge cited <2
+  of the available web sources, with a reasoning line stating exactly why
+  (e.g. "Judge cited 1 web sources out of 6 available — groundedness
+  capped at 0.5").
+
+Evidence from the rev-2 retest:
+```
+judge cited only 1 web sources (web_sources=6 available); appending Related search results (not citations)
+scorer: capping groundedness 1.00 -> 0.50 (judge cited only 1 of 6 web sources)
+```
+
+### 2. Latency under 25 s
+
+Three commits (`3c2edf7`, `1a8e2b4`, `4d65f2b`):
+
+- Every Groq call now goes through a shared `invoke_groq_with_retry`
+  wrapper: **8 s per attempt, max 2 attempts** (advocate, skeptic, judge,
+  scorer). Worst-case per Groq agent ≈ 16 s instead of 20–30 s.
+- Each pipeline node records its `time.perf_counter()` wall time into
+  `state.stage_timings_ms` and emits a WS `stage_done` event with the ms,
+  so the UI can draw per-stage progress bars.
+- `node_debate` measures **advocate_wall_ms**, **skeptic_wall_ms** and
+  **debate_parallel_ms**, and logs the "serial would be / stage actually
+  took / savings" triad so parallelism is *provable* from the log.
+- **Critical fix**: the old `with ThreadPoolExecutor()` wrapper was
+  defeating the whole timeout. Its `__exit__` calls `shutdown(wait=True)`,
+  which blocks until the worker thread finishes — so `future.result(
+  timeout=12)` would raise but the pipeline still waited for the SDK's
+  internal retry chain to give up (~39 s observed). Switched both
+  wrappers (`_groq_call` + answerer) to a non-context-manager executor
+  with `shutdown(wait=False)` on every path.
+
+### Per-stage timings (rev-2, cache cleared)
+
+| Stage              | Einstein   | ETH deadline | Nonsense (control) |
+|---                 |---:        |---:          |---:                |
+| planner            |   0.91 s   |   1.16 s     |   2.80 s           |
+| researcher         |   0.73 s   |   0.88 s     |   0.62 s           |
+| answerer (Gemini)  |  13.40 s   |  13.31 s     |  13.65 s           |
+| debate (parallel)  |   1.97 s   |   1.76 s     |   1.72 s           |
+|   ↳ advocate wall  |   1.97 s   |   1.76 s     |   1.72 s           |
+|   ↳ skeptic wall   |   1.97 s   |   1.76 s     |   1.72 s           |
+|   serial would be  |   3.94 s   |   3.52 s     |   3.43 s           |
+|   savings          |   1.97 s   |   1.76 s     |   1.72 s           |
+| judge              |   0.92 s   |   0.62 s     |   1.03 s           |
+| scorer             |   0.43 s   |   0.40 s     |   0.86 s           |
+| **total**          | **18.8 s** | **18.1 s**   | **20.7 s**         |
+
+All three come in under the 25 s target. Advocate ≈ skeptic ≈ stage
+within ~1 ms — the two critics are genuinely parallel. Answerer still
+dominates at ~13 s because Gemini's free tier is routinely slow; the
+12 s hard cap now actually cuts it off so we flip to the Groq fallback
+promptly.
+
+### Rev-2 commits (4)
+
+```
+4d65f2b fix(agents): shutdown(wait=False) so timeouts actually cut the call
+1a8e2b4 feat(pipeline): per-stage timings + parallelism proof + stage_done events
+3c2edf7 feat(agents): 8s + one-retry wrapper on every Groq call
+030e1bf fix(judge,scorer): auto-appended results are 'Related', not citations
+```
+
+Raw payloads: `demo/logs/rev2-q{1,2,3}-*.json`.
+
+STATUS: DEBATE PIPELINE RUNNING** (PDF upload acceptance deferred to 014;
 see "What's left" below.)
 
 ## TL;DR
@@ -258,5 +341,88 @@ b48e014 fix(frontend): min-h-0 + near-bottom auto-scroll while streaming
 c4ae435 feat(config): judge on Qwen (diff family from advocate), add scorer_model
 159d5e8 fix(answerer): tighten timeouts to 12s each (Gemini primary + Groq fallback)
 ```
+
+## Revision 2 — honest citations + <25 s latency
+
+Two more fixes on `local-backup-test`:
+
+### 1. "Related search results" are no longer citations
+
+The old `_force_citations` was quietly padding `cited_web` and
+`judge_sources` with top uncited results whenever the judge cited <2 — so
+a half-grounded answer looked identical to a fully-cited one in the UI.
+
+New behaviour (`030e1bf`):
+
+- Judge keeps `judge_cited_count` on state (what the LLM itself cited).
+- When web results exist but the judge cited <2, the judge appends up to
+  three **bare-bullet** entries under `**Related search results (not used
+  in the answer):**`. They are NOT added to `cited_web_indices` or
+  `judge_sources`, and they carry no `[W#]` marker so the regex can never
+  pick them up.
+- Scorer now caps `groundedness` at **0.5** whenever the judge cited <2
+  of the available web sources, with a reasoning line stating exactly why
+  (e.g. "Judge cited 1 web sources out of 6 available — groundedness
+  capped at 0.5").
+
+Evidence from the rev-2 retest:
+```
+judge cited only 1 web sources (web_sources=6 available); appending Related search results (not citations)
+scorer: capping groundedness 1.00 -> 0.50 (judge cited only 1 of 6 web sources)
+```
+
+### 2. Latency under 25 s
+
+Three commits (`3c2edf7`, `1a8e2b4`, `4d65f2b`):
+
+- Every Groq call now goes through a shared `invoke_groq_with_retry`
+  wrapper: **8 s per attempt, max 2 attempts** (advocate, skeptic, judge,
+  scorer). Worst-case per Groq agent ≈ 16 s instead of 20–30 s.
+- Each pipeline node records its `time.perf_counter()` wall time into
+  `state.stage_timings_ms` and emits a WS `stage_done` event with the ms,
+  so the UI can draw per-stage progress bars.
+- `node_debate` measures **advocate_wall_ms**, **skeptic_wall_ms** and
+  **debate_parallel_ms**, and logs the "serial would be / stage actually
+  took / savings" triad so parallelism is *provable* from the log.
+- **Critical fix**: the old `with ThreadPoolExecutor()` wrapper was
+  defeating the whole timeout. Its `__exit__` calls `shutdown(wait=True)`,
+  which blocks until the worker thread finishes — so `future.result(
+  timeout=12)` would raise but the pipeline still waited for the SDK's
+  internal retry chain to give up (~39 s observed). Switched both
+  wrappers (`_groq_call` + answerer) to a non-context-manager executor
+  with `shutdown(wait=False)` on every path.
+
+### Per-stage timings (rev-2, cache cleared)
+
+| Stage              | Einstein   | ETH deadline | Nonsense (control) |
+|---                 |---:        |---:          |---:                |
+| planner            |   0.91 s   |   1.16 s     |   2.80 s           |
+| researcher         |   0.73 s   |   0.88 s     |   0.62 s           |
+| answerer (Gemini)  |  13.40 s   |  13.31 s     |  13.65 s           |
+| debate (parallel)  |   1.97 s   |   1.76 s     |   1.72 s           |
+|   ↳ advocate wall  |   1.97 s   |   1.76 s     |   1.72 s           |
+|   ↳ skeptic wall   |   1.97 s   |   1.76 s     |   1.72 s           |
+|   serial would be  |   3.94 s   |   3.52 s     |   3.43 s           |
+|   savings          |   1.97 s   |   1.76 s     |   1.72 s           |
+| judge              |   0.92 s   |   0.62 s     |   1.03 s           |
+| scorer             |   0.43 s   |   0.40 s     |   0.86 s           |
+| **total**          | **18.8 s** | **18.1 s**   | **20.7 s**         |
+
+All three come in under the 25 s target. Advocate ≈ skeptic ≈ stage
+within ~1 ms — the two critics are genuinely parallel. Answerer still
+dominates at ~13 s because Gemini's free tier is routinely slow; the
+12 s hard cap now actually cuts it off so we flip to the Groq fallback
+promptly.
+
+### Rev-2 commits (4)
+
+```
+4d65f2b fix(agents): shutdown(wait=False) so timeouts actually cut the call
+1a8e2b4 feat(pipeline): per-stage timings + parallelism proof + stage_done events
+3c2edf7 feat(agents): 8s + one-retry wrapper on every Groq call
+030e1bf fix(judge,scorer): auto-appended results are 'Related', not citations
+```
+
+Raw payloads: `demo/logs/rev2-q{1,2,3}-*.json`.
 
 STATUS: DEBATE PIPELINE RUNNING
