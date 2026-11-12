@@ -573,14 +573,37 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   const [input, setInput] = useState('')
   const [busyMsgId, setBusyMsgId] = useState<string | null>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
   const wsRef = useRef<WebSocket | null>(null)
   const autoFiredRef = useRef<Set<string>>(new Set())
   const convId = conversation?.id ?? null
 
+  // Jump to bottom only if the user is already near the bottom. Avoids
+  // yanking the viewport while they're reading older messages.
+  const isNearBottom = () => {
+    const el = scrollRef.current
+    if (!el) return true
+    return el.scrollHeight - el.scrollTop - el.clientHeight < 160
+  }
+
+  // New message appended → scroll on first paint.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (isNearBottom()) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }
   }, [conversation?.messages.length])
+
+  // Tokens streaming into the last message → keep the tail in view, but
+  // only when the user is still near the bottom. 'auto' avoids compounding
+  // smooth-scroll animations on every token.
+  const streamingTail = conversation?.messages[conversation.messages.length - 1]?.content ?? ''
+  useEffect(() => {
+    if (!busyMsgId) return
+    if (isNearBottom()) {
+      bottomRef.current?.scrollIntoView({ behavior: 'auto', block: 'end' })
+    }
+  }, [streamingTail, busyMsgId])
 
   const buildHistory = (msgs: Conversation['messages'], beforeId: string): HistoryMessage[] => {
     const turns: HistoryMessage[] = []
@@ -724,7 +747,10 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
   return (
     <div className="flex flex-col h-full" style={{ background: '#030305' }}>
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 sm:px-8 py-8 space-y-8 relative">
+      <div
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-8 space-y-8 relative"
+      >
         <FloatingParticles />
         {messages.length === 0
           ? <EmptyState onExample={q => { setInput(q); inputRef.current?.focus() }} />
