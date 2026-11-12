@@ -95,8 +95,23 @@ class VerifierAgent(BaseAgent):
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
-        response = self._llm.invoke(messages, timeout=cfg.verifier_timeout_seconds)
-        raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
+        # Hard outer timeout. The Gemini client retries with exponential
+        # backoff internally — up to ~2 minutes before it surfaces the
+        # error — which would fail the whole pipeline. Wrap the call in a
+        # thread + timeout so the pipeline can cleanly report "unverified"
+        # on slow or flaky upstream behaviour.
+        try:
+            raw = self._invoke_with_hard_timeout(
+                messages, cfg.verifier_timeout_seconds
+            )
+        except Exception as exc:
+            self.logger.warning(
+                "Verifier timed out or failed in %.1fs: %s",
+                cfg.verifier_timeout_seconds, exc,
+            )
+            scores = self._zero_scores()
+            scores["flags"] = ["verifier_timeout"]
+            return {**state, "verifier_scores": scores, "verifier_passed": False}
 
         try:
             scores = json.loads(raw)
@@ -124,6 +139,27 @@ class VerifierAgent(BaseAgent):
             scores["agreement"], scores["overall"], scores["pass"],
         )
         return {**state, "verifier_scores": scores, "verifier_passed": scores["pass"]}
+
+    def _invoke_with_hard_timeout(self, messages, timeout_seconds: float) -> str:
+        """Wrap the LLM call so a flaky upstream can never block longer than N s."""
+        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+        def _call() -> str:
+            response = self._llm.invoke(messages, timeout=timeout_seconds)
+            return (
+                response.content if isinstance(response.content, str)
+                else str(response.content)
+            ).strip()
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(_call)
+            try:
+                return future.result(timeout=timeout_seconds)
+            except FuturesTimeout as exc:
+                future.cancel()
+                raise TimeoutError(
+                    f"Verifier exceeded {timeout_seconds}s"
+                ) from exc
 
     @staticmethod
     def _zero_scores() -> dict:
