@@ -33,10 +33,18 @@ class Settings(BaseSettings):
     #   with a judge prompt. Writes the final user-facing answer.
     answerer_model: str = "gemini-3.8-flash"
     advocate_model: str = "openai/gpt-oss-120b"
+    # Skeptic + Judge land on the Qwen family so the judge's final answer
+    # is written by a different family than the advocate's defence. This
+    # account's Groq key only serves two chat families (OpenAI + Qwen) —
+    # no Llama chat model is available.
     skeptic_model: str = "qwen/qwen3.8-27b"
-    judge_model: str = "openai/gpt-oss-120b"
+    judge_model: str = "qwen/qwen3.8-27b"
+    # The scorer re-uses the skeptic model (different prompt, different role)
+    # so scoring is NOT self-graded by the author of the final answer.
+    scorer_model: str = "qwen/qwen3.8-27b"
     debate_web_top_k: int = 6
-    judge_timeout_seconds: int = 60
+    judge_timeout_seconds: int = 20
+    scorer_timeout_seconds: int = 15
 
     # ── JWT ───────────────────────────────────────────────────────────────────
     # Must be set to a strong random value in production:
