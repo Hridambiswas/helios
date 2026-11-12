@@ -184,10 +184,10 @@ echo $! > "$PID_DIR/worker.pid"
 cd "$SCRIPT_DIR"
 
 # Poll /health for up to 120s.
-echo "  waiting for http://localhost:8000/health …"
+echo "  waiting for http://localhost:8000/api/v1/health …"
 api_ok=0
 for i in $(seq 1 120); do
-  if curl -sf http://127.0.0.1:8000/health >/dev/null 2>&1; then
+  if curl -sf http://127.0.0.1:8000/api/v1/health >/dev/null 2>&1; then
     api_ok=1
     echo "  API healthy after ${i}s (pid $(cat "$PID_DIR/api.pid"))."
     break
@@ -224,7 +224,7 @@ done
 echo ""
 echo "✅ Helios is running."
 echo "    http://localhost:3000   (frontend)"
-echo "    http://localhost:8000   (API, /health /docs)"
+echo "    http://localhost:8000   (API, /api/v1/health /docs)"
 echo "    Logs: $LOG_DIR"
 echo "    Stop with ./stop_helios.command"
 
