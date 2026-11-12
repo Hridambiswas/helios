@@ -175,6 +175,11 @@ echo "  caffeinate pid $(cat "$PID_DIR/caffeinate.pid")."
 echo ""
 echo "[7/8] Starting API (uvicorn :8000) and Celery worker…"
 cd "$BACKEND_DIR"
+# Pin PYTHONPATH to the backend dir so Celery pool subprocesses (spawn-mode,
+# fresh interpreters) can still import top-level packages like `retrieval`,
+# `storage`, `observability`. Otherwise the BM25 rebuild on worker_ready
+# fails with "No module named 'retrieval'".
+export PYTHONPATH="$BACKEND_DIR${PYTHONPATH:+:$PYTHONPATH}"
 nohup "$VENV_BIN/uvicorn" main:app --host 0.0.0.0 --port 8000 \
   > "$LOG_DIR/api.log" 2>&1 &
 echo $! > "$PID_DIR/api.pid"
