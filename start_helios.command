@@ -45,3 +45,24 @@ if [ "$port_busy" -ne 0 ]; then
   echo "   whatever is using them, then try again."
   exit 1
 fi
+
+# ── Pre-flight: Docker Desktop must be running ────────────────────────────
+echo ""
+echo "[2/8] Checking Docker Desktop…"
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker Desktop is not running. Starting it now…"
+  open -a Docker
+  for i in $(seq 1 60); do
+    if docker info >/dev/null 2>&1; then
+      echo "Docker Desktop is up."
+      break
+    fi
+    sleep 2
+  done
+  if ! docker info >/dev/null 2>&1; then
+    echo "❌ Docker Desktop did not start within 120s. Open it manually and retry."
+    exit 1
+  fi
+else
+  echo "Docker Desktop already running."
+fi
