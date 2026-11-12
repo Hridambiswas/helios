@@ -45,6 +45,28 @@ export type WebSource = {
   snippet: string
 }
 
+export type FinalScores = {
+  groundedness: number
+  faithfulness: number
+  completeness: number
+  overall: number
+}
+
+export type JudgeSource = {
+  index: number
+  title: string
+  url: string
+}
+
+export type DebatePayload = {
+  draft_answer: string | null
+  answerer_model: string | null
+  advocate: Record<string, unknown> | null
+  skeptic: Record<string, unknown> | null
+  judge_model: string | null
+  judge_verdict: string | null
+}
+
 export type QueryResponse = {
   query_id: string
   query: string
@@ -55,6 +77,9 @@ export type QueryResponse = {
   execution_result: { stdout: string; stderr: string; success: boolean } | null
   critic_scores: { groundedness: number; faithfulness: number; completeness: number; overall: number; pass: boolean; reasoning: string; suggestions?: string[] } | null
   critic_passed: boolean | null
+  final_scores: FinalScores | null
+  judge_sources: JudgeSource[]
+  debate: DebatePayload | null
   verifier_scores: { groundedness: number; faithfulness: number; agreement: number; overall: number; pass: boolean; reasoning: string; flags?: string[] } | null
   verifier_passed: boolean | null
   follow_up_questions: string[]
