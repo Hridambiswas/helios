@@ -75,20 +75,38 @@ class CriticAgent(BaseAgent):
         query: str = state["query"]
         answer: str = state.get("answer", "")
         docs: list[dict] = state.get("retrieved_docs", [])
+        web: list[dict] = state.get("web_sources", [])
 
         if not answer:
             self.logger.warning("No answer to evaluate — returning zero scores")
             scores = self._zero_scores()
             return {**state, "critic_scores": scores, "critic_passed": False}
 
-        context_snippet = "\n\n".join(
-            f"[{d['id']}]: {d['document'][:300]}" for d in docs[:5]
+        doc_block = "\n\n".join(
+            f"[D{i}] {d.get('document','')[:300]}" for i, d in enumerate(docs[:5], 1)
+        )
+        web_block = "\n\n".join(
+            f"[W{i}] {w.get('title','')} — {w.get('snippet','')[:300]}"
+            for i, w in enumerate(web[:5], 1)
+        )
+        context_parts = [b for b in (doc_block, web_block) if b]
+        has_context = bool(context_parts)
+        context_snippet = "\n\n".join(context_parts) if context_parts else "None"
+
+        # When there's no retrievable context, groundedness-vs-context is
+        # not meaningful — tell the critic to treat groundedness as "n/a"
+        # (score 1.0) and judge on faithfulness + completeness alone.
+        no_context_note = (
+            "\n\nNOTE: no local documents and no web results were retrieved. "
+            "Treat GROUNDEDNESS as 1.0 (not applicable). Judge the answer on "
+            "FAITHFULNESS to the question and COMPLETENESS only."
+            if not has_context else ""
         )
 
         user_msg = f"""Query: {query}
 
 Context used:
-{context_snippet or "None"}
+{context_snippet}{no_context_note}
 
 Answer to evaluate:
 {answer}
