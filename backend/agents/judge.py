@@ -99,20 +99,50 @@ class JudgeAgent(BaseAgent):
             SystemMessage(content=_SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
-        try:
-            raw = invoke_groq_with_retry(
-                self._llm, messages,
-                agent_name="judge",
-                per_call_timeout=8.0,
-                attempts=2,
-            )
-        except Exception as exc:
-            self.logger.warning("judge failed (%s); using draft as final answer", exc)
-            return self._fallback_payload(state, draft, web, docs, reason=str(exc))
+        # Judge may return empty / unparseable JSON on a cold roll. Retry
+        # once on the same model with a stricter nudge before falling back
+        # to the draft. Each invoke is still capped by the 8s + one-retry
+        # transport wrapper, so worst case here is ~32s (2 x 8s x 2).
+        parsed: dict | None = None
+        for attempt in (1, 2):
+            try:
+                raw = invoke_groq_with_retry(
+                    self._llm, messages,
+                    agent_name="judge",
+                    per_call_timeout=8.0,
+                    attempts=2,
+                )
+            except Exception as exc:
+                self.logger.warning(
+                    "judge call failed on attempt %d (%s); using draft as final answer",
+                    attempt, exc,
+                )
+                return self._fallback_payload(state, draft, web, docs, reason=str(exc))
 
-        parsed = self._parse(raw)
+            parsed = self._parse(raw)
+            if parsed and parsed.get("final_answer"):
+                break
+            if attempt == 1:
+                self.logger.warning(
+                    "judge produced empty/invalid output on attempt 1 "
+                    "(raw_len=%d); retrying once",
+                    len(raw or ""),
+                )
+                # Stronger nudge for the second attempt — put it in a new
+                # message rather than editing the system prompt so the
+                # model's state resets cleanly.
+                messages = messages + [HumanMessage(content=(
+                    "Your previous reply was not valid JSON matching the "
+                    "schema. Output ONLY the JSON object with final_answer, "
+                    "verdict, cited_web_indices, cited_doc_indices — no "
+                    "prose, no markdown fences, and final_answer must be "
+                    "a non-empty string."
+                ))]
+
         if not parsed or not parsed.get("final_answer"):
-            self.logger.warning("judge produced empty final_answer; falling back to draft")
+            self.logger.warning(
+                "judge produced empty final_answer on both attempts; falling back to draft"
+            )
             return self._fallback_payload(state, draft, web, docs, reason="empty_judge_output")
 
         final = str(parsed.get("final_answer", "")).strip()
