@@ -161,17 +161,28 @@ Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section conta
 
         token_callback: Callable[[str], None] | None = state.get("_token_callback")
 
-        if token_callback:
-            chunks = []
-            for chunk in self._llm.stream(messages):
-                token = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
-                if token:
-                    chunks.append(token)
-                    token_callback(token)
-            raw = "".join(chunks).strip()
-        else:
-            response = self._llm.invoke(messages, timeout=45)
-            raw = (response.content if isinstance(response.content, str) else str(response.content)).strip()
+        raw = self._invoke_once(messages, token_callback)
+
+        # Empty-response retry: if the model returned nothing, run one
+        # non-streaming retry at a lower temperature and higher
+        # determinism. Keeps a flaky provider from leaving the user
+        # with an empty bubble.
+        if not raw:
+            self.logger.warning("Synthesizer returned empty — retrying once (non-streaming)")
+            raw = self._invoke_once(messages, token_callback=None)
+
+        # If still empty after the retry, hand back the previous
+        # non-empty answer (on retries) or a one-line fallback.
+        if not raw:
+            prev_answer = state.get("answer") or ""
+            self.logger.error("Synthesizer empty twice; using fallback (prev_len=%d)", len(prev_answer))
+            if prev_answer:
+                raw = prev_answer
+            else:
+                raw = (
+                    "I ran into a transient issue generating the answer. "
+                    "Please try again in a moment."
+                )
 
         answer, follow_ups = _parse_follow_ups(raw)
 
@@ -201,3 +212,27 @@ Now answer the question. Remember to end with the <<<FOLLOW_UPS>>> section conta
             "web_sources": web,
             "retry_count": retry_count + 1,
         }
+
+    def _invoke_once(
+        self,
+        messages: list,
+        token_callback: Callable[[str], None] | None,
+    ) -> str:
+        """Single LLM call. Returns the (stripped) text, possibly empty."""
+        try:
+            if token_callback:
+                chunks: list[str] = []
+                for chunk in self._llm.stream(messages):
+                    token = chunk.content if isinstance(chunk.content, str) else str(chunk.content)
+                    if token:
+                        chunks.append(token)
+                        token_callback(token)
+                return "".join(chunks).strip()
+            response = self._llm.invoke(messages, timeout=45)
+            return (
+                response.content if isinstance(response.content, str)
+                else str(response.content)
+            ).strip()
+        except Exception as exc:
+            self.logger.warning("Synthesizer LLM call failed: %s", exc)
+            return ""
