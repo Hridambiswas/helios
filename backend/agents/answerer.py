@@ -21,6 +21,13 @@ from agents.base import BaseAgent
 logger = logging.getLogger("helios.agents.answerer")
 
 
+def _answerer_call(llm, messages, timeout_seconds: float) -> str:
+    resp = llm.invoke(messages, timeout=timeout_seconds)
+    return (
+        resp.content if isinstance(resp.content, str) else str(resp.content)
+    ).strip()
+
+
 _SYSTEM_PROMPT = """\
 You are the Answerer in Helios's debate pipeline — you write the FIRST DRAFT.
 
@@ -124,16 +131,20 @@ class AnswererAgent(BaseAgent):
 
     @staticmethod
     def _invoke_with_timeout(llm, messages, timeout_seconds: float) -> str:
-        def _call() -> str:
-            resp = llm.invoke(messages, timeout=timeout_seconds)
-            return (
-                resp.content if isinstance(resp.content, str) else str(resp.content)
-            ).strip()
-
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            fut = pool.submit(_call)
-            try:
-                return fut.result(timeout=timeout_seconds)
-            except FuturesTimeout as exc:
-                fut.cancel()
-                raise TimeoutError(f"answerer exceeded {timeout_seconds}s") from exc
+        # NOT using `with ThreadPoolExecutor` — its __exit__ waits for the
+        # worker to finish, which defeats the timeout when the Gemini
+        # client is deep in its own retry-with-backoff loop. Shutdown
+        # without waiting and abandon the hung thread.
+        pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="answerer-call")
+        fut = pool.submit(_call := (lambda: _answerer_call(llm, messages, timeout_seconds)))
+        try:
+            result = fut.result(timeout=timeout_seconds)
+            pool.shutdown(wait=False)
+            return result
+        except FuturesTimeout as exc:
+            fut.cancel()
+            pool.shutdown(wait=False)
+            raise TimeoutError(f"answerer exceeded {timeout_seconds}s") from exc
+        except Exception:
+            pool.shutdown(wait=False)
+            raise
