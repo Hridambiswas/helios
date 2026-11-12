@@ -161,6 +161,98 @@ function PipelineIndicator({ step }: { step: string }) {
   )
 }
 
+// ── Debate scorecard + expander (013) ─────────────────────────────────────────
+function DebateScorecard({ result }: { result: QueryResponse }) {
+  const [open, setOpen] = useState(false)
+  const fs = result.final_scores
+  if (!fs) return null
+
+  const row = (label: string, v: number) => (
+    <div className="flex items-center gap-2">
+      <span className="font-mono text-[9px] w-20" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        {label}
+      </span>
+      <div className="flex-1 h-[3px]" style={{ background: 'rgba(255,255,255,0.05)' }}>
+        <div
+          style={{
+            width: `${Math.max(0, Math.min(1, v)) * 100}%`,
+            height: '100%',
+            background: v >= 0.75 ? '#a78bfa' : v >= 0.5 ? '#8b5cf6' : 'rgba(248,113,113,0.7)',
+          }}
+        />
+      </div>
+      <span className="font-mono text-[9px] w-8 text-right" style={{ color: 'rgba(255,255,255,0.5)' }}>
+        {v.toFixed(2)}
+      </span>
+    </div>
+  )
+
+  const advocate = result.debate?.advocate as { summary?: string; verdict?: string; model?: string } | null
+  const skeptic = result.debate?.skeptic as { summary?: string; verdict?: string; model?: string } | null
+
+  return (
+    <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+      <div className="flex items-center justify-between mb-2">
+        <p className="font-mono text-[9px] tracking-[0.25em] uppercase" style={{ color: 'rgba(255,255,255,0.18)' }}>
+          Scores
+        </p>
+        {result.debate?.judge_verdict && (
+          <p className="font-mono text-[9px] italic truncate ml-3" style={{ color: 'rgba(255,255,255,0.4)' }}>
+            {result.debate.judge_verdict}
+          </p>
+        )}
+      </div>
+      <div className="space-y-1.5">
+        {row('grounded', fs.groundedness)}
+        {row('faithful', fs.faithfulness)}
+        {row('complete', fs.completeness)}
+      </div>
+
+      {(advocate || skeptic) && (
+        <button
+          onClick={() => setOpen(v => !v)}
+          className="mt-3 flex items-center gap-1.5 font-mono text-[9px] uppercase tracking-[0.2em]"
+          style={{ color: 'rgba(167,139,250,0.7)' }}
+        >
+          <ChevronRight size={10} style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.15s' }} />
+          Debate
+        </button>
+      )}
+
+      {open && (
+        <div className="mt-3 space-y-3 pl-3" style={{ borderLeft: '1px solid rgba(139,92,246,0.15)' }}>
+          {advocate && (
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: 'rgba(167,139,250,0.85)' }}>
+                Advocate {advocate.model && `· ${advocate.model}`} {advocate.verdict && `· ${advocate.verdict}`}
+              </p>
+              <p className="font-mono text-[10px] mt-1 leading-[1.6]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                {advocate.summary ?? '—'}
+              </p>
+            </div>
+          )}
+          {skeptic && (
+            <div>
+              <p className="font-mono text-[9px] uppercase tracking-[0.2em]" style={{ color: 'rgba(248,113,113,0.8)' }}>
+                Skeptic {skeptic.model && `· ${skeptic.model}`} {skeptic.verdict && `· ${skeptic.verdict}`}
+              </p>
+              <p className="font-mono text-[10px] mt-1 leading-[1.6]" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                {skeptic.summary ?? '—'}
+              </p>
+            </div>
+          )}
+          {result.debate?.judge_model && (
+            <p className="font-mono text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>
+              Judge model: {result.debate.judge_model}
+            </p>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+
 function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: boolean }) {
   const result = msg.result
 
@@ -282,14 +374,44 @@ function AssistantBubble({ msg, isStreaming }: { msg: ChatMessage; isStreaming: 
           </div>
         )}
 
-        {/* Citations */}
-        {result && !isStreaming && (result.web_sources?.length > 0 || result.retrieved_docs?.length > 0) && (
+        {/* Debate scores + verdict (013) */}
+        {result?.final_scores && !isStreaming && (
+          <DebateScorecard result={result} />
+        )}
+
+        {/* Citations — prefer judge_sources when the debate pipeline produced them,
+            otherwise fall back to the full retrieved sources list. */}
+        {result && !isStreaming && (
+          result.judge_sources?.length > 0 ||
+          result.web_sources?.length > 0 ||
+          result.retrieved_docs?.length > 0
+        ) && (
           <div className="mt-4 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
             <p className="font-mono text-[9px] tracking-[0.25em] uppercase mb-2.5" style={{ color: 'rgba(255,255,255,0.18)' }}>
               Sources
             </p>
             <div className="space-y-2">
-              {result.web_sources?.map((src, i) => (
+              {result.judge_sources?.length > 0
+                ? result.judge_sources.map(js => (
+                    <div key={`js${js.index}`} className="flex items-start gap-2">
+                      <span className="font-mono text-[9px] shrink-0 mt-0.5" style={{ color: '#a78bfa' }}>
+                        [W{js.index}]
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <a
+                          href={js.url} target="_blank" rel="noopener noreferrer"
+                          className="font-mono text-[10px] block truncate hover:underline"
+                          style={{ color: '#a78bfa' }}
+                        >
+                          {js.title || js.url}
+                        </a>
+                        <p className="font-mono text-[9px] mt-0.5 truncate" style={{ color: 'rgba(255,255,255,0.22)' }}>
+                          {js.url}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                : result.web_sources?.map((src, i) => (
                 <div key={`w${i}`} className="flex items-start gap-2">
                   <span className="font-mono text-[9px] shrink-0 mt-0.5" style={{ color: '#a78bfa' }}>[W{i + 1}]</span>
                   <div className="min-w-0 flex-1">
