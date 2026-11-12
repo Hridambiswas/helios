@@ -183,4 +183,80 @@ plus the Gemini model bump and the demo scripts).
 
 Demo is left **running on http://localhost:3000**.
 
+## Revision 1 — tightening pass
+
+Five follow-up fixes landed on `local-backup-test` after the first report:
+
+1. **Answerer 12 s + Groq fallback** (`159d5e8`). Gemini call capped at 12 s
+   via `ThreadPoolExecutor.future.result(timeout=)`. On timeout OR raise, we
+   immediately fall back to the advocate's Groq model (also 12 s). Keeps
+   the total query budget ≈ 30 s (answerer ≤24 s + debate ≈4 s +
+   judge ≈2 s + scorer ≈1 s).
+2. **Judge model → Qwen** (`c4ae435`). Groq on this account only serves
+   OpenAI + Qwen chat families (no Llama chat model — only
+   `meta-llama/llama-prompt-guard-2-*` safety classifiers), so the judge
+   moves to `qwen/qwen3.8-27b`: a different family than the advocate's
+   `openai/gpt-oss-120b`. If Groq later serves a Llama chat model, point
+   `JUDGE_MODEL` at it. Also tightened `judge_timeout_seconds` 60 → 20.
+3. **Judge must cite + honest empty-search** (`9505cf3`). Judge prompt now
+   requires ≥2 `[W#]` citations whenever `web_sources` is non-empty, plus
+   a Sources section. Python-side post-check `_force_citations` appends a
+   "Supporting sources (added)" block if the model forgets. If search
+   returned nothing, the answer opens with "Web search returned no usable
+   results, so this is based on model knowledge." Judge NO LONGER scores.
+4. **Independent ScorerAgent** (`7792e7a`). New node: `answerer → debate
+   → judge → **scorer** → verifier`. The scorer uses the skeptic model
+   (Qwen) with its own strict prompt — "vague answers / near-empty
+   replies MUST score low." Separate model + separate prompt from the
+   author of the final answer.
+5. **Frontend scroll** (`b48e014`). `min-h-0` on the messages container
+   (parent is `flex-col`, child is `flex-1` — without `min-h-0` the
+   child couldn't shrink below its intrinsic height, so long streams
+   pushed the input bar off-screen). Auto-scroll on new messages and on
+   each streamed token ONLY when the user is within 160 px of the bottom,
+   so reading older messages isn't yanked away.
+
+Why the first Q2 (ETH) had `cited_web=[]`: traced in the logs. The Gemini
+answerer timed out at the old 30 s cap, the Groq fallback produced a draft
+without `[W]` citations, and the old judge prompt didn't require any.
+The rev-1 judge prompt + `_force_citations` repair makes this impossible —
+any non-empty `web_sources` is now guaranteed to yield at least two `[W#]`
+in the body (either from the LLM or auto-appended).
+
+### Retest (clean cache, Redis `FLUSHDB`, fresh pipeline)
+
+| Query                                 | Time   | Cited `[W]` | `judge_sources` | Final scores (G/F/C → overall)  |
+|---                                    |---     |---          |---              |---                               |
+| "who was albert einstein"             | 47.9 s | [1,2,3,4,5] | 5               | 0.70 / 0.70 / 1.00 → **0.80**   |
+| "ETH Zurich MSc CS deadline"          | 43.0 s | [1,3]       | 2               | 1.00 / 1.00 / 0.70 → **0.90**   |
+| nonsense ("plurk-glorg quapatatic…")  | 42.9 s | [1,2] (auto)| 2               | 1.00 / 1.00 / **0.10** → 0.70   |
+
+Note: the ≈45 s latency comes from Gemini's answerer still overloading on
+every retry — logs show `answerer=openai/gpt-oss-120b` on all three, i.e.
+the Groq fallback took over each time. When Gemini free-tier is healthy
+the budget drops back toward 30 s. Advocate + skeptic + judge + scorer
+all land as planned: advocate=openai/gpt-oss-120b, skeptic=qwen/qwen3.8-27b,
+judge=qwen/qwen3.8-27b, scorer=qwen/qwen3.8-27b.
+
+The nonsense question is the honesty check: the scorer (which did NOT
+write the answer) gave it **completeness 0.10** — a real low score from
+a Qwen model grading a Qwen-written answer about "plurk-glorg…"
+that correctly refused to invent lore.
+
+Raw payloads: `demo/logs/rev1-q{1,2,3}-*.json`.
+
+Unit tests after rev-1: `pytest -q tests/test_debate_pipeline.py` → **10
+passed** (adds coverage for the citation-repair path and for the scorer's
+empty / JSON-parsing / low-completeness paths).
+
+### Rev-1 commits (5)
+
+```
+b48e014 fix(frontend): min-h-0 + near-bottom auto-scroll while streaming
+7792e7a feat(pipeline): add independent ScorerAgent on the skeptic model
+9505cf3 fix(judge): enforce 2+ web citations, no self-scoring, honest empty-search
+c4ae435 feat(config): judge on Qwen (diff family from advocate), add scorer_model
+159d5e8 fix(answerer): tighten timeouts to 12s each (Gemini primary + Groq fallback)
+```
+
 STATUS: DEBATE PIPELINE RUNNING
