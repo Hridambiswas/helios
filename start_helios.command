@@ -37,8 +37,11 @@ echo "  venv python : $VENV_PY"
 # ── Pre-flight: ports must be free ────────────────────────────────────────
 echo ""
 echo "[1/8] Checking required ports…"
+# Only the ports the demo itself will *open*. 5432 (Postgres) and 6379
+# (Redis) are served by brew services that are already listening — we
+# WANT them to be busy, and we check them below.
 port_busy=0
-for port in 3000 8000 5432 6379 9000 9001 8001; do
+for port in 3000 8000 9000 9001 8001; do
   if ! "$SCRIPT_DIR/scripts/port_check.sh" "$port"; then
     port_busy=1
   fi
