@@ -10,7 +10,6 @@
 from __future__ import annotations
 import json
 import re
-from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
 from typing import Any
 
 from langchain_groq import ChatGroq
@@ -18,6 +17,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
 from agents.base import BaseAgent
+from agents._groq_call import invoke_groq_with_retry
 
 
 _SYSTEM_PROMPT = """\
@@ -100,7 +100,12 @@ class JudgeAgent(BaseAgent):
             HumanMessage(content=user_msg),
         ]
         try:
-            raw = self._invoke_with_timeout(messages, cfg.judge_timeout_seconds)
+            raw = invoke_groq_with_retry(
+                self._llm, messages,
+                agent_name="judge",
+                per_call_timeout=8.0,
+                attempts=2,
+            )
         except Exception as exc:
             self.logger.warning("judge failed (%s); using draft as final answer", exc)
             return self._fallback_payload(state, draft, web, docs, reason=str(exc))
@@ -216,21 +221,6 @@ class JudgeAgent(BaseAgent):
         return final.rstrip() + "\n\n" + "\n".join(lines)
 
     # ── helpers ───────────────────────────────────────────────────────────────
-
-    def _invoke_with_timeout(self, messages, timeout_seconds: float) -> str:
-        def _call() -> str:
-            resp = self._llm.invoke(messages, timeout=timeout_seconds)
-            return (
-                resp.content if isinstance(resp.content, str) else str(resp.content)
-            ).strip()
-
-        with ThreadPoolExecutor(max_workers=1) as pool:
-            fut = pool.submit(_call)
-            try:
-                return fut.result(timeout=timeout_seconds)
-            except FuturesTimeout as exc:
-                fut.cancel()
-                raise TimeoutError(f"judge exceeded {timeout_seconds}s") from exc
 
     @staticmethod
     def _parse(raw: str) -> dict | None:

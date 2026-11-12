@@ -18,6 +18,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
 from agents.base import BaseAgent
+from agents._groq_call import invoke_groq_with_retry
 
 
 _ADVOCATE_SYSTEM = """\
@@ -106,13 +107,15 @@ class _DebateCriticBase(BaseAgent):
                 HumanMessage(content=user_msg),
             ]
             try:
-                resp = self._llm.invoke(messages, timeout=30)
-                raw = (
-                    resp.content if isinstance(resp.content, str) else str(resp.content)
-                ).strip()
+                raw = invoke_groq_with_retry(
+                    self._llm, messages,
+                    agent_name=self.name,
+                    per_call_timeout=8.0,
+                    attempts=2,
+                )
                 payload = self._parse(raw)
             except Exception as exc:
-                self.logger.warning("%s failed: %s", self.name, exc)
+                self.logger.warning("%s failed after retries: %s", self.name, exc)
                 payload = self._empty_payload()
 
         # Tag the payload with provider/model so the UI can show them.
