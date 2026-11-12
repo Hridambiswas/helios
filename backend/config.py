@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     groq_api_key: SecretStr = SecretStr("")
     groq_model: str = "openai/gpt-oss-120b"
     gemini_api_key: SecretStr = SecretStr("")
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-flash-lite-latest"
     embedding_model: str = "BAAI/bge-small-en-v1.5"
 
     # ── Debate pipeline models (013) ──────────────────────────────────────────
@@ -31,7 +31,7 @@ class Settings(BaseSettings):
     #   draft in parallel.
     # judge: a third family if available, otherwise the advocate model
     #   with a judge prompt. Writes the final user-facing answer.
-    answerer_model: str = "gemini-3.8-flash"
+    answerer_model: str = "gemini-flash-lite-latest"
     advocate_model: str = "openai/gpt-oss-120b"
     # Skeptic + Judge land on the Qwen family so the judge's final answer
     # is written by a different family than the advocate's defence. This
