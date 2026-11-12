@@ -21,6 +21,31 @@ from agents.base import BaseAgent
 logger = logging.getLogger("helios.agents.answerer")
 
 
+# HTTP status codes that mean "Gemini won't serve this right now" — retrying
+# only wastes the query's time budget, so the answerer short-circuits
+# straight to the Groq fallback when any of these shows up.
+_FAIL_FAST_STATUSES = (429, 503, 502, 504)
+
+
+def _extract_status(exc: BaseException) -> int | None:
+    """Fish the HTTP status out of a google-genai / grpc / httpx error."""
+    # google-genai errors carry a `code` attribute
+    code = getattr(exc, "code", None)
+    if isinstance(code, int) and 100 <= code < 600:
+        return code
+    # grpc status wrapped
+    for attr in ("status_code", "http_status"):
+        v = getattr(exc, attr, None)
+        if isinstance(v, int) and 100 <= v < 600:
+            return v
+    # Fallback: parse the message
+    s = str(exc)
+    for probe in _FAIL_FAST_STATUSES + (500, 400, 401, 403, 404):
+        if f" {probe} " in s or f"({probe})" in s or s.startswith(f"{probe} "):
+            return probe
+    return None
+
+
 def _answerer_call(llm, messages, timeout_seconds: float) -> str:
     resp = llm.invoke(messages, timeout=timeout_seconds)
     return (
@@ -101,12 +126,24 @@ class AnswererAgent(BaseAgent):
         try:
             draft = self._invoke_with_timeout(self._llm, messages, 12.0)
         except Exception as exc:
-            self.logger.warning("answerer: gemini failed (%s); falling back to groq", exc)
+            status = _extract_status(exc)
+            if status in _FAIL_FAST_STATUSES:
+                # Known "retrying won't help" status — go straight to Groq,
+                # no backoff, no second attempt against Gemini.
+                self.logger.warning(
+                    "answerer: gemini returned %d — immediate groq fallback (no retry)",
+                    status,
+                )
+            else:
+                self.logger.warning(
+                    "answerer: gemini failed (status=%s, %s); falling back to groq",
+                    status, exc,
+                )
             draft = ""
 
         if not draft:
-            # Primary (Gemini) empty or timed out — try the Groq fallback so
-            # the pipeline still produces a draft.
+            # Primary unavailable — Groq fallback so the pipeline still
+            # produces a draft.
             try:
                 draft = self._invoke_with_timeout(self._fallback, messages, 12.0)
                 provider = "groq"
