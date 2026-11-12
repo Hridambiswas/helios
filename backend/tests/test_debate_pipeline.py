@@ -111,14 +111,23 @@ class TestJudge:
 
     def test_judge_writes_final_answer(self, state_with_draft):
         from agents.judge import JudgeAgent
+        # Draft has two [W#] citations so the judge doesn't trigger
+        # the auto-citation repair path.
+        state_with_draft_two_webs = {
+            **state_with_draft,
+            "web_sources": [
+                {"title": "CARLE paper", "url": "https://example.com/carle", "snippet": "…"},
+                {"title": "Compression survey", "url": "https://example.com/survey", "snippet": "…"},
+            ],
+        }
         judge_output = {
             "final_answer": (
-                "CARLE is a lossless semantic compression method [W1]. "
-                "**Sources:** - [W1] CARLE paper — https://example.com/carle"
+                "CARLE is a lossless semantic compression method [W1][W2].\n\n"
+                "**Sources:**\n- [W1] CARLE paper — https://example.com/carle\n"
+                "- [W2] Compression survey — https://example.com/survey"
             ),
-            "scores": {"groundedness": 0.9, "faithfulness": 0.9, "completeness": 0.8},
             "verdict": "confirmed draft",
-            "cited_web_indices": [1],
+            "cited_web_indices": [1, 2],
             "cited_doc_indices": [],
         }
         with patch("agents.judge.ChatGroq") as mock_groq:
@@ -128,18 +137,47 @@ class TestJudge:
 
             agent = JudgeAgent()
             out = agent._run({
-                **state_with_draft,
+                **state_with_draft_two_webs,
                 "advocate_critique": {"summary": "ok"},
                 "skeptic_critique": {"summary": "ok"},
             })
 
         assert out["answer"].startswith("CARLE is a lossless semantic compression")
-        assert out["final_scores"]["groundedness"] == 0.9
-        # overall is recomputed from the three dims
-        assert 0.0 <= out["final_scores"]["overall"] <= 1.0
-        assert out["judge_sources"][0]["url"] == "https://example.com/carle"
+        assert out["cited_web_indices"] == [1, 2]
+        assert {s["url"] for s in out["judge_sources"]} == {
+            "https://example.com/carle", "https://example.com/survey",
+        }
         assert out["judge_verdict"] == "confirmed draft"
+        # Judge no longer self-grades — scorer runs next.
+        assert "final_scores" not in out or out.get("final_scores") is None
         assert out.get("judge_fallback") is not True
+
+    def test_judge_auto_repairs_missing_citations(self, state_with_draft):
+        """If web sources exist but judge cites <2, auto-cite the top results."""
+        from agents.judge import JudgeAgent
+        state = {
+            **state_with_draft,
+            "web_sources": [
+                {"title": "A", "url": "https://a.test", "snippet": "…"},
+                {"title": "B", "url": "https://b.test", "snippet": "…"},
+                {"title": "C", "url": "https://c.test", "snippet": "…"},
+            ],
+        }
+        judge_output = {
+            "final_answer": "CARLE compresses meaning without loss.",  # no [W]
+            "verdict": "confirmed draft",
+            "cited_web_indices": [],
+            "cited_doc_indices": [],
+        }
+        with patch("agents.judge.ChatGroq") as mock_groq:
+            mock_llm = MagicMock()
+            mock_llm.invoke.return_value.content = json.dumps(judge_output)
+            mock_groq.return_value = mock_llm
+
+            out = JudgeAgent()._run({**state, "advocate_critique": {}, "skeptic_critique": {}})
+
+        assert len(out["cited_web_indices"]) >= 2
+        assert "Supporting sources" in out["answer"]
 
     def test_judge_fallback_when_llm_raises(self, state_with_draft):
         """Pipeline must never return an empty answer — judge fallback keeps the draft."""
@@ -155,7 +193,36 @@ class TestJudge:
 
         assert out["answer"] == state_with_draft["draft_answer"]
         assert out["judge_fallback"] is True
-        assert out["final_scores"]["overall"] == 0.5
+
+
+class TestScorer:
+
+    def test_scorer_strict_low_for_empty(self):
+        from agents.scorer import ScorerAgent
+        with patch("agents.scorer.ChatGroq"):
+            agent = ScorerAgent()
+            out = agent._run({"query": "q", "answer": "", "web_sources": [], "retrieved_docs": []})
+        assert out["final_scores"]["overall"] == 0.0
+
+    def test_scorer_parses_json(self):
+        from agents.scorer import ScorerAgent
+        with patch("agents.scorer.ChatGroq"):
+            agent = ScorerAgent()
+            agent._llm = MagicMock()
+            agent._llm.invoke.return_value.content = json.dumps({
+                "groundedness": 0.2,
+                "faithfulness": 0.9,
+                "completeness": 0.4,
+                "reasoning": "Mostly unsupported."
+            })
+            out = agent._run({
+                "query": "q", "answer": "x", "web_sources": [{"title": "t", "url": "u", "snippet": "s"}],
+                "retrieved_docs": [], "cited_web_indices": [], "cited_doc_ids": [],
+            })
+        fs = out["final_scores"]
+        assert fs["groundedness"] == 0.2
+        assert 0.3 < fs["overall"] < 0.6
+        assert "unsupported" in fs["reasoning"].lower()
 
 
 # ── Verifier: hard timeout path (regression from 012) ─────────────────────────

@@ -17,6 +17,7 @@ from agents.executor import ExecutorAgent
 from agents.answerer import AnswererAgent
 from agents.debate_critics import AdvocateCriticAgent, SkepticCriticAgent
 from agents.judge import JudgeAgent
+from agents.scorer import ScorerAgent
 from agents.verifier import VerifierAgent
 from observability.metrics import pipeline_latency_histogram, pipeline_requests_counter
 from observability.tracing import span
@@ -77,13 +78,14 @@ _answerer: AnswererAgent | None = None
 _advocate: AdvocateCriticAgent | None = None
 _skeptic: SkepticCriticAgent | None = None
 _judge: JudgeAgent | None = None
+_scorer: ScorerAgent | None = None
 _verifier: VerifierAgent | None = None
 _init_lock = threading.Lock()
 
 
 def _ensure_agents() -> None:
     global _planner, _retriever, _executor, _answerer
-    global _advocate, _skeptic, _judge, _verifier
+    global _advocate, _skeptic, _judge, _scorer, _verifier
     if _planner is not None:
         return
     with _init_lock:
@@ -97,6 +99,7 @@ def _ensure_agents() -> None:
         _advocate = AdvocateCriticAgent()
         _skeptic = SkepticCriticAgent()
         _judge = JudgeAgent()
+        _scorer = ScorerAgent()
         from config import cfg as _cfg
         if _cfg.verifier_enabled:
             _verifier = VerifierAgent()
@@ -178,6 +181,14 @@ def node_judge(state: HeliosState) -> HeliosState:
         return _judge.run(state)  # type: ignore
 
 
+def node_scorer(state: HeliosState) -> HeliosState:
+    """Independent scoring pass — different model + prompt from the judge."""
+    _ensure_agents()
+    _emit_stage(state, "scoring")
+    with span("helios.scorer"):
+        return _scorer.run(state)  # type: ignore
+
+
 def node_verifier(state: HeliosState) -> HeliosState:
     _ensure_agents()
     if _verifier is None:  # verifier disabled via config
@@ -222,6 +233,7 @@ def _build_graph() -> StateGraph:
     g.add_node("answerer",   node_answerer)    # type: ignore
     g.add_node("debate",     node_debate)      # type: ignore (advocate ‖ skeptic)
     g.add_node("judge",      node_judge)       # type: ignore
+    g.add_node("scorer",     node_scorer)      # type: ignore (independent)
     g.add_node("verifier",   node_verifier)    # type: ignore
 
     g.set_entry_point("planner")
@@ -237,7 +249,8 @@ def _build_graph() -> StateGraph:
     g.add_edge("executor", "answerer")
     g.add_edge("answerer", "debate")
     g.add_edge("debate",   "judge")
-    g.add_edge("judge",    "verifier")
+    g.add_edge("judge",    "scorer")
+    g.add_edge("scorer",   "verifier")
     g.add_edge("verifier", END)
 
     return g
