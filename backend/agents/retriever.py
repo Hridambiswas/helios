@@ -66,6 +66,11 @@ def _web_search(query: str, max_results: int = 4) -> list[dict]:
         return []
 
 
+def web_search(query: str, max_results: int = 6) -> list[dict]:
+    """Public wrapper used by the debate pipeline — always runs, never raises."""
+    return _web_search(query, max_results=max_results)
+
+
 class RetrieverAgent(BaseAgent):
     """
     Hybrid retriever: FastEmbed dense + BM25 sparse merged via RRF.
@@ -83,8 +88,12 @@ class RetrieverAgent(BaseAgent):
         query: str = state["query"]
 
         if not plan.get("requires_retrieval", True):
-            self.logger.info("Retrieval skipped — plan says not required")
-            return {**state, "retrieved_docs": [], "web_sources": []}
+            # Even when local retrieval is skipped, still run web search —
+            # the debate pipeline's primary path doesn't depend on uploaded
+            # docs, but it always benefits from fresh web context.
+            self.logger.info("Local retrieval skipped — web search only")
+            web_sources = _web_search(query, max_results=cfg.debate_web_top_k)
+            return {**state, "retrieved_docs": [], "web_sources": web_sources}
 
         top_k = cfg.retriever_top_k
 
@@ -121,7 +130,7 @@ class RetrieverAgent(BaseAgent):
         retrieval_docs_histogram.labels(source="merged").observe(len(merged))
 
         # ── Web search — always runs to provide up-to-date context ────────────
-        web_sources = _web_search(query, max_results=4)
+        web_sources = _web_search(query, max_results=cfg.debate_web_top_k)
         self.logger.info(
             "Retrieved %d local docs (dense=%d bm25=%d merged=%d) + %d web results",
             len(merged), len(dense_hits), len(sparse_hits), len(merged), len(web_sources),
