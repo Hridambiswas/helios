@@ -33,12 +33,14 @@ class Settings(BaseSettings):
     #   with a judge prompt. Writes the final user-facing answer.
     answerer_model: str = "gemini-flash-lite-latest"
     advocate_model: str = "openai/gpt-oss-120b"
-    # Skeptic + Judge land on the Qwen family so the judge's final answer
-    # is written by a different family than the advocate's defence. This
-    # account's Groq key only serves two chat families (OpenAI + Qwen) —
-    # no Llama chat model is available.
+    # Skeptic stays on Qwen (different family from advocate) so the two
+    # debate voices really are different models. Judge is back on the
+    # OpenAI-family gpt-oss-120b after the Qwen judge was observed citing
+    # zero of six available web sources on several queries — fidelity to
+    # the retrieved evidence matters more here than family-diversity. The
+    # scorer still runs on the skeptic model, so grading is NOT self-done.
     skeptic_model: str = "qwen/qwen3.8-27b"
-    judge_model: str = "qwen/qwen3.8-27b"
+    judge_model: str = "openai/gpt-oss-120b"
     # The scorer re-uses the skeptic model (different prompt, different role)
     # so scoring is NOT self-graded by the author of the final answer.
     scorer_model: str = "qwen/qwen3.8-27b"
