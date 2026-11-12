@@ -204,6 +204,7 @@ async def ws_query(websocket: WebSocket):
                             "judge_model": state.get("judge_model"),
                             "judge_verdict": state.get("judge_verdict"),
                         },
+                        "stage_timings_ms": state.get("stage_timings_ms") or {},
                         "verifier_scores": state.get("verifier_scores"),
                         "verifier_passed": state.get("verifier_passed"),
                         "retrieved_doc_count": len(state.get("retrieved_docs", [])),

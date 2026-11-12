@@ -239,6 +239,7 @@ async def query(body: QueryRequest, current_user: OptionalUser):
         final_scores=state.get("final_scores"),
         judge_sources=judge_sources,  # type: ignore[arg-type]
         debate=debate_payload,  # type: ignore[arg-type]
+        stage_timings_ms=state.get("stage_timings_ms") or {},
         verifier_scores=state.get("verifier_scores"),
         verifier_passed=state.get("verifier_passed"),
         follow_up_questions=state.get("follow_up_questions", []),

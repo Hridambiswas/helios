@@ -180,6 +180,7 @@ class QueryResponse(BaseModel):
     final_scores: FinalScores | None = None
     judge_sources: list[JudgeSource] = []
     debate: DebatePayload | None = None
+    stage_timings_ms: dict[str, float] = {}
     verifier_scores: VerifierScores | None = None
     verifier_passed: bool | None = None
     follow_up_questions: list[str] = []

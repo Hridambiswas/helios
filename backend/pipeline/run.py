@@ -64,6 +64,7 @@ class HeliosState(TypedDict, total=False):
 
     _token_callback: Optional[Callable[[str], None]]  # set by websocket; not persisted
     _stage_callback: Optional[Callable[[str, dict], None]]  # WS stage events
+    stage_timings_ms: dict           # per-stage ms, keyed by stage name
     error: Optional[str]
     failed_agent: Optional[str]
     pipeline_start_ms: Optional[float]
@@ -120,73 +121,125 @@ def _emit_stage(state: HeliosState, stage: str, extra: dict | None = None) -> No
         logger.warning("stage callback for %s raised %s", stage, exc)
 
 
+def _record_stage(state: HeliosState, stage: str, started_ms: float) -> None:
+    """
+    Log + emit the duration of a pipeline stage. Appends to state["stage_timings_ms"]
+    so the API/WS layer can surface per-stage latency.
+    """
+    elapsed = (time.perf_counter() * 1000) - started_ms
+    timings = state.setdefault("stage_timings_ms", {})  # type: ignore[misc]
+    timings[stage] = round(elapsed, 1)
+    logger.info("stage '%s' finished in %.1fms", stage, elapsed)
+    _emit_stage(state, "stage_done", {"stage": stage, "elapsed_ms": round(elapsed, 1)})
+
+
 # ── Node wrappers ─────────────────────────────────────────────────────────────
 
 def node_planner(state: HeliosState) -> HeliosState:
     _ensure_agents()
     _emit_stage(state, "planning")
+    t0 = time.perf_counter() * 1000
     with span("helios.planner", {"query": state.get("query", "")[:80]}):
-        return _planner.run(state)  # type: ignore
+        out = _planner.run(state)  # type: ignore
+    _record_stage(out, "planner", t0)
+    return out
 
 
 def node_researcher(state: HeliosState) -> HeliosState:
     """DuckDuckGo web search + optional hybrid local retrieval."""
     _ensure_agents()
     _emit_stage(state, "researching")
+    t0 = time.perf_counter() * 1000
     with span("helios.researcher"):
-        return _retriever.run(state)  # type: ignore
+        out = _retriever.run(state)  # type: ignore
+    _record_stage(out, "researcher", t0)
+    return out
 
 
 def node_executor(state: HeliosState) -> HeliosState:
     _ensure_agents()
+    t0 = time.perf_counter() * 1000
     with span("helios.executor"):
-        return _executor.run(state)  # type: ignore
+        out = _executor.run(state)  # type: ignore
+    _record_stage(out, "executor", t0)
+    return out
 
 
 def node_answerer(state: HeliosState) -> HeliosState:
     _ensure_agents()
     _emit_stage(state, "drafting")
+    t0 = time.perf_counter() * 1000
     with span("helios.answerer"):
-        return _answerer.run(state)  # type: ignore
+        out = _answerer.run(state)  # type: ignore
+    _record_stage(out, "answerer", t0)
+    return out
 
 
 def node_debate(state: HeliosState) -> HeliosState:
-    """Run advocate + skeptic in parallel threads and merge their outputs."""
+    """
+    Run advocate + skeptic truly in parallel via a 2-worker thread pool.
+    Each critic lives behind its own bulkhead (different agent names ->
+    different semaphores), so they don't block each other.
+
+    Logs each agent's observed wall-time plus the combined stage time —
+    if the sum of individual times is >> stage time, parallelism is real.
+    """
     _ensure_agents()
     _emit_stage(state, "advocating")
+    _emit_stage(state, "skeptic")  # fire both so the UI can show both bars
+    stage_t0 = time.perf_counter() * 1000
     with span("helios.debate"):
-        # Each critic is isolated by a bulkhead inside BaseAgent.run(), so
-        # running them in a 2-thread pool is safe.
-        with ThreadPoolExecutor(max_workers=2) as pool:
+        with ThreadPoolExecutor(max_workers=2, thread_name_prefix="debate") as pool:
+            adv_t0 = time.perf_counter() * 1000
+            skp_t0 = time.perf_counter() * 1000
             fa = pool.submit(_advocate.run, state)   # type: ignore
             fs = pool.submit(_skeptic.run, state)    # type: ignore
-            _emit_stage(state, "skeptic")
             adv_state = fa.result()
+            adv_ms = (time.perf_counter() * 1000) - adv_t0
             skp_state = fs.result()
+            skp_ms = (time.perf_counter() * 1000) - skp_t0
+        stage_ms = (time.perf_counter() * 1000) - stage_t0
+        logger.info(
+            "debate parallelism: advocate=%.1fms skeptic=%.1fms stage=%.1fms "
+            "serial-would-be=%.1fms savings=%.1fms",
+            adv_ms, skp_ms, stage_ms, adv_ms + skp_ms, (adv_ms + skp_ms) - stage_ms,
+        )
         merged: dict[str, Any] = {**state}
         merged["advocate_critique"] = adv_state.get("advocate_critique")
         merged["skeptic_critique"] = skp_state.get("skeptic_critique")
+        merged.setdefault("stage_timings_ms", {}).update({   # type: ignore[union-attr]
+            "advocate_wall_ms": round(adv_ms, 1),
+            "skeptic_wall_ms": round(skp_ms, 1),
+            "debate_parallel_ms": round(stage_ms, 1),
+        })
         # Surface either agent's error without blocking the pipeline.
         for src in (adv_state, skp_state):
             if src.get("error") and not merged.get("error"):
                 merged["error"] = src["error"]
                 merged["failed_agent"] = src.get("failed_agent")
-        return merged  # type: ignore
+    _record_stage(merged, "debate", stage_t0)  # type: ignore[arg-type]
+    return merged  # type: ignore
 
 
 def node_judge(state: HeliosState) -> HeliosState:
     _ensure_agents()
     _emit_stage(state, "judging")
+    t0 = time.perf_counter() * 1000
     with span("helios.judge"):
-        return _judge.run(state)  # type: ignore
+        out = _judge.run(state)  # type: ignore
+    _record_stage(out, "judge", t0)
+    return out
 
 
 def node_scorer(state: HeliosState) -> HeliosState:
     """Independent scoring pass — different model + prompt from the judge."""
     _ensure_agents()
     _emit_stage(state, "scoring")
+    t0 = time.perf_counter() * 1000
     with span("helios.scorer"):
-        return _scorer.run(state)  # type: ignore
+        out = _scorer.run(state)  # type: ignore
+    _record_stage(out, "scorer", t0)
+    return out
 
 
 def node_verifier(state: HeliosState) -> HeliosState:
@@ -195,9 +248,11 @@ def node_verifier(state: HeliosState) -> HeliosState:
         _emit_stage(state, "done")
         return {**state, "verifier_scores": None, "verifier_passed": None}  # type: ignore[typeddict-item]
     _emit_stage(state, "verifying")
+    t0 = time.perf_counter() * 1000
     with span("helios.verifier"):
         result = _verifier.run(state)  # type: ignore
-    _emit_stage(state, "done")
+    _record_stage(result, "verifier", t0)
+    _emit_stage(result, "done")
     return result
 
 
