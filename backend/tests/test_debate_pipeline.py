@@ -152,8 +152,8 @@ class TestJudge:
         assert "final_scores" not in out or out.get("final_scores") is None
         assert out.get("judge_fallback") is not True
 
-    def test_judge_auto_repairs_missing_citations(self, state_with_draft):
-        """If web sources exist but judge cites <2, auto-cite the top results."""
+    def test_judge_appends_related_but_does_not_count_as_citations(self, state_with_draft):
+        """Related-results fallback MUST NOT inflate cited_web/judge_sources."""
         from agents.judge import JudgeAgent
         state = {
             **state_with_draft,
@@ -176,8 +176,16 @@ class TestJudge:
 
             out = JudgeAgent()._run({**state, "advocate_critique": {}, "skeptic_critique": {}})
 
-        assert len(out["cited_web_indices"]) >= 2
-        assert "Supporting sources" in out["answer"]
+        # Honest counts — the judge cited zero, period.
+        assert out["cited_web_indices"] == []
+        assert out["judge_sources"] == []
+        assert out["judge_cited_count"] == 0
+        assert out["judge_auto_related"] is True
+        # The labelled block IS appended, but under the honest heading.
+        assert "Related search results (not used in the answer)" in out["answer"]
+        # And it must not add fake [W#] markers to the body.
+        import re
+        assert re.search(r"\[W\d+\]", out["answer"]) is None
 
     def test_judge_fallback_when_llm_raises(self, state_with_draft):
         """Pipeline must never return an empty answer — judge fallback keeps the draft."""
@@ -203,6 +211,27 @@ class TestScorer:
             agent = ScorerAgent()
             out = agent._run({"query": "q", "answer": "", "web_sources": [], "retrieved_docs": []})
         assert out["final_scores"]["overall"] == 0.0
+
+    def test_scorer_caps_groundedness_when_judge_undercites(self):
+        """Judge cited <2 of N web sources -> scorer caps groundedness at 0.5."""
+        from agents.scorer import ScorerAgent
+        with patch("agents.scorer.ChatGroq"):
+            agent = ScorerAgent()
+            agent._llm = MagicMock()
+            # LLM would otherwise give a high groundedness; the cap must kick in.
+            agent._llm.invoke.return_value.content = json.dumps({
+                "groundedness": 0.9, "faithfulness": 0.9, "completeness": 0.9,
+                "reasoning": "looks good"
+            })
+            out = agent._run({
+                "query": "q", "answer": "x",
+                "web_sources": [{"title": "t", "url": "u", "snippet": "s"}] * 3,
+                "retrieved_docs": [], "cited_web_indices": [], "cited_doc_ids": [],
+                "judge_cited_count": 0,
+            })
+        fs = out["final_scores"]
+        assert fs["groundedness"] == 0.5
+        assert "capped at 0.5" in fs["reasoning"]
 
     def test_scorer_parses_json(self):
         from agents.scorer import ScorerAgent

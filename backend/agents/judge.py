@@ -117,26 +117,37 @@ class JudgeAgent(BaseAgent):
         cited_web = sorted({int(x) for x in re.findall(r"\[W(\d+)\]", final)})
         cited_docs = sorted({int(x) for x in re.findall(r"\[D(\d+)\]", final)})
 
-        # Enforce the "if web_sources exist, cite ≥2 of them" rule.
-        if web and len(cited_web) < 2:
+        # Number of citations the JUDGE itself produced in the body.
+        # Used by the scorer to penalise low-citation answers.
+        judge_cited_count = len(cited_web)
+        auto_related_added = False
+
+        # If web_sources existed but the judge cited <2, append a labeled
+        # "Related search results (not used in the answer)" block. These are
+        # NOT citations — they do not go into cited_web or judge_sources,
+        # and the scorer knows to dock groundedness.
+        if web and judge_cited_count < 2:
             self.logger.warning(
                 "judge cited only %d web sources (web_sources=%d available); "
-                "forcing citation repair",
-                len(cited_web), len(web),
+                "appending Related search results (not citations)",
+                judge_cited_count, len(web),
             )
-            final, cited_web = self._force_citations(final, web, cited_web)
-            verdict = (verdict + " [citations auto-added]")[:280]
+            final = self._append_related_results(final, web, already_cited=cited_web)
+            auto_related_added = True
+            verdict = (verdict + " [related results appended]")[:280]
 
-        # If any [W#] was cited, make sure the answer ends with a Sources block.
+        # If the judge DID cite but forgot the Sources block, add it now.
+        # Only citations the judge itself made are listed here.
         if cited_web and "**Sources:**" not in final and "Sources:" not in final[-400:]:
             final = self._append_sources_block(final, web, cited_web)
 
-        # If search returned nothing, make the first sentence say so.
+        # If search returned nothing, open the answer with the honest note.
         if not web and not cited_web:
             opener = "Web search returned no usable results, so this is based on model knowledge. "
             if not final.lower().startswith("web search"):
                 final = opener + final
 
+        # judge_sources contains ONLY what the judge actually cited.
         sources = [
             {"index": i, "title": web[i-1].get("title",""), "url": web[i-1].get("url","")}
             for i in cited_web if 1 <= i <= len(web)
@@ -144,8 +155,8 @@ class JudgeAgent(BaseAgent):
 
         self.logger.info(
             "judge wrote final: %d chars, cited_web=%s cited_docs=%s, model=%s "
-            "(web_sources_in=%d)",
-            len(final), cited_web, cited_docs, self._model, len(web),
+            "(web_sources_in=%d, auto_related=%s)",
+            len(final), cited_web, cited_docs, self._model, len(web), auto_related_added,
         )
         return {
             **state,
@@ -153,6 +164,8 @@ class JudgeAgent(BaseAgent):
             # final_scores intentionally omitted here — ScorerAgent fills it.
             "judge_verdict": verdict,
             "judge_sources": sources,
+            "judge_cited_count": judge_cited_count,
+            "judge_auto_related": auto_related_added,
             "cited_doc_ids": [str(i) for i in cited_docs],
             "cited_web_indices": cited_web,
             "judge_provider": "groq",
@@ -160,29 +173,38 @@ class JudgeAgent(BaseAgent):
         }
 
     @staticmethod
-    def _force_citations(
-        final: str, web: list[dict], already_cited: list[int]
-    ) -> tuple[str, list[int]]:
+    def _append_related_results(
+        final: str, web: list[dict], already_cited: list[int], wanted: int = 3
+    ) -> str:
         """
-        If the judge failed to cite ≥2 web sources, append a short
-        "**Supporting sources (added):**" section pointing at the top
-        two uncited results. Keeps the pipeline honest without
-        fabricating claims.
+        When the judge cites <2 web sources, append up to `wanted` of the
+        top uncited search results under a header that is EXPLICITLY not a
+        citation: 'Related search results (not used in the answer)'. This
+        keeps the UI's sources list honest — only sources the judge truly
+        used end up as citations — while still exposing what the retriever
+        pulled up.
+
+        Deliberately uses bare bullets (no [W#]) so the body regex that
+        feeds cited_web never picks these up.
         """
-        wanted = 2
-        picked: list[int] = list(already_cited)
+        picked: list[int] = []
         for i, _ in enumerate(web, 1):
             if len(picked) >= wanted:
                 break
-            if i in picked:
+            if i in already_cited:
                 continue
             picked.append(i)
-        tail_lines = ["", "**Supporting sources (added):**"]
+        if not picked:
+            return final
+        tail_lines = [
+            "",
+            "**Related search results (not used in the answer):**",
+        ]
         for i in picked:
-            if 1 <= i <= len(web):
-                w = web[i-1]
-                tail_lines.append(f"- [W{i}] {w.get('title','') or w.get('url','')} — {w.get('url','')}")
-        return final.rstrip() + "\n\n" + "\n".join(tail_lines), sorted(picked)
+            w = web[i-1]
+            title = w.get("title", "") or w.get("url", "")
+            tail_lines.append(f"- {title} — {w.get('url','')}")
+        return final.rstrip() + "\n\n" + "\n".join(tail_lines)
 
     @staticmethod
     def _append_sources_block(final: str, web: list[dict], cited: list[int]) -> str:

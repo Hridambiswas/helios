@@ -89,6 +89,7 @@ class ScorerAgent(BaseAgent):
         docs: list[dict] = state.get("retrieved_docs", []) or []
         cited_web: list[int] = state.get("cited_web_indices", []) or []
         cited_docs: list[str] = state.get("cited_doc_ids", []) or []
+        judge_cited_count: int = int(state.get("judge_cited_count", len(cited_web)))
 
         if not answer:
             scores = self._zero()
@@ -128,10 +129,32 @@ class ScorerAgent(BaseAgent):
 
         parsed = self._parse(raw) or {}
         scores = self._sanitize(parsed)
+
+        # If the judge itself cited <2 web sources despite results being
+        # available, groundedness can't exceed 0.5 — the final answer is
+        # implicitly trusting the model rather than the retrieved evidence.
+        if web and judge_cited_count < 2:
+            capped = min(scores["groundedness"], 0.5)
+            if capped < scores["groundedness"]:
+                self.logger.info(
+                    "scorer: capping groundedness %.2f -> %.2f "
+                    "(judge cited only %d of %d web sources)",
+                    scores["groundedness"], capped, judge_cited_count, len(web),
+                )
+                scores["groundedness"] = capped
+                scores["overall"] = round(
+                    (scores["groundedness"] + scores["faithfulness"] + scores["completeness"]) / 3, 3
+                )
+                scores["reasoning"] = (
+                    f"Judge cited {judge_cited_count} web sources out of "
+                    f"{len(web)} available — groundedness capped at 0.5. "
+                    + scores["reasoning"]
+                )[:280]
+
         self.logger.info(
-            "scorer: g=%.2f f=%.2f c=%.2f overall=%.2f (model=%s)",
+            "scorer: g=%.2f f=%.2f c=%.2f overall=%.2f (model=%s, judge_cited=%d)",
             scores["groundedness"], scores["faithfulness"],
-            scores["completeness"], scores["overall"], self._model,
+            scores["completeness"], scores["overall"], self._model, judge_cited_count,
         )
         return {**state, "final_scores": scores}
 
