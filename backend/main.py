@@ -2,6 +2,7 @@
 # Author: Hridam Biswas | Project: Helios
 
 from __future__ import annotations
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -28,6 +29,22 @@ logger = logging.getLogger("helios.main")
 
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
+async def _warmup_embeddings() -> None:
+    """Preload BGE (dense) and CLIP (multimodal) encoders in a worker thread."""
+    def _work() -> None:
+        from langchain_community.embeddings import FastEmbedEmbeddings
+        FastEmbedEmbeddings(model_name=cfg.embedding_model).embed_query("warmup")
+        from retrieval.clip_encoder import encode_text
+        encode_text("warmup")
+
+    try:
+        logger.info("Warming up embedding models (BGE + CLIP) …")
+        await asyncio.to_thread(_work)
+        logger.info("Embedding models ready")
+    except Exception as exc:  # noqa: BLE001 — never crash startup on warm-up
+        logger.warning("Embedding warm-up failed, falling back to lazy load: %s", exc)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown hooks."""
@@ -43,6 +60,12 @@ async def lifespan(app: FastAPI):
     await create_tables()
     ensure_bucket()
     logger.info("Storage layer ready")
+
+    # Warm up embedding models so the first query doesn't pay the
+    # ~30s one-shot load cost for BGE + CLIP. Runs off the event loop
+    # in a worker thread and never blocks readiness — if it fails the
+    # models will simply load lazily on first use as before.
+    asyncio.create_task(_warmup_embeddings())
 
     yield  # ← app runs here
 
