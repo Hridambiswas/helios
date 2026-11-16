@@ -47,28 +47,43 @@ def _deduplicate(hits: list[dict]) -> list[dict]:
 
 
 def _web_search(query: str, max_results: int = 4) -> list[dict]:
-    """Search the web via DuckDuckGo. Returns [{title, url, snippet}]."""
+    """Search the web via DuckDuckGo. Returns [{title, url, snippet}].
+
+    ddgs rotates across several engines (yahoo, mojeek, startpage, …) and
+    will raise "No results found" when none of them responded in time or
+    all were rate-limited. That happens surprisingly often on back-to-back
+    calls, so one retry after a short pause typically turns a cold miss
+    into a hit. Total worst-case added latency: ~1.5s.
+    """
     try:
+        from ddgs import DDGS  # maintained successor of duckduckgo_search
+    except ImportError:  # fall back to the old package if ddgs is missing
+        from duckduckgo_search import DDGS  # type: ignore[no-redef]
+
+    import time as _time
+    last_exc: Exception | None = None
+    for attempt in (1, 2):
         try:
-            from ddgs import DDGS  # maintained successor of duckduckgo_search
-        except ImportError:  # fall back to the old package if ddgs is missing
-            from duckduckgo_search import DDGS
-        # ddgs's Wikipedia engine turns "wt-wt" into "wt.wikipedia.org"
-        # (DNS error, kills the whole search when it bubbles up).
-        # Use "us-en" — it works and still gives global English results.
-        results = list(DDGS().text(query, region="us-en", max_results=max_results))
-        return [
-            {
-                "title": r.get("title", ""),
-                "url": r.get("href", ""),
-                "snippet": r.get("body", ""),
-            }
-            for r in results
-            if r.get("href")
-        ]
-    except Exception as exc:
-        logger.warning("Web search failed: %s", exc)
-        return []
+            # ddgs's Wikipedia engine turns "wt-wt" into "wt.wikipedia.org"
+            # (DNS error, kills the whole search when it bubbles up).
+            # Use "us-en" — it works and still gives global English results.
+            results = list(DDGS().text(query, region="us-en", max_results=max_results))
+            return [
+                {
+                    "title": r.get("title", ""),
+                    "url": r.get("href", ""),
+                    "snippet": r.get("body", ""),
+                }
+                for r in results
+                if r.get("href")
+            ]
+        except Exception as exc:  # noqa: BLE001 — ddgs raises many types
+            last_exc = exc
+            if attempt == 1:
+                logger.info("Web search attempt 1 failed (%s); retrying once", exc)
+                _time.sleep(1.2)
+    logger.warning("Web search failed after 2 attempts: %s", last_exc)
+    return []
 
 
 def web_search(query: str, max_results: int = 6) -> list[dict]:
