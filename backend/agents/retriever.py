@@ -53,7 +53,10 @@ def _web_search(query: str, max_results: int = 4) -> list[dict]:
             from ddgs import DDGS  # maintained successor of duckduckgo_search
         except ImportError:  # fall back to the old package if ddgs is missing
             from duckduckgo_search import DDGS
-        results = list(DDGS().text(query, region="wt-wt", max_results=max_results))
+        # ddgs's Wikipedia engine turns "wt-wt" into "wt.wikipedia.org"
+        # (DNS error, kills the whole search when it bubbles up).
+        # Use "us-en" — it works and still gives global English results.
+        results = list(DDGS().text(query, region="us-en", max_results=max_results))
         return [
             {
                 "title": r.get("title", ""),
