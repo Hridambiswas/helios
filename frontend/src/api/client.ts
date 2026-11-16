@@ -5,7 +5,10 @@ const BASE = import.meta.env.VITE_API_URL ?? ''
 export const api = axios.create({
   baseURL: `${BASE}/api/v1`,
   headers: { 'Content-Type': 'application/json' },
-  timeout: 60_000,
+  // 120s: the first query of a cold backend can take ~30s of model-load
+  // overhead on top of the ~25s debate budget. 60s wasn't enough and the
+  // UI surfaced "Request failed" even when the server was still working.
+  timeout: 120_000,
 })
 
 // Attach JWT from localStorage on every request
