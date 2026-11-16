@@ -18,6 +18,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from config import cfg
 from agents.base import BaseAgent
 from agents._groq_call import invoke_groq_with_retry
+from agents._system_date import date_preamble_with_web_trust
 
 
 _SYSTEM_PROMPT = """\
@@ -96,7 +97,7 @@ class JudgeAgent(BaseAgent):
         )
 
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=date_preamble_with_web_trust() + _SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
         # Judge may return empty / unparseable JSON on a cold roll. Retry

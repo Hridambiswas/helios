@@ -11,6 +11,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
 from agents.base import BaseAgent
+from agents._system_date import date_preamble
 
 logger = logging.getLogger("helios.agents.planner")
 
@@ -69,7 +70,7 @@ class PlannerAgent(BaseAgent):
                 context_note = f"\n\nConversation context (most recent prior user message): {last_user[:200]}"
 
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT.format(max_subtasks=cfg.planner_max_subtasks)),
+            SystemMessage(content=date_preamble() + _SYSTEM_PROMPT.format(max_subtasks=cfg.planner_max_subtasks)),
             HumanMessage(content=query + context_note),
         ]
         response = self._llm.invoke(messages, timeout=30)

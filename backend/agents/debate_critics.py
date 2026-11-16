@@ -19,6 +19,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from config import cfg
 from agents.base import BaseAgent
 from agents._groq_call import invoke_groq_with_retry
+from agents._system_date import date_preamble, date_preamble_with_web_trust
 
 
 _ADVOCATE_SYSTEM = """\
@@ -103,7 +104,7 @@ class _DebateCriticBase(BaseAgent):
                 f"Web results:\n{web_block}\n"
             )
             messages = [
-                SystemMessage(content=self._system_prompt),
+                SystemMessage(content=self._full_system_prompt()),
                 HumanMessage(content=user_msg),
             ]
             try:
@@ -127,6 +128,10 @@ class _DebateCriticBase(BaseAgent):
             self.name, self._model, len(json.dumps(payload)),
         )
         return {**state, self._state_key(): payload}
+
+    def _full_system_prompt(self) -> str:
+        """Prepend today's date. Overridden by the skeptic to add web-trust guidance."""
+        return date_preamble() + self._system_prompt
 
     def _parse(self, raw: str) -> dict:
         """Strict JSON parse with a one-shot repair attempt (strip fences)."""
@@ -170,6 +175,9 @@ class SkepticCriticAgent(_DebateCriticBase):
     name = "skeptic_critic"
     _system_prompt = _SKEPTIC_SYSTEM
     _model_attr = "skeptic_model"
+
+    def _full_system_prompt(self) -> str:
+        return date_preamble_with_web_trust() + self._system_prompt
 
     def _state_key(self) -> str:
         return "skeptic_critique"

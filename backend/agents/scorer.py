@@ -22,6 +22,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from config import cfg
 from agents.base import BaseAgent
 from agents._groq_call import invoke_groq_with_retry
+from agents._system_date import date_preamble
 
 
 _SYSTEM_PROMPT = """\
@@ -115,7 +116,7 @@ class ScorerAgent(BaseAgent):
             f"W={cited_web or 'none'}, D={cited_docs or 'none'}\n"
         )
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=date_preamble() + _SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
 

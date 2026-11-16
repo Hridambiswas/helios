@@ -17,6 +17,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 
 from config import cfg
 from agents.base import BaseAgent
+from agents._system_date import date_preamble
 
 logger = logging.getLogger("helios.agents.answerer")
 
@@ -117,7 +118,7 @@ class AnswererAgent(BaseAgent):
         )
 
         messages = [
-            SystemMessage(content=_SYSTEM_PROMPT),
+            SystemMessage(content=date_preamble() + _SYSTEM_PROMPT),
             HumanMessage(content=user_msg),
         ]
 
