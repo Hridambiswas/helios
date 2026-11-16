@@ -30,19 +30,27 @@ logger = logging.getLogger("helios.main")
 # ── Lifespan ──────────────────────────────────────────────────────────────────
 
 async def _warmup_embeddings() -> None:
-    """Preload BGE (dense) and CLIP (multimodal) encoders in a worker thread."""
-    def _work() -> None:
+    """Preload BGE (dense) and CLIP (multimodal) encoders in a worker thread.
+
+    BGE and CLIP are independent — one can succeed while the other fails
+    (e.g. torch missing in a lightweight dev install). Warm each one
+    separately so a partial failure never undoes the win on the other.
+    """
+    def _warm_bge() -> None:
         from langchain_community.embeddings import FastEmbedEmbeddings
         FastEmbedEmbeddings(model_name=cfg.embedding_model).embed_query("warmup")
+
+    def _warm_clip() -> None:
         from retrieval.clip_encoder import encode_text
         encode_text("warmup")
 
-    try:
-        logger.info("Warming up embedding models (BGE + CLIP) …")
-        await asyncio.to_thread(_work)
-        logger.info("Embedding models ready")
-    except Exception as exc:  # noqa: BLE001 — never crash startup on warm-up
-        logger.warning("Embedding warm-up failed, falling back to lazy load: %s", exc)
+    logger.info("Warming up embedding models (BGE + CLIP) …")
+    for name, work in (("BGE", _warm_bge), ("CLIP", _warm_clip)):
+        try:
+            await asyncio.to_thread(work)
+            logger.info("%s warm-up done", name)
+        except Exception as exc:  # noqa: BLE001 — never crash startup
+            logger.warning("%s warm-up failed, lazy-load will handle it: %s", name, exc)
 
 
 @asynccontextmanager
