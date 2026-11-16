@@ -49,9 +49,11 @@ def _deduplicate(hits: list[dict]) -> list[dict]:
 def _web_search(query: str, max_results: int = 4) -> list[dict]:
     """Search the web via DuckDuckGo. Returns [{title, url, snippet}]."""
     try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results))
+        try:
+            from ddgs import DDGS  # maintained successor of duckduckgo_search
+        except ImportError:  # fall back to the old package if ddgs is missing
+            from duckduckgo_search import DDGS
+        results = list(DDGS().text(query, region="wt-wt", max_results=max_results))
         return [
             {
                 "title": r.get("title", ""),
