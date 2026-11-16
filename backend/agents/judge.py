@@ -67,6 +67,12 @@ class JudgeAgent(BaseAgent):
             model=self._model,
             temperature=0.1,
             api_key=cfg.groq_api_key,
+            # Force the Groq API into JSON mode. The system prompt already
+            # includes the word "JSON" (which Groq requires when
+            # response_format is set), so this just stops the ~5 s cost of
+            # the "I got invalid JSON, please try again" retry path on
+            # cold rolls.
+            model_kwargs={"response_format": {"type": "json_object"}},
         )
         self.logger.info("judge initialised: provider=groq model=%s", self._model)
 
