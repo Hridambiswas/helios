@@ -10,19 +10,30 @@ import type { User } from '../hooks/useAuth'
 
 function useLenis() {
   useEffect(() => {
+    // Smooth scroll for the landing page only. The chat view has its own
+    // scroll container, so Lenis must be fully torn down when we leave:
+    // guard against unmounting before the dynamic import resolves, and
+    // stop the RAF loop, otherwise Lenis keeps swallowing wheel events.
     let lenis: any
+    let rafId = 0
+    let cancelled = false
     ;(async () => {
       try {
         const { default: Lenis } = await import('lenis')
+        if (cancelled) return
         lenis = new Lenis({
           duration: 1.2,
           easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
         })
-        const raf = (time: number) => { lenis.raf(time); requestAnimationFrame(raf) }
-        requestAnimationFrame(raf)
+        const raf = (time: number) => { lenis.raf(time); rafId = requestAnimationFrame(raf) }
+        rafId = requestAnimationFrame(raf)
       } catch { /* native scroll fallback */ }
     })()
-    return () => lenis?.destroy()
+    return () => {
+      cancelled = true
+      cancelAnimationFrame(rafId)
+      lenis?.destroy()
+    }
   }, [])
 }
 
