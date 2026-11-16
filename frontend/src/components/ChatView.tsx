@@ -749,6 +749,7 @@ export function ChatView({ conversation, isLoggedIn, onAuthRequired, onAddUserMe
       {/* Messages */}
       <div
         ref={scrollRef}
+        data-lenis-prevent
         className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-8 py-8 space-y-8 relative"
       >
         <FloatingParticles />
